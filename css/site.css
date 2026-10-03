@@ -1,0 +1,100 @@
+/* Layout: full-bleed pixel forest (canvas sized to the screen in chunky pixels, sky follows local time) under one parchment card */
+:root {
+  color-scheme: dark;
+  --ink: #3a2414;
+  --ink-soft: #6b4528;
+  --parch: #ecd7a6;
+  --parch-hi: #f7eac8;
+  --parch-lo: #cfa96c;
+  --night: #0a0c26;
+  --px: 4px;
+}
+html, body { height: 100%; }
+body { background: var(--night); color: var(--ink); overflow-x: hidden; }
+#world { position: fixed; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: 50% 100%; image-rendering: pixelated; display: block; }
+.stage { position: relative; min-height: 100%; box-sizing: border-box; display: grid; place-items: center; padding-inline: 16px; padding-block: 40px; }
+.card-wrap { width: 100%; max-width: 620px; filter: drop-shadow(8px 8px 0 rgba(8, 6, 28, .45)); animation: drop .5s steps(5) both; }
+@keyframes drop { from { transform: translateY(-28px); } to { transform: none; } }
+.card {
+  position: relative; box-sizing: border-box; display: flex; align-items: center; gap: 28px; padding: 30px 34px;
+  background-color: var(--parch); background-image: var(--grain, none); background-size: 192px 192px; image-rendering: pixelated;
+  box-shadow:
+    0 calc(-1 * var(--px)) 0 0 var(--ink), 0 var(--px) 0 0 var(--ink), calc(-1 * var(--px)) 0 0 0 var(--ink), var(--px) 0 0 0 var(--ink),
+    inset var(--px) var(--px) 0 0 var(--parch-hi), inset calc(-1 * var(--px)) calc(-1 * var(--px)) 0 0 var(--parch-lo);
+}
+.card::before { content: ""; position: absolute; inset: 12px; border: 2px solid rgba(106, 69, 40, .22); pointer-events: none; }
+.portrait { flex: none; width: 144px; height: 144px; padding: 6px; cursor: pointer; background: var(--parch-lo); box-shadow: 0 calc(-1 * var(--px)) 0 0 var(--ink), 0 var(--px) 0 0 var(--ink), calc(-1 * var(--px)) 0 0 0 var(--ink), var(--px) 0 0 0 var(--ink); }
+.portrait canvas { width: 100%; height: 100%; display: block; image-rendering: pixelated; }
+.ident { min-width: 0; display: grid; gap: 20px; }
+h1 { margin: 0; line-height: 0; color: var(--ink); cursor: pointer; justify-self: start; }
+/* the name is baked from Jersey 10, 15, 20 and 25; all share one cap height, so stepping through them sharpens it */
+.ident { --cap: 40px; }
+h1 { position: relative; }
+.name { display: block; height: calc(var(--cap) * var(--r)); width: auto; max-width: none; transition: none; }
+/* Jersey 10 stays in the flow and sizes the heading; the sharper cuts are layered on top, so the links never move */
+.name ~ .name { position: absolute; top: 0; left: 0; opacity: 0; }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.links { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: nowrap; gap: 14px; }
+.links a {
+  position: relative; display: grid; place-items: center; width: 44px; height: 44px; color: var(--ink); background: var(--parch-hi);
+  box-shadow: 0 -3px 0 0 var(--ink), 0 3px 0 0 var(--ink), -3px 0 0 0 var(--ink), 3px 0 0 0 var(--ink), inset 0 -3px 0 0 var(--parch-lo);
+  transition: transform .12s steps(2);
+}
+/* hover is tracked on the list slot, which never moves, so the lifted button can't slide out from under the pointer */
+.links li { display: block; }
+.links li:hover > a, .links a:focus-visible { transform: translateY(-4px); color: var(--ink-soft); }
+.links a:focus-visible { outline: 3px dashed var(--ink); outline-offset: 6px; }
+.links li:hover > a:active, .links a:active { transform: translateY(0); }
+/* the link's clickable area covers its drawn ink border and reaches 4 px further down,
+   so the strip a lifted button leaves behind still counts as the button */
+.links a::after { content: ""; position: absolute; inset: -3px -3px -7px -3px; }
+.tip { position: absolute; top: calc(100% + 8px); left: -3px; line-height: 0; color: var(--parch-hi); background: var(--ink); padding: 3px 4px; pointer-events: none; visibility: hidden; }
+.links li:hover > a .tip, .links a:focus-visible .tip, .links a.copied .tip { visibility: visible; }
+.tip .clip { display: block; overflow: hidden; width: var(--w); }
+.tip .clip[hidden] { display: none; }
+.tip svg { display: block; }
+/* typed in left to right, one character per step; the dark box grows with the text */
+@keyframes type { from { width: 0; } to { width: var(--w); } }
+/* the email label hangs from the button's right edge and types right to left: the box grows leftward,
+   revealing the end of the text first, so it stays on screen in every layout */
+.links li:last-child .tip { left: auto; right: -3px; }
+.links li:last-child .clip { display: flex; justify-content: flex-end; }
+.links li:last-child .clip[hidden] { display: none; }
+.links li:last-child .tip svg { flex: none; }
+.links li:hover > a .clip, .links a:focus-visible .clip, .links a.copied .clip { animation: type calc(var(--n) * 22ms) steps(var(--n), end) both; }
+
+/* stack once the side-by-side card no longer fits on one line (portrait + name + padding + page gutters) */
+@media (max-width: 660px) {
+  .card-wrap { width: max-content; max-width: 100%; }
+  .card { flex-direction: column; text-align: center; padding: 28px 22px; gap: 22px; }
+  .ident { --cap: 30px; }
+  .name { margin-inline: auto; }
+  .name ~ .name { left: 50%; transform: translateX(-50%); }
+  .links { justify-content: center; }
+}
+/* very small phones: a slightly smaller name and tighter padding so the stacked card still fits */
+@media (max-width: 340px) { .ident { --cap: 26px; } .card { padding-inline: 14px; } }
+/* easter egg: click the name or portrait for a little time-of-day panel in the top-left corner */
+.timepanel {
+  position: fixed; top: calc(16px + env(safe-area-inset-top, 0px)); left: 16px; z-index: 5;
+  display: flex; align-items: center; gap: 8px; padding: 6px 8px; box-sizing: border-box; max-width: calc(100% - 32px);
+  background: var(--parch); color: var(--ink);
+  box-shadow: 0 -3px 0 0 var(--ink), 0 3px 0 0 var(--ink), -3px 0 0 0 var(--ink), 3px 0 0 0 var(--ink), inset 0 -3px 0 0 var(--parch-lo);
+  filter: drop-shadow(6px 6px 0 rgba(8, 6, 28, .45)); animation: tp-in .35s steps(7) both;
+}
+/* slides down from above the top edge of the screen; closing fades it out in place */
+@keyframes tp-in { from { transform: translateY(calc(-100% - 40px)); } to { transform: none; } }
+@keyframes tp-out { from { opacity: 1; } to { opacity: 0; } }
+.timepanel.closing { animation: tp-out .25s ease-out both; pointer-events: none; }
+.timepanel[hidden] { display: none; }
+.tp-clock { display: block; flex: none; }
+.tp-btn { flex: none; display: grid; place-items: center; width: 24px; height: 24px; padding: 0; border: 0; cursor: pointer; color: var(--ink); background: var(--parch-hi);
+  box-shadow: 0 -2px 0 0 var(--ink), 0 2px 0 0 var(--ink), -2px 0 0 0 var(--ink), 2px 0 0 0 var(--ink), inset 0 -2px 0 0 var(--parch-lo); }
+.tp-btn:hover { color: var(--ink-soft); transform: translateY(-2px); }
+.tp-btn:focus-visible, #tp-range:focus-visible { outline: 2px dashed var(--ink); outline-offset: 4px; }
+#tp-range { -webkit-appearance: none; appearance: none; width: 120px; min-width: 0; flex: 1 1 auto; height: 14px; margin: 0; background: transparent; cursor: pointer; }
+#tp-range::-webkit-slider-runnable-track { height: 3px; background: var(--ink); }
+#tp-range::-moz-range-track { height: 3px; background: var(--ink); }
+#tp-range::-webkit-slider-thumb { -webkit-appearance: none; width: 8px; height: 14px; margin-top: -5.5px; border: 0; background: var(--parch-hi); box-shadow: 0 0 0 2px var(--ink); }
+#tp-range::-moz-range-thumb { width: 8px; height: 14px; border: 0; border-radius: 0; background: var(--parch-hi); box-shadow: 0 0 0 2px var(--ink); }
+@media (prefers-reduced-motion: reduce) { .card-wrap { animation: none; } .links a { transition: none; } }

@@ -12,32 +12,50 @@ Rounak Bera's one-page personal website. A procedurally generated pixel-art fore
 
 ## Files
 
-| File | Purpose |
-|---|---|
-| `index.html` | The whole site: CSS, card markup, the card script and the forest script (~110 KB) |
-| `portrait-pixel.png` | 48×48 pixel-art portrait (hand-tuned; see Portrait) |
-| `portrait.jpg` | 320 px photo the portrait reveals on hover |
-| `AGENTS.md` | This file |
+```
+index.html            markup only: the canvas, the card, the hidden time panel
+css/site.css          all styles
+js/util.js            shared helpers: seeded rng, coordinate hash, lerp/mix/clamp, dithering, value noise
+js/card.js            the card: link icons, copy-email button, parchment grain, portrait hover effect
+js/forest/
+  main.js             entry point: picks seed and season, fits the scene to the screen, redraw loop
+  state.js            shared view state (W, H, YO, PX, SKYB, WW, WH) and the current SEASON, with setters
+  palette.js          PAL (6 tones per material), REMAP (seasonal swaps), SNOWY, sky KEYS and palette(t)
+  layer.js            Layer pixel buffers (material, tone, part, object) and finalize() outlines/shading
+  draw.js             drawing primitives: blob, trunk, limb, tier, pine/conifer, oak + bare winter oak,
+                      bush, fern, rock, flowers, meadow, ground, ridge, treeline; owns object/part ids
+  clouds.js           cloud shapes and buildClouds(seed)
+  scene.js            planFor, buildWorld, buildFront, snowify, flatten
+  render.js           prepare() (sky, sun, moon, grading) and draw() (stars, clouds, land) per frame
+  timepanel.js        the easter-egg panel; talks to main.js through a small api object
+assets/
+  portrait-pixel.png  48×48 pixel-art portrait (hand-tuned; see Portrait)
+  portrait.jpg        320 px photo the portrait reveals on hover
+AGENTS.md             this file
+```
+
+The scripts are native ES modules (`<script type="module">`), so the page has to be served over HTTP; opening `index.html` straight from disk (`file://`) won't run them. Shared mutable state lives in `state.js` (and the id counters in `draw.js`); other modules read it through live imports and change it only via the exported setters.
 
 ## Running and checking
 
-- **Run:** `python3 -m http.server 8000` and open `http://localhost:8000/`.
+- **Run:** `python3 -m http.server 8000` and open `http://localhost:8000/` (a server is required: ES modules don't load from `file://`).
 - **URL hash options:** `#seed-21` pins a forest, `#winter` (also `spring`/`summer`/`autumn`) pins a season, and they combine as `#seed-21-winter`. Seed 21 is the original "favourite" forest and has a hand-set foreground plan.
 - **Visual checks:** take headless screenshots, e.g. with Playwright. Check wide (1280×720), tall/phone (390×844) and a narrow width just under the stacked-layout breakpoint (660 px). Check noon, dawn (~6.5) and night (~22). Drive the time through the hidden time panel: click the name, set `#tp-range` and dispatch `input`.
 - **Always look at the render after a visual change.** Several regressions were only caught by looking.
+- **Refactors:** freeze time with Playwright's `page.clock`, wait ~1.5 s of real time for the card's CSS drop-in, then compare screenshots before and after pixel for pixel. The background is fully deterministic for a pinned seed and season.
 
-## Page structure (`index.html`)
+## Page structure
 
-1. **CSS.** Tokens on `:root` (`--ink`, `--parch*`). Card layout: side-by-side above 660 px, stacked below, smaller again under 340 px. Link tooltips. The time panel.
-2. **Markup.**
+1. **`css/site.css`.** Tokens on `:root` (`--ink`, `--parch*`). Card layout: side-by-side above 660 px, stacked below, smaller again under 340 px. Link tooltips. The time panel.
+2. **`index.html` markup.**
    - `canvas#world` holds the background.
    - `main > .card-wrap > article`:
      - the portrait (canvas);
      - `h1`, holding a screen-reader name plus four SVG versions of the name (Jersey 10/15/20/25);
      - `ul.links`.
    - `#timepanel` is the hidden easter-egg dialog.
-3. **Card script (first IIFE).** Icons (string grids → SVG), copy-email button, parchment grain, portrait hover effect.
-4. **Forest script (second IIFE).** Everything about the background and the time panel.
+3. **`js/card.js`.** Icons (string grids → SVG), copy-email button, parchment grain, portrait hover effect.
+4. **`js/forest/`.** Everything about the background and the time panel (see Files).
 
 ## Card details
 
@@ -164,7 +182,7 @@ Keep these unless asked otherwise.
 
 ## Open work
 
-- **Winter foreground oak looks wrong.** The background bare trees are acceptable. Plan:
+- **Winter foreground oak looks wrong.** The background bare trees are acceptable. `bare()`/`bareShape()` in `js/forest/draw.js` currently grow branches by space colonisation; treat that as a stopgap. Plan:
   - Rebuild the foreground tree with regular forking. The trunk splits at about half the tree's height into 2–3 limbs, then each limb forks into a continuing child (~0.8× width, 10–20° bend) and a side child (~0.6× width, 30–45°).
   - Thickness shrinks from the trunk down to 1 px twigs, with a fine, lighter twig haze tracing the old crown edge.
   - No branches pointing down.
