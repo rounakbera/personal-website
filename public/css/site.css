@@ -9,10 +9,13 @@
   --night: #0a0c26;
   --px: 4px;
 }
-html, body { height: 100%; }
-body { background: var(--night); color: var(--ink); overflow-x: hidden; }
+/* one fixed screen: no page scroll, no scrollbars, no rubber-band overscroll */
+html, body { height: 100%; margin: 0; overflow: hidden; overscroll-behavior: none; }
+body { background: var(--night); color: var(--ink); height: 100dvh; }
 #world { position: fixed; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: 50% 100%; image-rendering: pixelated; display: block; }
-.stage { position: relative; min-height: 100%; box-sizing: border-box; display: grid; place-items: center; padding-inline: 16px; padding-block: 40px; }
+/* the forest is drawn edge to edge (viewport-fit=cover), but the card keeps clear of notches and rounded corners */
+.stage { position: relative; height: 100%; box-sizing: border-box; display: grid; place-items: center;
+  padding: max(16px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) max(16px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left)); }
 .card-wrap { width: 100%; max-width: 620px; filter: drop-shadow(8px 8px 0 rgba(8, 6, 28, .45)); animation: drop .5s steps(5) both; }
 @keyframes drop { from { transform: translateY(-28px); } to { transform: none; } }
 .card {
@@ -76,7 +79,7 @@ h1 { position: relative; }
 @media (max-width: 340px) { .ident { --cap: 26px; } .card { padding-inline: 14px; } }
 /* easter egg: click the name or portrait for a little time-of-day panel in the top-left corner */
 .timepanel {
-  position: fixed; top: calc(16px + env(safe-area-inset-top, 0px)); left: 16px; z-index: 5;
+  position: fixed; top: calc(16px + env(safe-area-inset-top, 0px)); left: max(16px, env(safe-area-inset-left)); z-index: 5;
   display: flex; align-items: center; gap: 8px; padding: 6px 8px; box-sizing: border-box; max-width: calc(100% - 32px);
   background: var(--parch); color: var(--ink);
   box-shadow: 0 -3px 0 0 var(--ink), 0 3px 0 0 var(--ink), -3px 0 0 0 var(--ink), 3px 0 0 0 var(--ink), inset 0 -3px 0 0 var(--parch-lo);

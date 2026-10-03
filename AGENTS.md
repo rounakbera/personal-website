@@ -59,7 +59,7 @@ The scripts are native ES modules (`<script type="module">`), so the page has to
 
 ## Page structure
 
-1. **`css/site.css`.** Tokens on `:root` (`--ink`, `--parch*`). Card layout: side-by-side above 660 px, stacked below, smaller again under 340 px. Link tooltips. The time panel.
+1. **`css/site.css`.** Tokens on `:root` (`--ink`, `--parch*`). The page is one fixed screen: `html`/`body` have no margin, `overflow: hidden` and no overscroll, so there's never a scrollbar. The viewport meta has `viewport-fit=cover` so the forest reaches under notches in phone landscape, while `.stage` and the time panel pad by `env(safe-area-inset-*)`. Card layout: side-by-side above 660 px, stacked below, smaller again under 340 px. Link tooltips. The time panel.
 2. **`index.html` markup.**
    - `canvas#world` holds the background.
    - `main > .card-wrap > article`:
