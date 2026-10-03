@@ -23,7 +23,23 @@ const hoursNow = () => override ?? realHours();
 const t0 = performance.now(), secs = () => (performance.now() - t0) / 1000;
 
 let plan = planFor(seed);
-const scene = { world: flatten(buildWorld(seed), WW, WH), front: null, clouds: buildClouds(seed) };
+// first frame fast: build only the middle of the world strip that this screen shows (plus a margin), then the
+// whole strip when the page is idle, before a resize or a wider screen could need it (see ensureWorld)
+const scene = { world: null, front: null, clouds: buildClouds(seed), full: false, clip: null };
+let fullTimer = 0;
+function buildWorldFor(vw, vh) {
+  const half = (Math.round(vw / baseScale(vw, vh)) >> 1) + 10;
+  scene.clip = [(WW >> 1) - half, (WW >> 1) + half]; scene.full = false;
+  scene.world = flatten(buildWorld(seed, scene.clip), WW, WH);
+  clearTimeout(fullTimer);
+  // after the load-in zoom has settled, so the extra work doesn't stutter it
+  fullTimer = setTimeout(() => (window.requestIdleCallback || setTimeout)(ensureWorld), 2200);
+}
+function ensureWorld(redraw = true) {
+  if (scene.full) return;
+  scene.world = flatten(buildWorld(seed), WW, WH); scene.full = true; scene.clip = null;
+  if (redraw) { minute = -1; frame(); }
+}
 makeStars();
 let prep = null, minute = -1;
 
@@ -51,20 +67,26 @@ if (BLEED) {
   document.addEventListener('touchmove', (e) => { if (!e.target.closest?.('input[type=range]')) e.preventDefault(); }, { passive: false });
   addEventListener('wheel', (e) => e.preventDefault(), { passive: false });
 }
+// continuous pixel size: the scene is 180 px tall on wide screens and 200 px wide on tall ones, and the
+// two meet at the same value, so resizing zooms smoothly with no jumps (min() picks whichever fits).
+// Stacked layout (narrow screens): zoom in so the land fills about the lower half and the framing trees
+// reach up to the middle of the screen; the scene gets narrower (at least 110 px) to make room
+function baseScale(vw, vh) {
+  const S = Math.max(1, Math.min(vh / 180, vw / 200));
+  return stacked.matches ? Math.max(S, Math.min(vh / 250, vw / 110)) : S;
+}
 function fit() {
   const vw = innerWidth;
   const vh = BLEED ? stage.clientHeight : Math.min(innerHeight, svh.offsetHeight || innerHeight);
   const full = BLEED ? vh : Math.max(vh, innerHeight, lvh.offsetHeight || 0);
-  // continuous pixel size: the scene is 180 px tall on wide screens and 200 px wide on tall ones, and the
-  // two meet at the same value, so resizing zooms smoothly with no jumps (min() picks whichever fits)
-  let S = Math.max(1, Math.min(vh / 180, vw / 200));
-  // stacked layout (narrow screens): zoom in so the land fills about the lower half and the framing trees
-  // reach up to the middle of the screen; the scene gets narrower (at least 110 px) to make room
-  if (stacked.matches) S = Math.max(S, Math.min(vh / 250, vw / 110));
-  S *= zoom;   // > 1 only during the load-in
+  const S = baseScale(vw, vh) * zoom;   // zoom > 1 only during the load-in
   const top = BLEED ? Math.ceil(TB / S) : 0, below = BLEED ? Math.ceil(BB / S) : Math.max(0, Math.round((full - vh) / S));
   const w = Math.round(vw / S), hv = Math.max(180, Math.round(vh / S)), h = top + hv + below;
   if (scene.front && w === W && h === H) return false;
+  // first fit: build the visible middle of the world; later, a window wider than that (a resize before the idle
+  // build) gets the whole strip at once
+  if (!scene.world) buildWorldFor(vw, vh);
+  else if (scene.clip && (WW >> 1) - (w >> 1) < scene.clip[0] + 2) ensureWorld(false);
   const yo = top + hv - 180;
   // SKYB: the card's top edge (layout position, ignoring the drop-in animation), so the sun and moon arc above it
   setView({ W: w, H: h, YO: yo, PX: S, VT: top, STACK: stacked.matches, SKYB: Math.max(top + 14, Math.min(yo + 112, top + Math.floor(document.querySelector('.card-wrap').offsetTop / S) - 6)) });
@@ -82,7 +104,7 @@ function frame() {
 }
 // rebuild everything for the current seed and season (the same seed gives the same layout in every season)
 function rebuild() {
-  scene.world = flatten(buildWorld(seed), WW, WH); scene.clouds = buildClouds(seed); scene.front = null;
+  scene.world = null; scene.clouds = buildClouds(seed); scene.front = null;
   fit(); minute = -1; frame();
 }
 

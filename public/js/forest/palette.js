@@ -56,6 +56,7 @@ export const SNOWY = new Set(['pine', 'deep', 'blue', 'olive', 'rock', 'mount', 
 
 /* ---------- sky by hour ---------- */
 // hour, top, middle, horizon, daylight (0–1), warmth (0–1); dawn runs ~3.75–9h and dusk ~16–22.25h
+// (the inline backdrop script in index.html carries a copy of these sky colours: keep the two in sync)
 export const KEYS = [
   [0,     [10, 12, 38],   [20, 24, 64],    [40, 40, 90],    0,   0],
   [3.75,  [10, 12, 38],   [20, 24, 64],    [40, 40, 90],    0,   0],

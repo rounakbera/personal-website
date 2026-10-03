@@ -1,7 +1,7 @@
 // Drawing primitives: trees, bushes, rocks, ground cover, ground and hills, all written into Layer buffers.
 import { rng, hash, lerp, clamp, dith, vnoise } from '../util.js';
 import { SEASON, YO } from './state.js';
-import { toneOf } from './layer.js';
+import { toneOf, mid } from './layer.js';
 
 // texture origin of the object being drawn: textures are hashed from coordinates relative to it,
 // so they stick to objects that slide on resize
@@ -15,11 +15,15 @@ export function resetIds(all = true) { OBJ = 0; if (all) { PART = 0; ORX = 0; OR
 export function at(x, y, id) { ORX = Math.round(x); ORY = Math.round(y); PART = id; }
 export function clearOrigin() { ORX = ORY = 0; }
 
+const BARK = mid('bark');
 function blob(L, cx, cy, r, mat, obj, sx = 1, sy = 1, o = {}) {
   const part = ++PART, seed = hash((cx - ORX) | 0, (cy - ORY) | 0, part) * 6.28, sc = o.scallop ?? (.05 + hash(part, 1, 9) * .06), lobes = 4 + Math.floor(hash(part, 2, 9) * 4) + Math.round(r / 5);
   if (o.under) L.under.add(part);
+  const rmax = r * (1 + Math.abs(sc)) + .4;
+  if (L.off(cx - rmax * sx - 3, cx + rmax * sx + 3)) return;   // ids and hashes are taken first, so skipping changes nothing else
   for (let y = Math.floor(cy - r * sy) - 2; y <= cy + r * sy + 2; y++) for (let x = Math.floor(cx - r * sx) - 2; x <= cx + r * sx + 2; x++) {
     const dx = (x - cx) / sx, dy = (y - cy) / sy, d = Math.hypot(dx, dy);
+    if (d > rmax) continue;   // outside even the widest lobe: skip the trig
     // edge waviness mostly on the underside; the sunlit top stays smooth
     if (d > r * (1 + sc * Math.sin(Math.atan2(dy, dx) * lobes + seed) * (dy < 0 ? .55 : 1)) + .4) continue;
     const nx = dx / r, ny = dy / r;
@@ -51,6 +55,7 @@ function limb(L, x0, y0, x1, y1, w, mat, obj) {
 }
 function tier(L, cx, ty, th, hw, mat, obj) {
   const part = ++PART;
+  if (L.off(cx - hw - 2, cx + hw + 2)) return;
   for (let y = Math.floor(ty); y <= ty + th + hw * .35 + 2; y++) {
     const ry = (y - ty) / th;
     for (let x = Math.floor(cx - hw - 1); x <= cx + hw + 1; x++) {
@@ -258,13 +263,14 @@ function bareShape(cx, base, h, tw, blobs, key, inward) {
   return pts;
 }
 function bare(L, cx, base, h, tw, blobs, obj, inward) {
-  const key = [inward, Math.round(h * 10), ...blobs.map(([bx, by, br]) => Math.round((bx - cx) * 4) + ',' + Math.round((by - base) * 4) + ',' + Math.round(br * 4))].join('|');
-  const pts = bareShape(cx, base, h, tw, blobs, key, inward);
   // fine wood is a separate, unoutlined object so it reads as twigs, not black wire
   const fine = ++OBJ; L.thin.add(fine);
   // the trunk (the part drawn just before this) and the big limbs blend without a seam line between them
   L.under.add(PART);
   const pBig = ++PART, pFine = ++PART; L.under.add(pBig); L.under.add(pFine);
+  if (L.off(cx - h * 1.6, cx + h * 1.6)) return;
+  const key = [inward, Math.round(h * 10), ...blobs.map(([bx, by, br]) => Math.round((bx - cx) * 4) + ',' + Math.round((by - base) * 4) + ',' + Math.round(br * 4))].join('|');
+  const pts = bareShape(cx, base, h, tw, blobs, key, inward);
   for (const [dx, dy, w, nx, ny] of pts) {
     const x = Math.round(cx + dx), y = Math.round(base + dy);
     if (w < 1.3) { L.put(x, y, w < .6 ? 'twig' : 'bark', 2, pFine, fine); continue; }
@@ -289,9 +295,10 @@ function bare(L, cx, base, h, tw, blobs, obj, inward) {
 function blossom(L, blobs, obj, h) {
   const tier = h >= 90 ? 2 : h >= 35 ? 1 : 0, minD = [2.6, 3.6, 4][tier], dens = [.06, .045, .014][tier];
   const main = hash(obj, 5, 77) < .65 ? 'bloom' : 'bloomW', alt = main === 'bloom' ? 'bloomW' : 'bloom';
+  if (L.off(Math.min(...blobs.map(([bx, , br]) => bx - br)) - 4, Math.max(...blobs.map(([bx, , br]) => bx + br)) + 4)) return;
   const placed = [];
   const at = (xx, yy) => yy * L.w + xx;
-  const leaf = (xx, yy) => { if (xx < 0 || yy < 0 || xx >= L.w || yy >= L.h) return false; const q = at(xx, yy); return L.obj[q] === obj && L.tone[q] !== 0 && L.mat[q] !== 'bark'; };
+  const leaf = (xx, yy) => { if (xx < 0 || yy < 0 || xx >= L.w || yy >= L.h) return false; const q = at(xx, yy); return L.obj[q] === obj && L.tone[q] !== 0 && L.mat[q] !== BARK; };
   const put = (xx, yy, m, t) => { if (leaf(xx, yy)) L.put(xx, yy, m, clamp(t, 2, 5), L.part[at(xx, yy)], obj); };
   blobs.forEach(([bx, by, br], k) => {
     if (br < 2.5) return;

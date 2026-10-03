@@ -3,7 +3,7 @@
 import { rng, hash, clamp } from '../util.js';
 import { W, YO, WW, WH, SEASON } from './state.js';
 import { SNOWY } from './palette.js';
-import { Layer } from './layer.js';
+import { Layer, MAT, mid } from './layer.js';
 import { resetIds, at, clearOrigin, meadow, KINDS, KIND_LIST, conifer, oak, bush, fern, rock, flowers, ground, ridge, treeline } from './draw.js';
 
 // foreground plan: which side the big oak stands on and which two conifers frame the other side
@@ -23,9 +23,12 @@ export function planFor(seed) {
 }
 const leafOf = (r) => ['oak', 'oak2', 'oak3'][Math.floor(r() * 3)];
 // the world: mountains, the field and its groves across a 960 px strip; built once per seed, then windowed by the screen
-export function buildWorld(seed) {
+// clip = [x0, x1]: draw only what touches those columns (the slow trees and clumps skip the rest). The layout,
+// ids and textures are unchanged, so a clipped world matches the full one inside the clip; main.js builds the
+// visible middle first for a fast first frame and the whole strip once the page is idle
+export function buildWorld(seed, clip = null) {
   resetIds();
-  const r = rng(seed), out = [], pick = () => KIND_LIST[Math.floor(r() * KIND_LIST.length)], NL = (atm, ol = true) => new Layer(atm, ol, WW, WH);
+  const r = rng(seed), out = [], pick = () => KIND_LIST[Math.floor(r() * KIND_LIST.length)], NL = (atm, ol = true) => { const L = new Layer(atm, ol, WW, WH); if (clip) [L.x0, L.x1] = clip; return L; };
   const m = NL(.55, false); ridge(m, 100, 30, 1.2); out.push(m);
   const f = NL(.4, false); treeline(f, 110, r, 8, 14, 3, 6); out.push(f);
   const mg = NL(.2, false); ground(mg, 119, 2, 'grass', 2, r, false, -WW / 2); out.push(mg);
@@ -86,25 +89,32 @@ export function buildFront(seed, plan) {
   return [fg, ft];
 }
 // winter: snow settles on every upward-facing surface of conifers, rocks, hills and branches, just under the outline
+const BARK = mid('bark'), SNOW = mid('snow');
+// column range a layer was drawn over (all of it unless the world was built clipped)
+const span = (L) => [Math.max(0, Math.floor(L.x0) - 2), Math.min(L.w, Math.ceil(L.x1) + 3)];
 function snowify(L) {
-  const w = L.w, h = L.h;
-  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
-    const i = y * w + x, m = L.mat[i]; if (!SNOWY.has(m)) continue;
+  const w = L.w, h = L.h, [xa, xb] = span(L);
+  for (let y = 0; y < h; y++) for (let x = xa; x < xb; x++) {
+    const i = y * w + x, m = MAT[L.mat[i]]; if (!SNOWY.has(m)) continue;
     const o = L.obj[i];
-    if (y > 0 && L.mat[i - w] !== null && L.obj[i - w] === o) continue;   // not a top surface
+    if (y > 0 && L.mat[i - w] && L.obj[i - w] === o) continue;   // not a top surface
     const ol = L.outline && !L.thin.has(o), depth = m === 'rock' ? 3 : m === 'bark' ? 1 : 2;
     if (m === 'bark' && hash(x, y, 61) < .6) continue;                      // patchy on branches
-    if (m === 'bark' && !ol && !(y + 1 < h && L.obj[i + w] === o && L.mat[i + w] === 'bark')) continue; // only on wood thick enough to hold it
+    if (m === 'bark' && !ol && !(y + 1 < h && L.obj[i + w] === o && L.mat[i + w] === BARK)) continue; // only on wood thick enough to hold it
     for (let k = ol ? 1 : 0; k <= depth - (ol ? 0 : 1); k++) {
-      const yy = y + k, j = yy * w + x; if (yy >= h || L.obj[j] !== o || !SNOWY.has(L.mat[j])) break;
+      const yy = y + k, j = yy * w + x; if (yy >= h || L.obj[j] !== o || !SNOWY.has(MAT[L.mat[j]])) break;
       if (k > 1 && hash(x, yy, 62) < .45) break;                             // ragged lower edge
-      L.mat[j] = 'snow'; L.tone[j] = k <= (ol ? 1 : 0) ? 5 : 4;
+      L.mat[j] = SNOW; L.tone[j] = k <= (ol ? 1 : 0) ? 5 : 4;
     }
   }
 }
 // keep only the top-most material per pixel; the layer buffers are dropped
 export function flatten(layers, w, h) {
-  const n = w * h, mat = new Array(n).fill(null), tone = new Uint8Array(n), atm = new Float32Array(n);
-  for (const L of layers) { L.finalize(); if (SEASON === 'winter') snowify(L); for (let i = 0; i < n; i++) if (L.mat[i] !== null) { mat[i] = L.mat[i]; tone[i] = L.tone[i]; atm[i] = L.atm; } }
+  const n = w * h, mat = new Uint8Array(n), tone = new Uint8Array(n), atm = new Float32Array(n);
+  for (const L of layers) {
+    L.finalize(); if (SEASON === 'winter') snowify(L);
+    const [xa, xb] = span(L);
+    for (let y = 0; y < h; y++) for (let i = y * w + xa, e = y * w + xb; i < e; i++) if (L.mat[i]) { mat[i] = L.mat[i]; tone[i] = L.tone[i]; atm[i] = L.atm; }
+  }
   return { mat, tone, atm };
 }

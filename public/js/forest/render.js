@@ -2,6 +2,7 @@
 import { rng, hash, lerp, mix, clamp, BAYER } from '../util.js';
 import { W, H, YO, PX, SKYB, STACK, VT, WW, WH, SEASON } from './state.js';
 import { PAL, REMAP, palette } from './palette.js';
+import { MAT } from './layer.js';
 
 function grade(c, p, atm) {
   let n = mix(c, [18, 24, 58], .74);
@@ -66,14 +67,14 @@ export function prepare(scene, t) {
   const { world, front } = scene, ox = (WW >> 1) - (W >> 1);
   for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
     const i = y * W + x; let m = front.mat[i], tn, at;
-    if (m !== null) { tn = front.tone[i]; at = front.atm[i]; }
+    if (m) { tn = front.tone[i]; at = front.atm[i]; }
     else {
       const wy = y - YO, wx = x + ox; if (wy < 0 || wy >= WH || wx < 0 || wx >= WW) continue;
-      const j = wy * WW + wx; m = world.mat[j]; if (m === null) continue; tn = world.tone[j]; at = world.atm[j];
+      const j = wy * WW + wx; m = world.mat[j]; if (!m) continue; tn = world.tone[j]; at = world.atm[j];
     }
-    m = REMAP[SEASON][m] || m;
-    const key = m + tn + '|' + at;
-    let c = cache.get(key); if (!c) { c = grade(PAL[m][tn], p, at); cache.set(key, c); }
+    // graded colours are cached per material id, tone and haze (a numeric key: no string building per pixel)
+    const key = (Math.round(at * 1000) * 256 + m) * 8 + tn;
+    let c = cache.get(key); if (!c) { const n = REMAP[SEASON][MAT[m]] || MAT[m]; c = grade(PAL[n][tn], p, at); cache.set(key, c); }
     fg[i * 4] = c[0]; fg[i * 4 + 1] = c[1]; fg[i * 4 + 2] = c[2]; fg[i * 4 + 3] = 255;
   }
   let base = mix([70, 74, 120], [240, 244, 250], p.L), shade = mix([46, 48, 90], mix(p.mid, [255, 255, 255], .32), p.L);

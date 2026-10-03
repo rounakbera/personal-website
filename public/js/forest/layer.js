@@ -2,36 +2,41 @@
 // can be worked out after everything is drawn.
 import { W, H } from './state.js';
 
+// materials are stored as small ids (0 = empty) so the buffers can be typed arrays; MAT[id] gives the name back
+export const MAT = [null], MID = Object.create(null);
+export const mid = (name) => MID[name] ?? (MAT.push(name), MID[name] = MAT.length - 1);
+
 export class Layer {
   constructor(atm, outline = true, w = W, h = H) {
     this.atm = atm; this.outline = outline; this.w = w; this.h = h;
-    this.mat = new Array(w * h).fill(null);
+    this.mat = new Uint8Array(w * h);
     this.tone = new Uint8Array(w * h);
-    this.part = new Int32Array(w * h).fill(-1);
-    this.obj = new Int32Array(w * h).fill(-1);
+    this.part = new Int32Array(w * h);   // only read where mat is set, so no fill needed
+    this.obj = new Int32Array(w * h);
     this.thin = new Set();
     this.under = new Set(); // underlayer parts that never cast the tier/clump shadow line
+    // columns worth drawing: the costly primitives skip anything wholly outside [x0, x1] (see buildWorld)
+    this.x0 = -Infinity; this.x1 = Infinity;
   }
+  // true when the columns xa..xb lie wholly outside the drawn range
+  off(xa, xb) { return xb < this.x0 || xa > this.x1; }
   put(x, y, mat, tone, part, obj) {
     x = Math.round(x); y = Math.round(y);
     if (x < 0 || y < 0 || x >= this.w || y >= this.h) return;
-    const i = y * this.w + x; this.mat[i] = mat; this.tone[i] = tone; this.part[i] = part; this.obj[i] = obj;
+    const i = y * this.w + x; this.mat[i] = MID[mat] ?? mid(mat); this.tone[i] = tone; this.part[i] = part; this.obj[i] = obj;
   }
   finalize() {
-    const t = this.tone.slice();
-    const W = this.w, H = this.h;
-    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
-      const i = y * W + x; if (this.mat[i] === null) continue;
-      const o = this.obj[i];
-      if (this.outline && !this.thin.has(o)) {
-        let edge = false;
-        for (const [a, b] of [[x - 1, y], [x + 1, y], [x, y - 1], [x, y + 1]]) {
-          if (a < 0 || b < 0 || a >= W || b >= H) continue;
-          const j = b * W + a; if (this.mat[j] === null || this.obj[j] < o) { edge = true; break; }
-        }
-        if (edge) { t[i] = 0; continue; }
+    const t = this.tone.slice(), { mat, obj, part, tone, thin, under } = this;
+    const W = this.w, H = this.h, xa = Math.max(0, Math.floor(this.x0) - 2), xb = Math.min(W, Math.ceil(this.x1) + 3);
+    for (let y = 0; y < H; y++) for (let x = xa; x < xb; x++) {
+      const i = y * W + x; if (!mat[i]) continue;
+      const o = obj[i];
+      if (this.outline && !thin.has(o)) {
+        // outline where a 4-neighbour is empty or belongs to an object drawn earlier
+        if ((x > 0 && (!mat[i - 1] || obj[i - 1] < o)) || (x < W - 1 && (!mat[i + 1] || obj[i + 1] < o)) ||
+            (y > 0 && (!mat[i - W] || obj[i - W] < o)) || (y < H - 1 && (!mat[i + W] || obj[i + W] < o))) { t[i] = 0; continue; }
       }
-      if (y > 0) { const j = i - W; if (this.mat[j] !== null && this.obj[j] === o && this.part[j] !== this.part[i] && !this.under.has(this.part[j])) t[i] = Math.max(1, this.tone[i] - 2); }
+      if (y > 0) { const j = i - W; if (mat[j] && obj[j] === o && part[j] !== part[i] && !under.has(part[j])) t[i] = Math.max(1, tone[i] - 2); }
     }
     this.tone = t;
     return this;

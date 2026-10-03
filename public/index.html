@@ -6,6 +6,39 @@
 <title>Rounak Bera</title>
 <meta name="description" content="Rounak Bera: links to GitHub, LinkedIn and more, on a hand-generated pixel forest.">
 <link rel="stylesheet" href="css/site.css">
+<script>
+// Backdrop for the moment before the forest is drawn: the page paints before the scripts can generate anything,
+// so instead of a flat night colour, paint a gradient of this hour's sky over this season's grass, roughly where
+// the first frame will put them. Sky colours copy KEYS in js/forest/palette.js (keep them in sync).
+(() => {
+  const K = [[0,[10,12,38],[20,24,64],[40,40,90],0],[3.75,[10,12,38],[20,24,64],[40,40,90],0],[4.75,[16,18,52],[40,38,90],[92,62,112],.05],[5.75,[28,32,82],[78,64,122],[196,110,120],.2],[6.75,[60,96,170],[190,140,160],[250,180,120],.55],[7.75,[66,124,206],[160,170,200],[245,205,160],.85],[9,[70,140,220],[120,180,235],[190,225,240],1],[12,[52,128,222],[104,172,236],[180,220,244],1],[16,[60,126,210],[120,170,225],[220,210,190],1],[17.5,[62,104,184],[170,150,170],[245,190,130],.85],[18.75,[64,80,150],[200,120,120],[250,170,90],.65],[19.75,[40,40,96],[120,70,120],[230,110,80],.35],[20.75,[22,24,64],[56,46,104],[120,70,110],.14],[22.25,[10,12,38],[20,24,64],[40,40,90],0],[24,[10,12,38],[20,24,64],[40,40,90],0]];
+  const d = new Date(), t = d.getHours() + d.getMinutes() / 60, mix = (a, b, f) => a.map((v, i) => v + (b[i] - v) * f), rgb = (c) => `rgb(${c.map(Math.round)})`;
+  let i = 0; while (i < K.length - 2 && K[i + 1][0] <= t) i++;
+  const a = K[i], b = K[i + 1], f = (t - a[0]) / (b[0] - a[0]), [top, mid, hor] = [1, 2, 3].map((k) => mix(a[k], b[k], f)), L = a[4] + (b[4] - a[4]) * f;
+  const ms = /spring|summer|autumn|winter/.exec(location.hash), season = ms ? ms[0] : ['winter', 'spring', 'summer', 'autumn'][Math.floor(((d.getMonth() + 1) % 12) / 3)];
+  // the land reads mostly as trees (dark conifer green, warmer in autumn, snow-dusted in winter) over grass
+  const tree = { spring: [43, 97, 65], summer: [31, 74, 51], autumn: [92, 74, 40], winter: [62, 74, 82] }[season];
+  const grass = { spring: [60, 112, 52], summer: [53, 102, 47], autumn: [99, 106, 44], winter: [154, 166, 188] }[season];
+  const grade = (c, atm) => mix(mix(mix(mix(c, [18, 24, 58], .74), c, .12), c, L), hor, atm * (.45 + .55 * L));
+  // the first frame's pixel size (the forest starts zoomed in 1.8×, see main.js)
+  const vw = innerWidth, vh = innerHeight; let S = Math.max(1, Math.min(vh / 180, vw / 200));
+  if (vw <= 660) S = Math.max(S, Math.min(vh / 250, vw / 110));
+  if (!matchMedia('(prefers-reduced-motion: reduce)').matches) S *= 1.8;
+  // treetops start ~80 scene px above the bottom; grass shows in the bottom ~25
+  const pc = (px) => px * S / vh * 100, hz = Math.max(0, 100 - pc(80));
+  document.documentElement.style.setProperty('--pre', `linear-gradient(${rgb(top)}, ${rgb(mid)} ${Math.min(38.5, hz * .55)}%, ${rgb(hor)} ${Math.min(70, hz)}%, ${rgb(grade(tree, .3))} ${hz + 2}%, ${rgb(grade(tree, 0))} ${Math.max(hz + 4, 100 - pc(30))}%, ${rgb(grade(grass, 0))} ${Math.max(hz + 6, 100 - pc(18))}%)`);
+})();
+</script>
+<!-- fetch every module at once instead of discovering them import by import -->
+<link rel="modulepreload" href="js/util.js">
+<link rel="modulepreload" href="js/forest/state.js">
+<link rel="modulepreload" href="js/forest/palette.js">
+<link rel="modulepreload" href="js/forest/layer.js">
+<link rel="modulepreload" href="js/forest/draw.js">
+<link rel="modulepreload" href="js/forest/clouds.js">
+<link rel="modulepreload" href="js/forest/scene.js">
+<link rel="modulepreload" href="js/forest/render.js">
+<link rel="modulepreload" href="js/forest/timepanel.js">
 <script type="module" src="js/card.js"></script>
 <script type="module" src="js/forest/main.js"></script>
 </head>

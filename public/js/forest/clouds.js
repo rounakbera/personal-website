@@ -13,16 +13,21 @@ function puffs(circles, flat = null, sc = 0) {
   const owner = (x, y) => {
     if (flat !== null && y > flat) return -1;
     for (let i = circles.length - 1; i >= 0; i--) {
-      const [cx, cy, r] = circles[i], dx = x - cx, dy = y - cy;
+      const c = circles[i], dx = x - c[0], dy = y - c[1], d2 = dx * dx + dy * dy, r = c[2];
+      const rm = r * (1 + sc); if (d2 > rm * rm + rm * .5) continue;   // beyond even the widest lobe: skip the trig
       const re = sc ? r * (1 + sc * Math.sin(Math.atan2(dy, dx) * (4 + Math.round(r / 2)) + i * 2.4)) : r;
-      if (dx * dx + dy * dy <= re * re + re * .5) return i;
+      if (d2 <= re * re + re * .5) return i;
     }
     return -1;
   };
+  // each pixel's owning puff, worked out once (with a 1 px border for the neighbour tests below)
+  const gw = w + 2, gh = h + 2, O = new Int16Array(gw * gh);
+  for (let y = 0; y < gh; y++) for (let x = 0; x < gw; x++) O[y * gw + x] = owner(x0 - 1 + x, y0 - 1 + y);
+  const own = (x, y) => O[(y - y0 + 1) * gw + (x - x0 + 1)];
   for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) {
-    const o = owner(x, y); if (o < 0) continue;
+    const o = own(x, y); if (o < 0) continue;
     const [cx, cy, r] = circles[o], nx = (x - cx) / r, ny = (y - cy) / r;
-    let tone = owner(x, y - 1) < 0 || (owner(x - 1, y - 1) < 0 && ny < 0) ? 3 : (flat !== null && y >= flat - 1) || owner(x + 1, y + 1) < 0 ? 2 : 1;
+    let tone = own(x, y - 1) < 0 || (own(x - 1, y - 1) < 0 && ny < 0) ? 3 : (flat !== null && y >= flat - 1) || own(x + 1, y + 1) < 0 ? 2 : 1;
     if (tone === 1) { const l = -(nx * .5 + ny * .9) + dith(x, y) * .1; tone = l > .6 ? 3 : l < -.15 ? 2 : 1; }
     t[(y - y0) * w + (x - x0)] = tone;
   }

@@ -30,9 +30,9 @@ public/                 everything served to the browser (the Worker's static as
   js/card.js            the card: copy-email button, parchment grain, portrait pixelation effect
   js/forest/
     main.js             entry point: picks seed and season, fits the scene to the screen, redraw loop
-    state.js            shared view state (W, H, YO, PX, SKYB, WW, WH) and the current SEASON, with setters
+    state.js            shared view state (W, H, YO, PX, SKYB, STACK, VT, WW, WH) and the current SEASON, with setters
     palette.js          PAL (6 tones per material), REMAP (seasonal swaps), SNOWY, sky KEYS and palette(t)
-    layer.js            Layer pixel buffers (material, tone, part, object) and finalize() outlines/shading
+    layer.js            Layer pixel buffers (material id, tone, part, object), the material id table, finalize() outlines/shading
     draw.js             drawing primitives: blob, trunk, limb, tier, pine/conifer, oak + bare winter oak,
                         bush, fern, rock, flowers, meadow, ground, ridge, treeline; owns object/part ids
     clouds.js           cloud shapes and buildClouds(seed)
@@ -117,7 +117,16 @@ The scripts are native ES modules (`<script type="module">`), so the page has to
 4. `prepare(t)` paints the dithered sky, sun, crescent moon and halo, then grades every land pixel for time of day and distance haze (`grade`) plus a season cast (`tint`). It runs once a minute.
 5. `draw()` runs every 500 ms. It composites stars (each twinkles on its own slow cycle, at most ~5% lit at once), clouds and the land.
 
-**Materials.** `PAL` gives each material six tones: outline, deep shadow, shadow, mid, light, highlight.
+**Materials.** `PAL` gives each material six tones: outline, deep shadow, shadow, mid, light, highlight. In the `Layer` buffers, materials are stored as small ids (`Uint8Array`, 0 = empty). `mid(name)` registers a name and `MAT[id]` gives it back (`layer.js`), so the buffers are all typed arrays.
+
+**Load speed** (the forest should be on screen as soon as possible; the owner wants no loading animation):
+
+- `index.html` preloads every module (`modulepreload`), so they download in parallel rather than import by import.
+- **Clipped first build:** the first `fit()` builds only the middle of the 960 px world strip that the screen shows, plus a margin (`buildWorld(seed, clip)`). The slow primitives (`blob`, `tier`, `bare`, `blossom`) return early when wholly outside the clip, after taking their part ids. `finalize`, `snowify` and `flatten` only sweep the drawn columns. Layout, ids and hashes are untouched, so inside the clip the result is identical to a full build. `ensureWorld()` builds the whole strip once the page is idle (after the load-in zoom), or at once if a resize widens the view first.
+- **Clouds:** `puffs()` works out each pixel's owning circle once into a grid, and skips the trig for pixels beyond a circle's widest lobe.
+- **Grading cache:** in `prepare()` the cache key is numeric (material id, tone, haze), not a string built per pixel.
+- **Backdrop:** an inline script in `<head>` sets `--pre`, a gradient of this hour's sky (a copy of `KEYS`, keep in sync) over the season's forest and grass. It's laid out where the first, zoomed-in frame puts them, and is the body background until the canvas covers it. So the moment before the forest is drawn shows matching colours, not navy.
+- These changes were verified pixel-identical to the previous renderer (all seasons, three screen sizes, several seeds). Keep that bar for any future speed work.
 
 **Determinism rules — don't break these:**
 
