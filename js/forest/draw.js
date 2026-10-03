@@ -134,56 +134,77 @@ export function oak(L, cx, base, h, mat, r, o = {}) {
   for (const b of blobs) blob(L, b[0], b[1], b[2], mat, obj);
   return obj;
 }
-// Winter oak, after the sympodial tree model in Prusinkiewicz & Lindenmayer, "The Algorithmic Beauty of
-// Plants", ch. 2 (Aono & Kunii's model, fig. 2.7):
-//   A → !(w) F [&(a1) B(l·r1, w·√q)] /(180) [&(a2) B(l·r2, w·√(1−q))]    the trunk ends in a fork of two limbs
-//   B → !(w) F [+(a1) B(l·r1, w·√q)] [−(a2) B(l·r2, w·√(1−q))]          and every apex forks again: a leader turned
-//                                                                       by a small angle a1, a side branch the
-//                                                                       other way by a larger a2
-// carried over to 2-D pixel art with the chapter's principles:
-//  • constant contraction ratios: each child is r1 (leader) or r2 (side branch) times its parent's length;
-//  • da Vinci's rule for widths: w² = w1² + w2², the leader taking the larger share q of the cross-section;
-//  • tropism: before each segment is drawn its heading H turns toward T (straight up) by e·|H × T|;
-//  • the side the leader turns alternates at every fork (the 2-D form of the 180° roll and $);
-//  • every parameter is drawn per tree from the ranges of the chapter's table 2.2, plus a little jitter per segment.
-// The structure is derived at unit length, then scaled so it fills the summer crown it replaces.
-// Two additions the paper doesn't need in 3-D: a branch that would run into other wood is cut short there
-// (and tapers instead of ending blunt), and the first fork can be told which side to lean (`inward`).
+// Winter oak, after Honda's monopodial tree model in Prusinkiewicz & Lindenmayer, "The Algorithmic Beauty of
+// Plants", ch. 2 (fig. 2.6, table 2.1 — the owner picked 2.6c):
+//   A(l,w) → !(w) F(l) [&(a0) B(l·r2, w_b)] /(d) A(l·r1, w_a)      the main axis climbs, putting out a lateral at
+//                                                                 each node and rolling by the divergence angle d
+//   B(l,w) → !(w) F(l) [−(a2) $ C(l·r2, w_b)] C(l·r1, w_a)         each lateral carries on, putting out
+//   C(l,w) → !(w) F(l) [+(a2) $ B(l·r2, w_b)] B(l·r1, w_a)         sub-branches to alternate sides
+// The turtle runs in 3-D, as in the book (H, L, U frame; & pitches, / rolls, ± turns, $ levels L), and the result is
+// projected onto the picture, so the 137.5° divergence gives laterals of every apparent length and angle.
+// 2.6c's constants: r1 0.9, r2 0.8, a0 45°, a2 45°, d 137.5°, with a little per-tree and per-segment jitter
+// (r2 leans high, 0.8–0.88, for big laterals off the main trunk, as the owner asked).
+// Widths: instead of the book's flat wr = 0.707 for every child (which halves the trunk at each node), the
+// cross-section is split by da Vinci's rule, w² = w_a² + w_b², with the continuing axis keeping most of it,
+// so the trunk narrows gradually up through the crown while the laterals stay large.
+// The structure is derived at unit length, then scaled to fill the summer crown it replaces.
+// Two additions for flat pixel art (owner's rules): a limb that would run into another limb is cut there (thin
+// branches may overlap, as on a real tree), and a cut or childless thick branch tapers to a point rather than
+// ending blunt.
 const BARE = new Map();   // seed-stable shapes, cached so resizing doesn't regrow the tree
-const BARE_SPLIT = .4;    // share of the tree's height at which the trunk forks
+const BARE_SPLIT = .4;    // share of the tree's height at which the first laterals leave the trunk
 const DEG = Math.PI / 180;
+// 3-D vector helpers for the turtle
+const v3 = {
+  add: (a, b) => [a[0] + b[0], a[1] + b[1], a[2] + b[2]],
+  mul: (a, k) => [a[0] * k, a[1] * k, a[2] * k],
+  cross: (a, b) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]],
+  norm: (a) => { const l = Math.hypot(a[0], a[1], a[2]) || 1; return [a[0] / l, a[1] / l, a[2] / l]; },
+  // rotate v by angle t about the unit axis k (Rodrigues)
+  rot: (v, k, t) => { const c = Math.cos(t), s = Math.sin(t), d = (k[0] * v[0] + k[1] * v[1] + k[2] * v[2]) * (1 - c), x = v3.cross(k, v); return [v[0] * c + x[0] * s + k[0] * d, v[1] * c + x[1] * s + k[1] * d, v[2] * c + x[2] * s + k[2] * d]; }
+};
 function bareShape(cx, base, h, tw, blobs, key, inward) {
   if (BARE.has(key)) return BARE.get(key);
   let x0 = Infinity, y0 = Infinity, x1 = -Infinity;
   for (const [bx, by, br] of blobs) { x0 = Math.min(x0, bx - br); y0 = Math.min(y0, by - br); x1 = Math.max(x1, bx + br); }
   const rr = rng(Math.floor(hash(Math.round(x1 - x0), Math.round(base - y0), Math.round(h * 7)) * 4294967296));
-  const up = -Math.PI / 2, sy = base - h * BARE_SPLIT;
-  // per-tree parameters (table 2.2 ranges: r1 ≈ 0.9, r2 0.7–0.8, a1 5–35°, a2 35–65°)
-  const r1 = .86 + rr() * .07, r2 = .7 + rr() * .1, a1 = (8 + rr() * 14) * DEG, a2 = (45 + rr() * 20) * DEG;
-  const q = .64 + rr() * .1, e = .1 + rr() * .08;
-  // first fork (production A): two limbs of equal length, 60–105° apart, both close to the trunk's width
-  const s0 = inward ? -inward : (rr() < .5 ? -1 : 1), lean = (8 + rr() * 8) * DEG, open = (60 + rr() * 45) * DEG;
-  const w0 = tw * .92, q0 = .55 + rr() * .1;
+  const sy = base - h * BARE_SPLIT, jit = (deg) => (rr() - .5) * 2 * deg * DEG;
+  // 2.6c, give or take a little per tree
+  const r1 = .88 + rr() * .04, r2 = .8 + rr() * .08, a0 = (42 + rr() * 8) * DEG, a2 = (40 + rr() * 10) * DEG, d = 137.5 * DEG;
+  const qa = .64 + rr() * .06, qb = .66 + rr() * .08;   // share of the cross-section the continuing axis keeps (main axis, laterals)
+  // the turtle starts at the trunk top heading straight up; the first roll is chosen so the first lateral
+  // (and with it the crown's weight) leans toward `inward` on the foreground oak
+  const Z = [0, 0, 1];
+  let roll0 = rr() * Math.PI * 2;
 
   // 1. derive the structure generation by generation (so older, thicker wood always comes first)
-  const segs = [];   // { x0, y0, x1, y1, w, parent, cut }
-  let apices = [
-    { x: 0, y: 0, a: up + s0 * lean, l: 1, w: w0 * Math.sqrt(q0), side: -s0, parent: -1 },
-    { x: 0, y: 0, a: up + s0 * lean - s0 * open, l: 1, w: w0 * Math.sqrt(1 - q0), side: s0, parent: -1 }
-  ];
-  for (let gen = 0; apices.length && gen < 16; gen++) {
+  const segs = [];   // { x0, y0, x1, y1, w, wn, parent } in unit-length picture coordinates (y down)
+  const turn = (f, axis, t) => ({ H: v3.rot(f.H, axis, t), L: v3.rot(f.L, axis, t), U: v3.rot(f.U, axis, t) });
+  const pitch = (f, t) => turn(f, f.L, t), rollF = (f, t) => turn(f, f.H, t), yaw = (f, t) => turn(f, f.U, t);
+  const level = (f) => { const L = v3.norm(v3.cross(Z, f.H)); return Math.hypot(...L) < .5 ? f : { H: f.H, L, U: v3.cross(f.H, L) }; };
+  const f0 = { H: [0, 0, 1], L: [0, 1, 0], U: [-1, 0, 0] };
+  if (inward) { let best = -Infinity; for (let t = 0; t < 12; t++) { const ro = t / 12 * Math.PI * 2, x = pitch(rollF(f0, ro), a0).H[0] * inward; if (x > best) { best = x; roll0 = ro; } } }
+  const frame = rollF(f0, roll0);
+  let apices = [{ p: [0, 0, 0], f: frame, l: 1, w: tw, kind: 'A', parent: -1 }];
+  for (let gen = 0; apices.length && gen < 10; gen++) {   // n = 10 derivation steps, as in fig. 2.6
     const next = [];
-    for (const p of apices) {
-      if (p.w < .7) continue;
-      // tropism: turn toward straight up by e·|H × T|, plus a little jitter
-      let a = p.a + e * Math.sin(up - p.a) + (rr() - .5) * 6 * DEG;
-      if (p.w > 2) a = Math.max(-Math.PI + .1, Math.min(-.1, Math.atan2(Math.sin(a), Math.cos(a))));   // thick wood never points down
-      const l = p.l * (.9 + rr() * .2), i = segs.length;
-      segs.push({ x0: p.x, y0: p.y, x1: p.x + Math.cos(a) * l, y1: p.y + Math.sin(a) * l, w: p.w, parent: p.parent, cut: false });
-      const x = segs[i].x1, y = segs[i].y1, sd = p.side;
-      // production B: leader turned by a1 one way, side branch by a2 the other; the leader's turn alternates
-      next.push({ x, y, a: a + sd * a1, l: p.l * r1, w: p.w * Math.sqrt(q), side: -sd, parent: i });
-      next.push({ x, y, a: a - sd * a2, l: p.l * r2, w: p.w * Math.sqrt(1 - q), side: sd, parent: i });
+    for (const ap of apices) {
+      if (ap.w < .45) continue;
+      const kind = ap.kind, q = kind === 'A' ? qa : qb;
+      // the internode F(l), with a touch of wobble so no two trees are identical
+      const f = pitch(yaw(ap.f, jit(4)), jit(4)), l = ap.l * (.9 + rr() * .2);
+      const e = v3.add(ap.p, v3.mul(f.H, l)), i = segs.length, wa = ap.w * Math.sqrt(q), wb = ap.w * Math.sqrt(1 - q);
+      segs.push({ x0: ap.p[0], y0: -ap.p[2], x1: e[0], y1: -e[2], w: ap.w, wn: wa, parent: ap.parent });
+      if (kind === 'A') {
+        // lateral, pitched down from the axis by a0; then the axis rolls by the divergence angle and carries on
+        next.push({ p: e, f: pitch(f, a0 + jit(5)), l: ap.l * r2, w: wb, kind: 'B', parent: i });
+        next.push({ p: e, f: rollF(f, d + jit(10)), l: ap.l * r1, w: wa, kind: 'A', parent: i });
+      } else {
+        // sub-branch to one side (levelled with $), the lateral carrying on and switching side for the next one
+        const sgn = kind === 'B' ? -1 : 1, other = kind === 'B' ? 'C' : 'B';
+        next.push({ p: e, f: level(yaw(f, sgn * (a2 + jit(5)))), l: ap.l * r2, w: wb, kind: other, parent: i });
+        next.push({ p: e, f, l: ap.l * r1, w: wa, kind: other, parent: i });
+      }
     }
     apices = next;
   }
@@ -191,24 +212,24 @@ function bareShape(cx, base, h, tw, blobs, key, inward) {
   let mx0 = 0, mx1 = 0, my0 = 0;
   for (const g of segs) { mx0 = Math.min(mx0, g.x1); mx1 = Math.max(mx1, g.x1); my0 = Math.min(my0, g.y1); }
   const k = Math.min((x1 - x0) / Math.max(1e-6, mx1 - mx0), (sy - y0) / Math.max(1e-6, -my0));
-  // 3. rasterise oldest first; a branch that would run into other wood is cut there, and so are its children
+  // 3. rasterise oldest first; a limb that would run into another limb is cut there, and so are its children
   const pts = [], occ = new Map(), dead = new Uint8Array(segs.length), kids = new Uint16Array(segs.length);
   for (const g of segs) if (g.parent >= 0) kids[g.parent]++;
   const stamp = (x, y, w, nx, ny) => pts.push([x - cx, y - base, w, nx, ny]);
-  // a rounded crotch on top of the trunk, so the wide fork doesn't leave the trunk's flat top showing
-  for (let j = 0; j <= 3; j++) pts.push([0, sy - base + tw * (.6 - j * .25), tw * (1 - j * .06), 1, 0]);
   segs.forEach((g, i) => {
     if (g.parent >= 0 && dead[g.parent]) { dead[i] = 1; return; }
     const ax = cx + g.x0 * k, ay = sy + g.y0 * k, bx = cx + g.x1 * k, by = sy + g.y1 * k;
-    const len = Math.hypot(bx - ax, by - ay); if (len < 1) { dead[i] = 1; return; }
+    // (a branch seen end-on is too short to draw, but its children still grow)
+    const len = Math.hypot(bx - ax, by - ay); if (len < 1) { stamp(bx, by, g.w, 1, 0); return; }
     const ux = (bx - ax) / len, uy = (by - ay) / len, nx = -uy, ny = ux, n = Math.ceil(len);
-    // taper toward the thicker child's width
-    const wEnd = g.w * Math.sqrt(q), mine = [];
+    // taper smoothly toward the width the axis carries on with, so nothing steps down suddenly
+    const wEnd = g.wn, mine = [];
     let stop = n;
     for (let t = 0; t <= n; t++) {
       const x = Math.round(ax + ux * t), y = Math.round(ay + uy * t), o = occ.get(x * 4096 + y);
       // skip the joint itself, where a branch must overlap the wood it grows from
-      if (t > g.w + 2 && o !== undefined && o !== i && o !== g.parent && segs[o].parent !== g.parent) { stop = t - 2; break; }
+      // only limbs are kept apart: thin branches may pass in front of or behind each other, as they do on a real tree
+      if (g.w >= 2 && t > g.w + 2 && o !== undefined && o !== i && o !== g.parent && segs[o].parent !== g.parent && segs[o].w >= 2) { stop = t - 2; break; }
       mine.push([x, y]);
     }
     if (stop < n) { dead[i] = 1; }
@@ -236,7 +257,7 @@ function bare(L, cx, base, h, tw, blobs, obj, inward) {
   const pBig = ++PART, pFine = ++PART; L.under.add(pBig); L.under.add(pFine);
   for (const [dx, dy, w, nx, ny] of pts) {
     const x = Math.round(cx + dx), y = Math.round(base + dy);
-    if (w < 1.3) { L.put(x, y, w < .8 ? 'twig' : 'bark', w < .8 ? 3 : 2, pFine, fine); continue; }
+    if (w < 1.3) { L.put(x, y, w < .6 ? 'twig' : 'bark', w < .6 ? 2 : 2, pFine, fine); continue; }
     // lit from the upper left: shade each stamp across the branch
     let ux = nx, uy = ny; if (ux + uy > 0) { ux = -ux; uy = -uy; }
     const big = w >= 2.6, rad = w / 2, c = Math.ceil(rad);

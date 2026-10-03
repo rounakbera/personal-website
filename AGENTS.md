@@ -182,12 +182,14 @@ Keep these unless asked otherwise.
 
 ## Open work
 
-- **Winter oak (`bare()`/`bareShape()` in `js/forest/draw.js`)** — being iterated with the owner. It follows the sympodial tree model (Aono & Kunii) from *The Algorithmic Beauty of Plants*, ch. 2, fig. 2.7 (owner's choice):
-  - Productions: the trunk (A) ends in a fork of two limbs; every apex (B) forks again into a leader turned by a small angle a1 and a side branch turned the other way by a larger a2. The leader's turn alternates side at every fork (the 2-D stand-in for the 180° roll / `$`).
-  - Constant contraction ratios: child length = r1 (leader) or r2 (side) × parent. Widths follow da Vinci's rule, w² = w1² + w2², with the leader taking share q of the cross-section. Tropism turns each segment toward straight up by e·|H × T|.
-  - Per-tree parameters come from the ranges in the chapter's table 2.2 (r1 0.86–0.93, r2 0.7–0.8, a1 8–22°, a2 45–65°, q 0.64–0.74, e 0.1–0.18), plus small per-segment jitter.
-  - Owner's rules kept: the trunk stops at ~40% height and forks into two limbs of equal length, 60–105° apart and both close to trunk width, with a rounded crotch over the trunk top. The foreground oak's outward limb leans toward the screen's middle (`inward`). Thick wood never points below horizontal. Branches never cross: a branch that would run into other wood is cut there along with its children, and a cut or childless thick branch tapers to a point rather than ending blunt.
-  - The structure is derived at unit length, generation by generation, then scaled to fill the summer crown's bounding box, so the bare tree keeps roughly the same size and silhouette as the leafy one.
+- **Winter oak (`bare()`/`bareShape()` in `js/forest/draw.js`)** — being iterated with the owner. It follows Honda's monopodial tree model from *The Algorithmic Beauty of Plants*, ch. 2, fig. 2.6c (owner's choice; replaced an earlier sympodial version):
+  - Productions: the main axis A climbs, putting out a lateral B at each node (pitched a0 off the axis) and rolling by the divergence angle d = 137.5°. Laterals B/C carry on (×r1), putting out sub-branches (×r2, turned ±a2, levelled with `$`) to alternate sides.
+  - The turtle runs in true 3-D (H/L/U frame, & / ± $ as in the book) and is projected onto the picture, so laterals show every apparent length and angle. n = 10 derivation steps.
+  - Constants near 2.6c: r1 0.88–0.92, r2 0.8–0.88 (high, for big laterals off the trunk, as the owner asked), a0 42–50°, a2 40–50°, plus small per-segment jitter.
+  - Widths use da Vinci's rule (w² = w_axis² + w_lateral²) instead of the book's flat wr = 0.707, and every segment tapers smoothly to the width its axis carries on with. The trunk narrows gradually up through the crown with no sudden step at the first branch (owner).
+  - The axis starts at the trunk top (~40% of height) at full trunk width. The foreground oak's first roll is chosen so its first lateral leans toward the screen's middle (`inward`).
+  - The structure is derived at unit length, then scaled to fill the summer crown's bounding box.
+  - Limbs (≥ 2 px) never run into other limbs: one that would is cut there and tapers to a point. Thin branches may overlap, as on a real tree. Childless or cut thick branches taper rather than ending blunt.
   - Shapes are cached per crown, so resizing doesn't regrow them.
 - **Résumé link** target.
 - **Hosting:** hook the repo up to the owner's Cloudflare domain (e.g. Cloudflare Pages, no build command, output directory `/`).
