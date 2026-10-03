@@ -1,6 +1,6 @@
 // Rendering: the sky (with sun, moon and stars), time-of-day and seasonal grading of the land, and per-frame compositing.
 import { rng, hash, lerp, mix, clamp, BAYER } from '../util.js';
-import { W, H, YO, PX, SKYB, STACK, WW, WH, SEASON } from './state.js';
+import { W, H, YO, PX, SKYB, STACK, VT, WW, WH, SEASON } from './state.js';
 import { PAL, REMAP, palette } from './palette.js';
 
 function grade(c, p, atm) {
@@ -35,9 +35,10 @@ export function prepare(scene, t) {
   // layout, where the card would hide most of that path, blend (by tt) to a path over the card: in from beyond the
   // left edge just above the card top (SKYB), over it, and out past the right edge, so nothing pops in or out.
   // On short stacked screens the bodies shrink so they still fit above the card
-  const tt = STACK ? 1 : clamp(((YO + 180) / W - .75) / .75, 0, 1), y0 = YO + 112;
-  const R = Math.max(5, Math.min(Math.round(35 / PX), tt > 0 ? Math.floor((SKYB - 4) / 2) : 99)), f = R / 7;
-  const ye = lerp(y0, SKYB - R - 2, tt), ap = Math.max(R + 2, lerp(y0 * .22, Math.min(y0 * .22, ye * .4), tt));
+  // (all heights are measured from VT, the first visible row, in case the canvas reaches up behind a status bar)
+  const tt = STACK ? 1 : clamp(((YO + 180 - VT) / W - .75) / .75, 0, 1), y0 = YO + 112, sb = SKYB - VT;
+  const R = Math.max(5, Math.min(Math.round(35 / PX), tt > 0 ? Math.floor((sb - 4) / 2) : 99)), f = R / 7;
+  const ye = lerp(y0, SKYB - R - 2, tt), ap = VT + Math.max(R + 2, lerp((y0 - VT) * .22, Math.min((y0 - VT) * .22, (ye - VT) * .4), tt));
   const xa = lerp(W * .12, -3 * R, tt), xb = lerp(W * .88, W + 3 * R, tt);
   const arc = (q) => [Math.round(xa + (xb - xa) * q), Math.round(ye - Math.sin(Math.PI * clamp(q, 0, 1)) * (ye - ap))];
   const sp = (t - 6.5) / 12.5;

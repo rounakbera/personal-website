@@ -96,7 +96,11 @@ The scripts are native ES modules (`<script type="module">`), so the page has to
 - One scene pixel is `PX` screen pixels, where `S = max(1, min(vh/180, vw/200))`. S is continuous, so resizing zooms smoothly.
 - The land is a 180 px-tall band. `YO = H − 180` pushes it down on tall screens, showing more sky.
 - **Under browser toolbars:** the canvas is `100lvh` tall, so Safari's toolbars show forest rather than a blank strip. `fit()` sizes the scene to the visible area (`100svh`, toolbars shown) and adds the extra rows below `YO + 180` as plain foreground ground. Flowers stop at `YO + 180`, so they and the bushes stay above the bar. Sky gradient and sun path use `YO + 180`, not `H`. On desktop there are no extra rows.
-- **Safari 26 (iPhone) bar tint:** on an unscrolled page Safari doesn't draw page pixels behind its status bar or toolbar. It tints them from a fixed element touching each edge (≥ 80% wide, ≥ 3 px tall), or else the body background. Two `.edge-tint` strips (shown only in iOS Safari, via an `@supports` check) carry the median colour of the canvas's top and bottom rows. `retint()` in `main.js` refreshes them whenever the sky is regraded, so the bars continue the sky and the ground at any time of day. `theme-color` is ignored by Safari 26.
+- **Safari 26 on iPhone** draws page pixels behind its status bar and toolbar only when the page is scrolled, and never draws fixed elements there (it just tints the bars). So in that browser (`BLEED` in `main.js`, `html.bleed` in CSS):
+  - The page is `OFF` (80 px) taller and parked at `scrollY = OFF`. Touch and wheel scrolling are blocked (`touchmove`/`wheel` `preventDefault`, except on the time slider), and any scroll snaps back.
+  - The canvas is `position: absolute` in the page's flow. It reaches `TB` (80 px) above the visible top and `BB` (160 px) below the visible bottom: sky behind the status bar, ground behind the toolbar.
+  - The land still ends at the visible bottom, so the flowers and bushes stay above the bar. `VT` in `state.js` is the first visible row, and the sun and moon path is measured from it.
+  - Elsewhere none of this applies (the fixed 100lvh canvas above).
 - In the stacked layout (≤ 660 px) the scene zooms in further, with `S ≥ min(vh/250, vw/110)`, so the land fills about the lower half and the framing trees reach the middle of the screen (owner's request). The view gets narrower to allow this.
 
 **Two parts, built differently:**

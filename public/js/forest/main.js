@@ -27,14 +27,34 @@ const scene = { world: flatten(buildWorld(seed), WW, WH), front: null, clouds: b
 makeStars();
 let prep = null, minute = -1;
 
-// size the scene to the screen; only the front is rebuilt when the size changes, so this can run on every resize frame
-// Safari draws its toolbars over the page; the canvas reaches down under them (100lvh) so they show forest rather
-// than a blank strip. The scene is fitted to the visible area (100svh, toolbars shown) and the extra rows below
-// are just more foreground ground, so the flowers and bushes stay above the bar
+// size the scene to the screen; only the front is rebuilt when the size changes, so this can run on every resize frame.
+//
+// Browser toolbars. Elsewhere the canvas is fixed and 100lvh tall, so a toolbar drawn over the page shows forest;
+// the scene is fitted to the visible area (100svh, toolbars shown) and the rows below are just more ground.
+// Safari 26 on iPhone, though, draws page pixels behind its status bar and toolbar only when the page is scrolled,
+// and never draws fixed elements there. So in that browser (html.bleed) the page is made a little taller and
+// parked at a small scroll offset (OFF) that the visitor can't change, and the canvas sits in the page's flow,
+// reaching TB px above the visible top and BB px below the visible bottom: sky behind the status bar, ground
+// behind the toolbar. The land still ends at the visible bottom, so the flowers and bushes stay above the bar.
+const BLEED = CSS.supports('-webkit-touch-callout: none') && CSS.supports('font: -apple-system-body') && !navigator.standalone;
+const TB = 80, BB = 160, OFF = TB;
+const stage = document.querySelector('.stage');
 const probe = (hgt) => { const d = document.createElement('div'); d.style.cssText = `position:fixed;top:0;left:0;width:0;height:${hgt};visibility:hidden;pointer-events:none`; document.body.append(d); return d; };
 const svh = probe('100svh'), lvh = probe('100lvh');
+if (BLEED) {
+  document.documentElement.classList.add('bleed');
+  document.documentElement.style.setProperty('--off', `${OFF}px`);
+  history.scrollRestoration = 'manual';
+  const park = () => { if (scrollY !== OFF) scrollTo({ top: OFF, left: 0, behavior: 'instant' }); };
+  park(); addEventListener('load', park); addEventListener('pageshow', park); addEventListener('scroll', park, { passive: true });
+  // no scrolling by touch (the time slider still drags) or by wheel
+  document.addEventListener('touchmove', (e) => { if (!e.target.closest?.('input[type=range]')) e.preventDefault(); }, { passive: false });
+  addEventListener('wheel', (e) => e.preventDefault(), { passive: false });
+}
 function fit() {
-  const vw = innerWidth, vh = Math.min(innerHeight, svh.offsetHeight || innerHeight), full = Math.max(vh, innerHeight, lvh.offsetHeight || 0);
+  const vw = innerWidth;
+  const vh = BLEED ? stage.clientHeight : Math.min(innerHeight, svh.offsetHeight || innerHeight);
+  const full = BLEED ? vh : Math.max(vh, innerHeight, lvh.offsetHeight || 0);
   // continuous pixel size: the scene is 180 px tall on wide screens and 200 px wide on tall ones, and the
   // two meet at the same value, so resizing zooms smoothly with no jumps (min() picks whichever fits)
   let S = Math.max(1, Math.min(vh / 180, vw / 200));
@@ -42,33 +62,23 @@ function fit() {
   // reach up to the middle of the screen; the scene gets narrower (at least 110 px) to make room
   if (stacked.matches) S = Math.max(S, Math.min(vh / 250, vw / 110));
   S *= zoom;   // > 1 only during the load-in
-  const w = Math.round(vw / S), hv = Math.max(180, Math.round(vh / S)), h = hv + Math.max(0, Math.round((full - vh) / S));
+  const top = BLEED ? Math.ceil(TB / S) : 0, below = BLEED ? Math.ceil(BB / S) : Math.max(0, Math.round((full - vh) / S));
+  const w = Math.round(vw / S), hv = Math.max(180, Math.round(vh / S)), h = top + hv + below;
   if (scene.front && w === W && h === H) return false;
-  const yo = hv - 180;
+  const yo = top + hv - 180;
   // SKYB: the card's top edge (layout position, ignoring the drop-in animation), so the sun and moon arc above it
-  setView({ W: w, H: h, YO: yo, PX: S, STACK: stacked.matches, SKYB: Math.max(14, Math.min(yo + 112, Math.floor(document.querySelector('.card-wrap').offsetTop / S) - 6)) });
+  setView({ W: w, H: h, YO: yo, PX: S, VT: top, STACK: stacked.matches, SKYB: Math.max(top + 14, Math.min(yo + 112, top + Math.floor(document.querySelector('.card-wrap').offsetTop / S) - 6)) });
   canvas.width = w; canvas.height = h;
+  if (BLEED) { canvas.style.top = `${OFF - top * S}px`; canvas.style.height = `${h * S}px`; }
   scene.front = flatten(buildFront(seed, plan), W, H);
   fitStars();
   minute = -1;
   return true;
 }
-// Safari's bars take their tint from these (see .edge-tint in site.css): the median colour (so stars and flowers don't skew it) of the canvas's top and
-// bottom rows, refreshed whenever the sky is regraded
-const tints = ['top', 'bot'].map((k) => { const d = document.createElement('div'); d.className = `edge-tint ${k}`; d.setAttribute('aria-hidden', 'true'); document.body.append(d); return d; });
-function retint() {
-  if (getComputedStyle(tints[0]).display === 'none') return;
-  const g = canvas.getContext('2d');
-  [0, H - 1].forEach((y, i) => {
-    const px = g.getImageData(0, y, W, 1).data, med = (c) => { const v = []; for (let j = c; j < px.length; j += 4) v.push(px[j]); v.sort((a, b) => a - b); return v[v.length >> 1]; };
-    tints[i].style.backgroundColor = `rgb(${med(0)},${med(1)},${med(2)})`;
-  });
-}
 function frame() {
   const t = hoursNow(), mk = Math.floor(t * 60), fresh = mk !== minute;
   if (fresh) { minute = mk; prep = prepare(scene, t); }   // sky, sun and moon move once a minute
   draw(canvas, scene, prep, secs());                      // clouds and stars on their own half-second beats
-  if (fresh) retint();
 }
 // rebuild everything for the current seed and season (the same seed gives the same layout in every season)
 function rebuild() {
