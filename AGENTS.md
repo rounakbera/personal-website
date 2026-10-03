@@ -39,9 +39,13 @@ public/                 everything served to the browser (the Worker's static as
     scene.js            planFor, buildWorld, buildFront, snowify, flatten
     render.js           prepare() (sky, sun, moon, grading) and draw() (stars, clouds, land) per frame
     timepanel.js        the easter-egg panel; talks to main.js through a small api object
+  robots.txt            allow all; points at the sitemap
+  sitemap.xml           the one page, with the photo as its image
+  favicon.ico           summer icon, for browsers that ask for /favicon.ico
   assets/
-    portrait-pixel.png  48×48 pixel-art portrait (hand-tuned; see Portrait)
-    portrait.jpg        320 px photo the portrait reveals on hover
+    portrait-pixel.png  48×48 pixel-art portrait (hand-tuned; see Portrait); X-Robots-Tag noindex
+    portrait.jpg        320 px photo the portrait reveals on hover; the one image meant for search
+    icons/              seasonal favicons: {spring,summer,autumn,winter}-{32,192}.png, -180.png apple-touch on parchment
 wrangler.jsonc          Cloudflare Workers config (static assets from public/, custom domain rounakbera.com)
 package.json            npm scripts `dev` / `deploy`; Wrangler as the only (dev) dependency
 AGENTS.md               this file
@@ -69,6 +73,12 @@ The scripts are native ES modules (`<script type="module">`), so the page has to
    - `#timepanel` is the hidden easter-egg dialog.
 3. **`js/card.js`.** Copy-email button, parchment grain, portrait pixelation effect. (The link icons are static SVG in `index.html`, so they show without JS.)
 4. **`js/forest/`.** Everything about the background and the time panel (see Files).
+
+## Search and favicon (owner's rules)
+
+- **Search results show only the name.** The `<title>` is "Rounak Bera". There's no meta description, and `robots` is `nosnippet` so no page text is used as a snippet either. Open Graph and Twitter tags carry the title and the photo, with no description.
+- **The only image meant for search is the photo** (`assets/portrait.jpg`). It's the `img` under the portrait canvas (alt "Portrait of Rounak Bera"), `og:image`, the `image` of the Person JSON-LD, and the image in `sitemap.xml`. The pixel portrait is served with `X-Robots-Tag: noindex` (`_headers`). Everything else is drawn (canvas or inline SVG), so there's nothing else to index. Favicons stay crawlable, since search engines need them for the icon next to the result.
+- **Seasonal favicon:** pixel trees in the site's palette, drawn on a 16×16 grid: a green oak (summer), the oak in pink blossom (spring), an orange oak (autumn) and a snow-capped conifer (winter). The static links point at summer. The inline head script swaps them to the current (or `#season`) season, and the time panel's season button swaps them too.
 
 ## Card details
 

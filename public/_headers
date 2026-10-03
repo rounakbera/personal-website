@@ -4,3 +4,7 @@
   Referrer-Policy: strict-origin-when-cross-origin
   Permissions-Policy: camera=(), microphone=(), geolocation=()
   X-Frame-Options: DENY
+
+# the pixel-art portrait stays out of image search; the photo (assets/portrait.jpg) is the one image meant to be found
+/assets/portrait-pixel.png
+  X-Robots-Tag: noindex

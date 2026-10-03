@@ -132,6 +132,6 @@ document.addEventListener('visibilitychange', () => { if (!document.hidden) fram
 initTimePanel({
   hoursNow, realHours,
   setTime(t) { override = t; minute = -1; frame(); },
-  setSeason(s) { setSeasonState(s); rebuild(); },
+  setSeason(s) { setSeasonState(s); rebuild(); document.querySelectorAll('[data-season-icon]').forEach((l) => { l.href = `assets/icons/${s}-${l.dataset.seasonIcon}.png`; }); },
   reseed() { seed = randomSeed(); plan = planFor(seed); rebuild(); }
 });

@@ -4,7 +4,20 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Rounak Bera</title>
-<meta name="description" content="Rounak Bera: links to GitHub, LinkedIn and more, on a hand-generated pixel forest.">
+<!-- search results: just the name as the title, no text snippet; the only image meant for search is the photo -->
+<meta name="robots" content="nosnippet, max-image-preview:large">
+<link rel="canonical" href="https://rounakbera.com/">
+<meta property="og:type" content="profile">
+<meta property="og:title" content="Rounak Bera">
+<meta property="og:url" content="https://rounakbera.com/">
+<meta property="og:image" content="https://rounakbera.com/assets/portrait.jpg">
+<meta property="og:image:alt" content="Portrait of Rounak Bera">
+<meta name="twitter:card" content="summary">
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"Person","name":"Rounak Bera","url":"https://rounakbera.com/","image":"https://rounakbera.com/assets/portrait.jpg","sameAs":["https://github.com/rounakbera","https://www.linkedin.com/in/rbera"]}</script>
+<!-- favicon follows the season (swapped by the inline script below; summer for anything that doesn't run it) -->
+<link rel="icon" type="image/png" sizes="32x32" href="assets/icons/summer-32.png" data-season-icon="32">
+<link rel="icon" type="image/png" sizes="192x192" href="assets/icons/summer-192.png" data-season-icon="192">
+<link rel="apple-touch-icon" href="assets/icons/summer-180.png" data-season-icon="180">
 <link rel="stylesheet" href="css/site.css">
 <script>
 // Backdrop for the moment before the forest is drawn: the page paints before the scripts can generate anything,
@@ -16,6 +29,7 @@
   let i = 0; while (i < K.length - 2 && K[i + 1][0] <= t) i++;
   const a = K[i], b = K[i + 1], f = (t - a[0]) / (b[0] - a[0]), [top, mid, hor] = [1, 2, 3].map((k) => mix(a[k], b[k], f)), L = a[4] + (b[4] - a[4]) * f;
   const ms = /spring|summer|autumn|winter/.exec(location.hash), season = ms ? ms[0] : ['winter', 'spring', 'summer', 'autumn'][Math.floor(((d.getMonth() + 1) % 12) / 3)];
+  document.querySelectorAll('[data-season-icon]').forEach((l) => { l.href = `assets/icons/${season}-${l.dataset.seasonIcon}.png`; });
   // the land reads mostly as trees (dark conifer green, warmer in autumn, snow-dusted in winter) over grass
   const tree = { spring: [43, 97, 65], summer: [31, 74, 51], autumn: [92, 74, 40], winter: [62, 74, 82] }[season];
   const grass = { spring: [60, 112, 52], summer: [53, 102, 47], autumn: [99, 106, 44], winter: [154, 166, 188] }[season];
