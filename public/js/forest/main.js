@@ -36,6 +36,7 @@ function fit() {
   // stacked layout (narrow screens): zoom in so the land fills about the lower half and the framing trees
   // reach up to the middle of the screen; the scene gets narrower (at least 110 px) to make room
   if (stacked.matches) S = Math.max(S, Math.min(vh / 250, vw / 110));
+  S *= zoom;   // > 1 only during the load-in
   const w = Math.round(vw / S), h = Math.max(180, Math.round(vh / S));
   if (scene.front && w === W && h === H) return false;
   const yo = h - 180;
@@ -58,8 +59,19 @@ function rebuild() {
   fit(); minute = -1; frame();
 }
 
+// load-in: the forest starts zoomed in ~1.8× on its bottom middle and eases out to its real size, in step with
+// the card's drop-in. The front is rebuilt for each size on the way (the same path a window resize takes), so the
+// scene resolves smoothly rather than as a scaled picture. Skipped with reduced motion
+let zoom = matchMedia('(prefers-reduced-motion: reduce)').matches ? 1 : 1.8;
+const Z0 = zoom, ZDUR = 1600, zStart = performance.now();
 fit();
 frame();
+if (zoom > 1) requestAnimationFrame(function zstep(now) {
+  const q = Math.min(1, (now - zStart) / ZDUR), e = 1 - Math.pow(1 - q, 3);
+  zoom = 1 + (Z0 - 1) * (1 - e);
+  if (fit()) frame();
+  if (q < 1) requestAnimationFrame(zstep);
+});
 // redraw on every animation frame while the window is being resized
 let queued = false;
 addEventListener('resize', () => { if (queued) return; queued = true; requestAnimationFrame(() => { queued = false; if (fit()) frame(); }); });

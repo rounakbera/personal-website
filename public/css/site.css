@@ -27,7 +27,11 @@ body { background: var(--night); color: var(--ink); height: 100dvh; }
 }
 .card::before { content: ""; position: absolute; inset: 12px; border: 2px solid rgba(106, 69, 40, .22); pointer-events: none; }
 .portrait { flex: none; width: 144px; height: 144px; padding: 6px; cursor: pointer; background: var(--parch-lo); box-shadow: 0 calc(-1 * var(--px)) 0 0 var(--ink), 0 var(--px) 0 0 var(--ink), calc(-1 * var(--px)) 0 0 0 var(--ink), var(--px) 0 0 0 var(--ink); }
-.portrait canvas { width: 100%; height: 100%; display: block; image-rendering: pixelated; }
+/* the photo sits underneath (what shows without JS); the canvas on top starts transparent and, once the
+   images load, takes over from the photo and pixelates it into the art */
+.portrait { position: relative; box-sizing: content-box; }
+.portrait img, .portrait canvas { position: absolute; inset: 6px; width: calc(100% - 12px); height: calc(100% - 12px); display: block; }
+.portrait canvas { image-rendering: pixelated; }
 .ident { min-width: 0; display: grid; gap: 20px; }
 h1 { margin: 0; line-height: 0; color: var(--ink); cursor: pointer; justify-self: start; }
 /* the name is baked from Jersey 10, 15, 20 and 25; all share one cap height, so stepping through them sharpens it */
@@ -36,6 +40,9 @@ h1 { position: relative; }
 .name { display: block; height: calc(var(--cap) * var(--r)); width: auto; max-width: none; transition: none; }
 /* Jersey 10 stays in the flow and sizes the heading; the sharper cuts are layered on top, so the links never move */
 .name ~ .name { position: absolute; top: 0; left: 0; opacity: 0; }
+/* without JS the smoothest cut (Jersey 25) shows; the script then steps it down to Jersey 10 as the page loads */
+.name:first-of-type { opacity: 0; }
+.name:last-of-type { opacity: 1; }
 .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 .links { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: nowrap; gap: 14px; }
 .links a {

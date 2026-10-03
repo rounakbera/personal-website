@@ -73,7 +73,9 @@ The scripts are native ES modules (`<script type="module">`), so the page has to
 ## Card details
 
 - **Name:** a bitmap of the Jersey fonts. Glyphs were rasterised from the TTF outlines, at grid units 75/50/38/30 for Jersey 10/15/20/25, into crisp SVG path runs.
-- **Hover effect:** hovering the portrait or name runs a ~0.45 s de-pixelation. The portrait goes from 48 px art to the photo with linear block size, so the pacing is even. At the same time the name steps through Jersey 10 → 15 → 20 → 25. On touch screens, tapping toggles it.
+- **Hover effect:** hovering the portrait or name runs a ~0.45 s de-pixelation. The portrait goes from 48 px art to the photo with linear block size, so the pacing is even. At the same time the name steps through Jersey 10 → 15 → 20 → 25.
+- **Click/tap toggles it** (mouse and touch) and the state sticks after the pointer leaves, until the next click. (With a mouse, hover already shows the photo, so a click while hovering pixelates.)
+- **Load:** the markup shows the photo (an `img` under the canvas) and the Jersey 25 name, so that's the no-JS look. Once both images decode, the canvas takes over at the photo and ~0.65 s later pixelates into the art while the name steps down to Jersey 10.
 - **Link icons:**
   - The GitHub and LinkedIn icons were pixelated from the official brand images the owner supplied. Brand guidelines may not allow altering them.
   - The résumé icon is a scroll with parallel diagonal sides.
@@ -162,6 +164,8 @@ The scripts are native ES modules (`<script type="module">`), so the page has to
   - 1.7× the clouds, with a greyer sky and greyer clouds.
 
 **Motion:**
+
+- **Load-in:** the forest starts zoomed in 1.8× on its bottom middle and eases out (cubic, 1.6 s) to its real size. `zoom` multiplies `S` in `fit()`, and the front is rebuilt for each size, as on resize. Skipped with reduced motion.
 
 - The sky's motion runs even with reduced motion on (owner's choice). Only the card's drop-in respects `prefers-reduced-motion`.
 - Animation pauses while the tab is hidden.
