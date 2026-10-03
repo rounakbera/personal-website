@@ -134,32 +134,27 @@ export function oak(L, cx, base, h, mat, r, o = {}) {
   for (const b of blobs) blob(L, b[0], b[1], b[2], mat, obj);
   return obj;
 }
-// Winter oak, after Honda's monopodial tree model in Prusinkiewicz & Lindenmayer, "The Algorithmic Beauty of
-// Plants", ch. 2 (fig. 2.6, table 2.1 — the owner picked 2.6c):
-//   A(l,w) → !(w) F(l) [&(a0) B(l·r2, w_b)] /(d) A(l·r1, w_a)      the main axis climbs, putting out a lateral at
-//                                                                 each node and rolling by the divergence angle d
-//   B(l,w) → !(w) F(l) [−(a2) $ C(l·r2, w_b)] C(l·r1, w_a)         each lateral carries on, putting out
-//   C(l,w) → !(w) F(l) [+(a2) $ B(l·r2, w_b)] B(l·r1, w_a)         sub-branches to alternate sides
-// The turtle runs in 3-D, as in the book (H, L, U frame; & pitches, / rolls, ± turns, $ levels L), and the result is
-// projected onto the picture, so the 137.5° divergence gives laterals of every apparent length and angle.
-// 2.6c's constants: r1 0.9, r2 0.8, a0 45°, a2 45°, d 137.5°, with a little per-tree and per-segment jitter
-// (r2 leans high, 0.8–0.88, for big laterals off the main trunk, as the owner asked).
-// Widths: instead of the book's flat wr = 0.707 for every child (which halves the trunk at each node), the
-// cross-section is split by da Vinci's rule, w² = w_a² + w_b², with the continuing axis keeping most of it,
-// so the trunk narrows gradually up through the crown while the laterals stay large.
-// The structure is derived at unit length, then scaled to fill the summer crown it replaces.
-// Two additions for flat pixel art (owner's rules): a limb that would run into another limb is cut there (thin
-// branches may overlap, as on a real tree), and a cut or childless thick branch tapers to a point rather than
-// ending blunt.
+// Winter oak, after the ternary branching model in Prusinkiewicz & Lindenmayer, "The Algorithmic Beauty of
+// Plants", ch. 2 (fig. 2.8a, table 2.3 — the owner's pick):
+//   ω : !(1) F(200) /(45) A
+//   p1: A → !(vr) F(50) [&(a) F(50) A] /(d1) [&(a) F(50) A] /(d2) [&(a) F(50) A]
+//   p2: F(l) → F(l·lr)          every segment keeps elongating as the tree grows
+//   p3: !(w) → !(w·vr)          and thickening, so older wood ends up longer and thicker
+// 2.8a's constants: d1 94.74°, d2 132.63°, a 18.95°, lr 1.109, vr 1.732 (= √3, so a stem's cross-section equals
+// its three branches' together), tropism T = straight down with e 0.22 (applied after every F), n = 6 steps
+// (fewer here, scaled to the tree's size, so the twigs don't merge into a solid mass at pixel scale).
+// The turtle runs in 3-D (H/L/U frame: & pitches, / rolls), and the result is projected onto the picture, so each
+// fork shows one, two or three branches of similar size depending on how they face the viewer.
+// After n steps a segment made at step s has length 50·lr^(n−s) and width vr^(n−s+1); widths are scaled so the
+// first segment matches the trunk, and lengths so the whole tree fills the summer crown it replaces.
+// Kept for pixel art (owner's rules): limbs (≥ 2 px) never run into other limbs (one that would is cut and tapers),
+// and each branch segment tapers into the next so no width steps down suddenly.
 const BARE = new Map();   // seed-stable shapes, cached so resizing doesn't regrow the tree
-const BARE_SPLIT = .4;    // share of the tree's height at which the first laterals leave the trunk
+const BARE_SPLIT = .4;    // share of the tree's height where the trunk ends and the ternary crown begins
 const DEG = Math.PI / 180;
 // 3-D vector helpers for the turtle
 const v3 = {
-  add: (a, b) => [a[0] + b[0], a[1] + b[1], a[2] + b[2]],
-  mul: (a, k) => [a[0] * k, a[1] * k, a[2] * k],
   cross: (a, b) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]],
-  norm: (a) => { const l = Math.hypot(a[0], a[1], a[2]) || 1; return [a[0] / l, a[1] / l, a[2] / l]; },
   // rotate v by angle t about the unit axis k (Rodrigues)
   rot: (v, k, t) => { const c = Math.cos(t), s = Math.sin(t), d = (k[0] * v[0] + k[1] * v[1] + k[2] * v[2]) * (1 - c), x = v3.cross(k, v); return [v[0] * c + x[0] * s + k[0] * d, v[1] * c + x[1] * s + k[1] * d, v[2] * c + x[2] * s + k[2] * d]; }
 };
@@ -169,45 +164,47 @@ function bareShape(cx, base, h, tw, blobs, key, inward) {
   for (const [bx, by, br] of blobs) { x0 = Math.min(x0, bx - br); y0 = Math.min(y0, by - br); x1 = Math.max(x1, bx + br); }
   const rr = rng(Math.floor(hash(Math.round(x1 - x0), Math.round(base - y0), Math.round(h * 7)) * 4294967296));
   const sy = base - h * BARE_SPLIT, jit = (deg) => (rr() - .5) * 2 * deg * DEG;
-  // 2.6c, give or take a little per tree
-  const r1 = .88 + rr() * .04, r2 = .8 + rr() * .08, a0 = (42 + rr() * 8) * DEG, a2 = (40 + rr() * 10) * DEG, d = 137.5 * DEG;
-  const qa = .64 + rr() * .06, qb = .66 + rr() * .08;   // share of the cross-section the continuing axis keeps (main axis, laterals)
-  // the turtle starts at the trunk top heading straight up; the first roll is chosen so the first lateral
-  // (and with it the crown's weight) leans toward `inward` on the foreground oak
-  const Z = [0, 0, 1];
-  let roll0 = rr() * Math.PI * 2;
-
-  // 1. derive the structure generation by generation (so older, thicker wood always comes first)
-  const segs = [];   // { x0, y0, x1, y1, w, wn, parent } in unit-length picture coordinates (y down)
+  // 2.8a, with a little variation per tree
+  // the book grows n = 6 steps (729 tips); at pixel size that's a solid mass, so small and mid trees take fewer
+  // steps and the big foreground oak five
+  const n = clamp(Math.round(Math.log2(Math.max(2, (x1 - x0) / 2)) - .8), 2, 5), d1 = (94.74 + jit(6) / DEG) * DEG, d2 = (132.63 + jit(6) / DEG) * DEG, a = (18.95 + rr() * 6) * DEG;
+  const lr = 1.109, vr = 1.732, e = .22, T = [0, 0, -1];
+  // turtle frame helpers: & pitches about L, / rolls about H, tropism turns H toward T by e·|H × T|
   const turn = (f, axis, t) => ({ H: v3.rot(f.H, axis, t), L: v3.rot(f.L, axis, t), U: v3.rot(f.U, axis, t) });
-  const pitch = (f, t) => turn(f, f.L, t), rollF = (f, t) => turn(f, f.H, t), yaw = (f, t) => turn(f, f.U, t);
-  const level = (f) => { const L = v3.norm(v3.cross(Z, f.H)); return Math.hypot(...L) < .5 ? f : { H: f.H, L, U: v3.cross(f.H, L) }; };
+  const pitch = (f, t) => turn(f, f.L, t), roll = (f, t) => turn(f, f.H, t);
+  const tropism = (f) => { const c = v3.cross(f.H, T), m = Math.hypot(...c); return m < 1e-6 ? f : turn(f, [c[0] / m, c[1] / m, c[2] / m], e * m); };
+  // ω: the trunk heads straight up, then rolls 45°; on the foreground oak the roll is picked so the first
+  // branch leans toward the screen's middle (`inward`)
   const f0 = { H: [0, 0, 1], L: [0, 1, 0], U: [-1, 0, 0] };
-  if (inward) { let best = -Infinity; for (let t = 0; t < 12; t++) { const ro = t / 12 * Math.PI * 2, x = pitch(rollF(f0, ro), a0).H[0] * inward; if (x > best) { best = x; roll0 = ro; } } }
-  const frame = rollF(f0, roll0);
-  let apices = [{ p: [0, 0, 0], f: frame, l: 1, w: tw, kind: 'A', parent: -1 }];
-  for (let gen = 0; apices.length && gen < 10; gen++) {   // n = 10 derivation steps, as in fig. 2.6
-    const next = [];
-    for (const ap of apices) {
-      if (ap.w < .45) continue;
-      const kind = ap.kind, q = kind === 'A' ? qa : qb;
-      // the internode F(l), with a touch of wobble so no two trees are identical
-      const f = pitch(yaw(ap.f, jit(4)), jit(4)), l = ap.l * (.9 + rr() * .2);
-      const e = v3.add(ap.p, v3.mul(f.H, l)), i = segs.length, wa = ap.w * Math.sqrt(q), wb = ap.w * Math.sqrt(1 - q);
-      segs.push({ x0: ap.p[0], y0: -ap.p[2], x1: e[0], y1: -e[2], w: ap.w, wn: wa, parent: ap.parent });
-      if (kind === 'A') {
-        // lateral, pitched down from the axis by a0; then the axis rolls by the divergence angle and carries on
-        next.push({ p: e, f: pitch(f, a0 + jit(5)), l: ap.l * r2, w: wb, kind: 'B', parent: i });
-        next.push({ p: e, f: rollF(f, d + jit(10)), l: ap.l * r1, w: wa, kind: 'A', parent: i });
-      } else {
-        // sub-branch to one side (levelled with $), the lateral carrying on and switching side for the next one
-        const sgn = kind === 'B' ? -1 : 1, other = kind === 'B' ? 'C' : 'B';
-        next.push({ p: e, f: level(yaw(f, sgn * (a2 + jit(5)))), l: ap.l * r2, w: wb, kind: other, parent: i });
-        next.push({ p: e, f, l: ap.l * r1, w: wa, kind: other, parent: i });
-      }
+  let roll0 = 45 * DEG + rr() * Math.PI * 2;
+  if (inward) { let best = -Infinity; for (let t = 0; t < 24; t++) { const ro = t / 24 * Math.PI * 2, x = pitch(roll(f0, ro), a).H[0] * inward; if (x > best) { best = x; roll0 = ro; } } }
+
+  // 1. derive the structure (lengths in units of the book's F(50), widths relative to the trunk)
+  const segs = [];   // { x0, y0, x1, y1, w, wn, parent } in picture coordinates (y down)
+  let genNow = 0;
+  const seg = (p, f, l, w, wn, parent) => {
+    const e1 = [p[0] + f.H[0] * l, p[1] + f.H[1] * l, p[2] + f.H[2] * l];
+    segs.push({ x0: p[0], y0: -p[2], x1: e1[0], y1: -e1[2], w, wn, parent, gen: genNow });
+    return [e1, tropism(f), segs.length - 1];
+  };
+  // A made at step s: its stem F(50) and three branches, each a pitched F(50) ending in the next A
+  function A(p, f, s, parent) {
+    if (s > n) return;
+    const l = Math.pow(lr, n - s) * (.92 + rr() * .16), w = Math.pow(vr, 1 - s), wn = w / vr;
+    genNow = 2 * s - 1;
+    const [q, fq, i] = seg(p, roll(pitch(f, jit(3)), jit(8)), l, w, w, parent);
+    let fr = fq;
+    for (let k = 0; k < 3; k++) {
+      if (k === 1) fr = roll(fr, d1); else if (k === 2) fr = roll(fr, d2);
+      const fb = pitch(fr, a + jit(4));
+      genNow = 2 * s;
+      const [qb, fbe, ib] = seg(q, fb, l * (.92 + rr() * .16), w, wn, i);
+      A(qb, fbe, s + 1, ib);
     }
-    apices = next;
   }
+  A([0, 0, 0], roll(f0, roll0), 1, -1);
+  // widths so far are relative (1 = trunk); make them pixels
+  for (const g of segs) { g.w *= tw; g.wn *= tw; }
   // 2. scale the unit-length structure to fill the summer crown
   let mx0 = 0, mx1 = 0, my0 = 0;
   for (const g of segs) { mx0 = Math.min(mx0, g.x1); mx1 = Math.max(mx1, g.x1); my0 = Math.min(my0, g.y1); }
@@ -216,11 +213,14 @@ function bareShape(cx, base, h, tw, blobs, key, inward) {
   const pts = [], occ = new Map(), dead = new Uint8Array(segs.length), kids = new Uint16Array(segs.length);
   for (const g of segs) if (g.parent >= 0) kids[g.parent]++;
   const stamp = (x, y, w, nx, ny) => pts.push([x - cx, y - base, w, nx, ny]);
-  segs.forEach((g, i) => {
-    if (g.parent >= 0 && dead[g.parent]) { dead[i] = 1; return; }
+  // oldest wood first, so thicker limbs claim their space before younger ones
+  const order = segs.map((_, i) => i).sort((p, q) => segs[p].gen - segs[q].gen);
+  for (const i of order) {
+    const g = segs[i];
+    if (g.parent >= 0 && dead[g.parent]) { dead[i] = 1; continue; }
     const ax = cx + g.x0 * k, ay = sy + g.y0 * k, bx = cx + g.x1 * k, by = sy + g.y1 * k;
     // (a branch seen end-on is too short to draw, but its children still grow)
-    const len = Math.hypot(bx - ax, by - ay); if (len < 1) { stamp(bx, by, g.w, 1, 0); return; }
+    const len = Math.hypot(bx - ax, by - ay); if (len < 1) { stamp(bx, by, g.w, 1, 0); continue; }
     const ux = (bx - ax) / len, uy = (by - ay) / len, nx = -uy, ny = ux, n = Math.ceil(len);
     // taper smoothly toward the width the axis carries on with, so nothing steps down suddenly
     const wEnd = g.wn, mine = [];
@@ -243,7 +243,7 @@ function bareShape(cx, base, h, tw, blobs, key, inward) {
     // claim the branch's whole width, so a later branch can't slip through it diagonally
     const rad = Math.max(1, Math.round(g.w / 2));
     for (const [x, y] of mine.slice(0, run + 1)) for (let dy = -rad; dy <= rad; dy++) for (let dx = -rad; dx <= rad; dx++) if (!occ.has((x + dx) * 4096 + y + dy)) occ.set((x + dx) * 4096 + y + dy, i);
-  });
+  }
   BARE.set(key, pts);
   return pts;
 }
