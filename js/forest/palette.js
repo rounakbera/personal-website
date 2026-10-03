@@ -37,6 +37,8 @@ export const PAL = Object.fromEntries(Object.entries({
   fw:     ['#4a4a54', '#7a7a88', '#b0b0c0', '#dcdce8', '#f2f2f8', '#ffffff'],
   fv:     ['#2a1a4a', '#46307a', '#6a4ab0', '#9070d8', '#b49af0', '#dcd0ff'],
   fb:     ['#0e2a4a', '#18467a', '#2a6ab0', '#4a92d8', '#7ab6f0', '#bcdcff'],
+  fr:     ['#4a0e10', '#7a1a1c', '#b02a2a', '#e04a3c', '#f47a62', '#ffb8a4'],
+  fo:     ['#4a220a', '#7a3a10', '#b8601a', '#ec8a2a', '#f8b05a', '#ffd8a0'],
   // winter
   snow:   ['#4a5468', '#6c7890', '#9aa6bc', '#c4cedc', '#e2e8f0', '#f8fbff'],
   snowG:  ['#3e4658', '#7d8aa2', '#a9b5c8', '#c9d2e0', '#e3e9f1', '#f6f9fd'],

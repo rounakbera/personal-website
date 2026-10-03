@@ -367,7 +367,7 @@ export function flowers(L, r, x0, x1, yAt, n, mat = 'flower') {
       continue;
     }
     // spring wildflowers come in several colours, summer's are all pink
-    const m = SEASON === 'spring' ? ['flower', 'fy', 'fw', 'fv', 'fb', 'fy'][Math.floor(hash(i, 1, 43) * 6)] : mat;
+    const SPRING = ['flower', 'fy', 'fw', 'fv', 'fb', 'fr', 'fo', 'fy'], m = SEASON === 'spring' ? SPRING[Math.floor(hash(i, 1, 43) * SPRING.length)] : mat;
     L.put(x, y + 1, 'grass', 4, part, obj); L.put(x, y, m, 4, part, obj); L.put(x + 1, y, m, 2, part, obj); L.put(x, y - 1, m, 5, part, obj);
   }
 }
