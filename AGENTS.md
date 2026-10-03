@@ -141,8 +141,8 @@ The scripts are native ES modules (`<script type="module">`), so the page has to
   - No flowers or ferns.
   - Muted, cool grading.
 - **Spring:**
-  - Fresh pale greens, with pink or white blossom on the oaks only.
-  - Many multicoloured wildflowers.
+  - Fresh pale greens, with blossom on the oaks only: separate little flowers like the ground ones (yellow eye, four petals), pink or white per tree, scattered over each leaf clump by `blossom()`. Small, distant crowns get single-pixel buds, and the smallest none.
+  - Many multicoloured wildflowers. The specks scattered across the field (`meadow()`, also autumn's fallen leaves) only appear in the nearer part of the field, thinning toward the middle, since far back they'd be too small to see.
   - 1.7× the clouds, with a greyer sky and greyer clouds.
 
 **Motion:**

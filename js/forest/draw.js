@@ -26,8 +26,6 @@ function blob(L, cx, cy, r, mat, obj, sx = 1, sy = 1, o = {}) {
     // lighting per clump, broken up by two scales of leaf-cluster noise so clumps don't read as smooth balls
     let tone = o.tone ?? (o.shade ? (vnoise(x - ORX, y - ORY, 2.6, part) < .45 ? 1 : 2) : toneOf(-(nx * .5 + ny * .8) + dith(x - ORX, y - ORY) * .2 + (vnoise(x - ORX, y - ORY, 2.6, part) - .5) * .7 + (vnoise(x - ORX, y - ORY, 1.3, part + 7) - .5) * .45));
     if (o.tone === undefined && !o.shade && ny < .1 && tone < 5 && hash(x - ORX, y - ORY, part) < .05) tone++;
-    // spring blossom: small clusters of petals on the sunnier side of leafy clumps, pink or white per tree
-    if (SEASON === 'spring' && !o.shade && mat.startsWith('oak') && tone >= 3 && vnoise(x - ORX, y - ORY, 2.2, part + 3) > .7 - (ny < 0 ? .06 : 0) && hash(x - ORX, y - ORY, part + 4) < .8) { L.put(x, y, hash(obj, 5, 77) < .65 ? 'bloom' : 'bloomW', tone >= 4 ? 4 : 3, part, obj); continue; }
     L.put(x, y, mat, tone, part, obj);
   }
 }
@@ -132,6 +130,7 @@ export function oak(L, cx, base, h, mat, r, o = {}) {
   blobs.sort((a, b) => b[1] - a[1]);
   if (SEASON === 'winter') { bare(L, cx, base, h, tw, blobs, obj, o.inward || 0); return obj; }
   for (const b of blobs) blob(L, b[0], b[1], b[2], mat, obj);
+  if (SEASON === 'spring') blossom(L, blobs, obj);
   return obj;
 }
 // Winter oak, after the ternary branching model in Prusinkiewicz & Lindenmayer, "The Algorithmic Beauty of
@@ -281,6 +280,27 @@ function bare(L, cx, base, h, tw, blobs, obj, inward) {
     }
   }
 }
+// spring blossom: separate little flowers scattered over the sunlit part of each leaf clump, drawn like the ones
+// on the ground (a yellow eye with four petals), pink or white per tree; small, distant crowns get single-pixel
+// buds instead, and the smallest none. Each flower takes the part id of the leaves under it, so the clump's
+// shading lines don't cut through it.
+function blossom(L, blobs, obj) {
+  const petal = hash(obj, 5, 77) < .65 ? 'bloom' : 'bloomW';
+  blobs.forEach(([bx, by, br], k) => {
+    if (br < 3) return;
+    const big = br >= 6, n = Math.round(br * br * (big ? .022 : .05));
+    for (let i = 0; i < n; i++) {
+      const a = hash(k, i, obj + 11) * Math.PI * 2, d = Math.sqrt(hash(i, k, obj + 12)) * (br - (big ? 2.5 : 1.5));
+      const x = Math.round(bx + Math.cos(a) * d * 1.1), y = Math.round(by + Math.sin(a) * d * .9 - br * .15);
+      if (x < 0 || y < 1 || x >= L.w - 1 || y >= L.h - 1) continue;
+      const at = (xx, yy) => yy * L.w + xx, j = at(x, y);
+      if (L.obj[j] !== obj || L.mat[j] === 'bark' || L.tone[j] === 0) continue;   // only on leaves, never on the outline
+      const put = (xx, yy, m, t) => { const q = at(xx, yy); if (L.obj[q] === obj && L.tone[q] !== 0 && L.mat[q] !== 'bark') L.put(xx, yy, m, t, L.part[q], obj); };
+      if (!big) { put(x, y, petal, 4); continue; }
+      put(x, y - 1, petal, 5); put(x - 1, y, petal, 4); put(x + 1, y, petal, 3); put(x, y + 1, petal, 3); put(x, y, 'fy', 4);
+    }
+  });
+}
 // flat dark patch on the ground so small objects sit on it instead of floating
 function contact(L, cx, y, rx) {
   const obj = ++OBJ, part = ++PART; L.thin.add(obj);
@@ -360,11 +380,13 @@ export function ridge(L, y0, amp, seed) {
 export function treeline(L, base, r, hMin, hMax, gapMin, gapMax, mat = 'pine') {
   for (let x = -6; x < L.w + 6; x += gapMin + Math.floor(r() * (gapMax - gapMin))) pine(L, x, base + Math.floor(r() * 3), Math.round(hMin + r() * (hMax - hMin)), mat);
 }
-// meadow specks scattered across the field: tiny wildflowers or fallen leaves
+// meadow specks scattered across the field: tiny wildflowers or fallen leaves, only in the nearer part of the field
 export function meadow(L, r, n, cols, x1, y0, depth) {
   const obj = ++OBJ, part = ++PART;
   for (let i = 0; i < n; i++) {
-    const x = Math.floor(r() * x1), y = y0 + Math.floor(Math.pow(r(), .8) * depth), m = cols[Math.floor(r() * cols.length)];
-    L.put(x, y, m, 4, part, obj); if (y > 150 && r() < .5) L.put(x + 1, y, m, 3, part, obj);
+    const x = Math.floor(r() * x1), y = y0 + Math.floor(Math.pow(r(), .8) * depth), m = cols[Math.floor(r() * cols.length)], keep = r(), wide = r();
+    // far back they'd be too small to see: none in the back third of the field, thinning toward the middle
+    const f = (y - y0) / depth; if (f < .35 || keep > (f - .35) / .45) continue;
+    L.put(x, y, m, 4, part, obj); if (y > 150 && wide < .5) L.put(x + 1, y, m, 3, part, obj);
   }
 }
