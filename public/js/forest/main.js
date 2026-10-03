@@ -28,8 +28,13 @@ makeStars();
 let prep = null, minute = -1;
 
 // size the scene to the screen; only the front is rebuilt when the size changes, so this can run on every resize frame
+// Safari draws its toolbars over the page; the canvas reaches down under them (100lvh) so they show forest rather
+// than a blank strip. The scene is fitted to the visible area (100svh, toolbars shown) and the extra rows below
+// are just more foreground ground, so the flowers and bushes stay above the bar
+const probe = (hgt) => { const d = document.createElement('div'); d.style.cssText = `position:fixed;top:0;left:0;width:0;height:${hgt};visibility:hidden;pointer-events:none`; document.body.append(d); return d; };
+const svh = probe('100svh'), lvh = probe('100lvh');
 function fit() {
-  const vw = innerWidth, vh = innerHeight;
+  const vw = innerWidth, vh = Math.min(innerHeight, svh.offsetHeight || innerHeight), full = Math.max(vh, innerHeight, lvh.offsetHeight || 0);
   // continuous pixel size: the scene is 180 px tall on wide screens and 200 px wide on tall ones, and the
   // two meet at the same value, so resizing zooms smoothly with no jumps (min() picks whichever fits)
   let S = Math.max(1, Math.min(vh / 180, vw / 200));
@@ -37,9 +42,9 @@ function fit() {
   // reach up to the middle of the screen; the scene gets narrower (at least 110 px) to make room
   if (stacked.matches) S = Math.max(S, Math.min(vh / 250, vw / 110));
   S *= zoom;   // > 1 only during the load-in
-  const w = Math.round(vw / S), h = Math.max(180, Math.round(vh / S));
+  const w = Math.round(vw / S), hv = Math.max(180, Math.round(vh / S)), h = hv + Math.max(0, Math.round((full - vh) / S));
   if (scene.front && w === W && h === H) return false;
-  const yo = h - 180;
+  const yo = hv - 180;
   // SKYB: the card's top edge (layout position, ignoring the drop-in animation), so the sun and moon arc above it
   setView({ W: w, H: h, YO: yo, PX: S, STACK: stacked.matches, SKYB: Math.max(14, Math.min(yo + 112, Math.floor(document.querySelector('.card-wrap').offsetTop / S) - 6)) });
   canvas.width = w; canvas.height = h;

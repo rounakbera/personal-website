@@ -1,6 +1,6 @@
 // Drawing primitives: trees, bushes, rocks, ground cover, ground and hills, all written into Layer buffers.
 import { rng, hash, lerp, clamp, dith, vnoise } from '../util.js';
-import { SEASON } from './state.js';
+import { SEASON, YO } from './state.js';
 import { toneOf } from './layer.js';
 
 // texture origin of the object being drawn: textures are hashed from coordinates relative to it,
@@ -363,8 +363,9 @@ export function rock(L, cx, base, r, moss) {
 }
 export function flowers(L, r, x0, x1, yAt, n, mat = 'flower') {
   for (let i = 0; i < n; i++) {
-    // anywhere on the ground strip, from just below the grass line down to the bottom edge
-    const obj = ++OBJ; L.thin.add(obj); const part = ++PART, x = Math.round(x0 + r() * (x1 - x0)), y = yAt(x) + 3 + Math.floor(r() * Math.max(7, L.h - yAt(x) - 5));
+    // anywhere on the ground strip, from just below the grass line down to the bottom of the visible screen
+    // (YO + 180; the canvas may run on under a browser toolbar)
+    const obj = ++OBJ; L.thin.add(obj); const part = ++PART, x = Math.round(x0 + r() * (x1 - x0)), y = yAt(x) + 3 + Math.floor(r() * Math.max(7, YO + 180 - yAt(x) - 5));
     if (SEASON === 'autumn') {
       // fallen leaves lying flat in the grass
       const m = ['autO', 'autY', 'autR'][Math.floor(hash(i, 1, 41) * 3)];

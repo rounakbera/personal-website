@@ -18,7 +18,7 @@ const skyTint = (c, v) => SEASON === 'winter' ? mix(grey(c, .5), [205, 212, 225]
 export function prepare(scene, t) {
   const p = palette(t), d = new Uint8ClampedArray(W * H * 4), Q = 14;
   for (let y = 0; y < H; y++) {
-    const v = clamp(y / (H * .7), 0, 1), col = skyTint(v < .55 ? mix(p.top, p.mid, v / .55) : mix(p.mid, p.hor, (v - .55) / .45), v);
+    const v = clamp(y / ((YO + 180) * .7), 0, 1), col = skyTint(v < .55 ? mix(p.top, p.mid, v / .55) : mix(p.mid, p.hor, (v - .55) / .45), v);
     for (let x = 0; x < W; x++) {
       const th = (BAYER[(y & 3) * 4 + (x & 3)] / 16 - .5) * Q, i = (y * W + x) * 4;
       for (let k = 0; k < 3; k++) d[i + k] = clamp(Math.round((col[k] + th) / Q) * Q, 0, 255);
@@ -35,7 +35,7 @@ export function prepare(scene, t) {
   // layout, where the card would hide most of that path, blend (by tt) to a path over the card: in from beyond the
   // left edge just above the card top (SKYB), over it, and out past the right edge, so nothing pops in or out.
   // On short stacked screens the bodies shrink so they still fit above the card
-  const tt = STACK ? 1 : clamp((H / W - .75) / .75, 0, 1), y0 = YO + 112;
+  const tt = STACK ? 1 : clamp(((YO + 180) / W - .75) / .75, 0, 1), y0 = YO + 112;
   const R = Math.max(5, Math.min(Math.round(35 / PX), tt > 0 ? Math.floor((SKYB - 4) / 2) : 99)), f = R / 7;
   const ye = lerp(y0, SKYB - R - 2, tt), ap = Math.max(R + 2, lerp(y0 * .22, Math.min(y0 * .22, ye * .4), tt));
   const xa = lerp(W * .12, -3 * R, tt), xb = lerp(W * .88, W + 3 * R, tt);

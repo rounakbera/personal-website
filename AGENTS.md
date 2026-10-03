@@ -27,7 +27,7 @@ public/                 everything served to the browser (the Worker's static as
   _headers              response headers for Cloudflare
   css/site.css          all styles
   js/util.js            shared helpers: seeded rng, coordinate hash, lerp/mix/clamp, dithering, value noise
-  js/card.js            the card: link icons, copy-email button, parchment grain, portrait hover effect
+  js/card.js            the card: copy-email button, parchment grain, portrait pixelation effect
   js/forest/
     main.js             entry point: picks seed and season, fits the scene to the screen, redraw loop
     state.js            shared view state (W, H, YO, PX, SKYB, WW, WH) and the current SEASON, with setters
@@ -67,7 +67,7 @@ The scripts are native ES modules (`<script type="module">`), so the page has to
      - `h1`, holding a screen-reader name plus four SVG versions of the name (Jersey 10/15/20/25);
      - `ul.links`.
    - `#timepanel` is the hidden easter-egg dialog.
-3. **`js/card.js`.** Icons (string grids → SVG), copy-email button, parchment grain, portrait hover effect.
+3. **`js/card.js`.** Copy-email button, parchment grain, portrait pixelation effect. (The link icons are static SVG in `index.html`, so they show without JS.)
 4. **`js/forest/`.** Everything about the background and the time panel (see Files).
 
 ## Card details
@@ -76,7 +76,7 @@ The scripts are native ES modules (`<script type="module">`), so the page has to
 - **Hover effect:** hovering the portrait or name runs a ~0.45 s de-pixelation. The portrait goes from 48 px art to the photo with linear block size, so the pacing is even. At the same time the name steps through Jersey 10 → 15 → 20 → 25.
 - **Click/tap toggles it** (mouse and touch) and the state sticks after the pointer leaves, until the next click. (With a mouse, hover already shows the photo, so a click while hovering pixelates.)
 - **Load:** the markup shows the photo (an `img` under the canvas) and the Jersey 25 name, so that's the no-JS look. Once both images decode, the canvas takes over at the photo and ~0.65 s later pixelates into the art while the name steps down to Jersey 10.
-- **Link icons:**
+- **Link icons** (static pixel SVGs in `index.html`):
   - The GitHub and LinkedIn icons were pixelated from the official brand images the owner supplied. Brand guidelines may not allow altering them.
   - The résumé icon is a scroll with parallel diagonal sides.
   - Email is a winged envelope.
@@ -95,6 +95,7 @@ The scripts are native ES modules (`<script type="module">`), so the page has to
 
 - One scene pixel is `PX` screen pixels, where `S = max(1, min(vh/180, vw/200))`. S is continuous, so resizing zooms smoothly.
 - The land is a 180 px-tall band. `YO = H − 180` pushes it down on tall screens, showing more sky.
+- **Under browser toolbars:** the canvas is `100lvh` tall, so Safari's toolbars show forest rather than a blank strip. `fit()` sizes the scene to the visible area (`100svh`, toolbars shown) and adds the extra rows below `YO + 180` as plain foreground ground. Flowers stop at `YO + 180`, so they and the bushes stay above the bar. Sky gradient and sun path use `YO + 180`, not `H`. On desktop there are no extra rows.
 - In the stacked layout (≤ 660 px) the scene zooms in further, with `S ≥ min(vh/250, vw/110)`, so the land fills about the lower half and the framing trees reach the middle of the screen (owner's request). The view gets narrower to allow this.
 
 **Two parts, built differently:**

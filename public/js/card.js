@@ -1,25 +1,10 @@
-// The parchment card: pixel link icons, the copy-email button, paper grain, and the portrait's hover effect.
+// The parchment card: the copy-email button, paper grain, and the portrait's pixelation effect.
 import { rng, lerp } from './util.js';
 
 const mk = (w, h) => { const c = document.createElement('canvas'); c.width = w; c.height = h; return c; };
 
-/* ---------- link icons (pixel grids) ---------- */
-const ICONS = {
-  // GitHub: the mark from GitHub's brand assets, reduced to a 16 px grid
-  github: ["......####......","....########....","..##.######.##..","..##..####..##..",".###...##...###.",".###........###.","####........####","####........####","####........####","####........####",".#.##......####.",".##.##....#####.","..##......####..","..####....####..","....##....##....","................"],
-  // LinkedIn: the "in" mark from LinkedIn's brand assets, reduced to a 12 px grid
-  linkedin: ["##.........","##.........","...........","##.##.###..","##.#######.","##.###..###","##.##....##","##.##....##","##.##....##","##.##....##","##.##....##","##.##....##"],
-  // résumé: a sheet leaning between its two rolls, both sides parallel diagonals
-  scroll: ["..##########..",".#..#.......#.",".#.##.......#.","..##########..","...#........#.","...#.######.#.","..#........#..","..#.######.#..",".#........#...",".#.######.#...",".##########...","#........###..",".##########..."],
-  // email: an envelope with feathered wings
-  mail: ["#..................#","##................##","#.#.############.#.#","######........######",".#.##.#......#.##.#.","..###..#....#..###..","....#...#..#...#....","....#....##....#....","....#..........#....","....############...."]
-};
-const iconSVG = (rows) => {
-  const h = rows.length, w = Math.max(...rows.map(r => r.length)); let out = '';
-  rows.forEach((row, y) => { let x = 0; while (x < row.length) { if (row[x] === '#') { const s = x; while (x < row.length && row[x] === '#') x++; out += `<rect x="${s}" y="${y}" width="${x - s}" height="1"/>`; } else x++; } });
-  return `<svg viewBox="0 0 ${w} ${h}" width="${w * 2}" height="${h * 2}" shape-rendering="crispEdges" fill="currentColor" aria-hidden="true">${out}</svg>`;
-};
-document.querySelectorAll('.links a[data-icon]').forEach(a => a.insertAdjacentHTML('afterbegin', iconSVG(ICONS[a.dataset.icon])));
+/* link icons are baked into index.html as pixel SVGs (GitHub and LinkedIn reduced from their brand marks,
+   a scroll for the résumé, a winged envelope for email), so they show even without JS */
 
 /* ---------- email: never written out in the page; built from the name and copied on click ---------- */
 {
