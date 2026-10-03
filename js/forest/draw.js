@@ -134,155 +134,95 @@ export function oak(L, cx, base, h, mat, r, o = {}) {
   for (const b of blobs) blob(L, b[0], b[1], b[2], mat, obj);
   return obj;
 }
-// winter oak: the trunk splits into a few unequal scaffold limbs, and every limb keeps forking into a
-// leading child that carries on roughly straight and a thinner side child that splays off, alternating sides,
-// with short side shoots along the way. Wood thins at every fork, wanders a little rather than bending
-// steadily upward, and stops at the summer crown's outline, so the bare tree keeps the same silhouette.
+// Winter oak, after the sympodial tree model in Prusinkiewicz & Lindenmayer, "The Algorithmic Beauty of
+// Plants", ch. 2 (Aono & Kunii's model, fig. 2.7):
+//   A → !(w) F [&(a1) B(l·r1, w·√q)] /(180) [&(a2) B(l·r2, w·√(1−q))]    the trunk ends in a fork of two limbs
+//   B → !(w) F [+(a1) B(l·r1, w·√q)] [−(a2) B(l·r2, w·√(1−q))]          and every apex forks again: a leader turned
+//                                                                       by a small angle a1, a side branch the
+//                                                                       other way by a larger a2
+// carried over to 2-D pixel art with the chapter's principles:
+//  • constant contraction ratios: each child is r1 (leader) or r2 (side branch) times its parent's length;
+//  • da Vinci's rule for widths: w² = w1² + w2², the leader taking the larger share q of the cross-section;
+//  • tropism: before each segment is drawn its heading H turns toward T (straight up) by e·|H × T|;
+//  • the side the leader turns alternates at every fork (the 2-D form of the 180° roll and $);
+//  • every parameter is drawn per tree from the ranges of the chapter's table 2.2, plus a little jitter per segment.
+// The structure is derived at unit length, then scaled so it fills the summer crown it replaces.
+// Two additions the paper doesn't need in 3-D: a branch that would run into other wood is cut short there
+// (and tapers instead of ending blunt), and the first fork can be told which side to lean (`inward`).
 const BARE = new Map();   // seed-stable shapes, cached so resizing doesn't regrow the tree
-const BARE_SPLIT = .4;    // share of the tree's height at which the trunk splits
+const BARE_SPLIT = .4;    // share of the tree's height at which the trunk forks
+const DEG = Math.PI / 180;
 function bareShape(cx, base, h, tw, blobs, key, inward) {
   if (BARE.has(key)) return BARE.get(key);
-  // m scales the crown: each branch line carries its own reach, so the tips land at uneven distances
-  // and the outline is spiky rather than a clean circle
-  const inside = (x, y, m = 1) => blobs.some(([bx, by, br]) => (x - bx) ** 2 + (y - by) ** 2 <= (br * 1.04 * m) ** 2);
-  // distance a branch can travel this way before leaving the crown
-  // (main limbs start below the crown, so for them the count runs across the gap up into it)
-  const room = (x, y, a, gap = false, m = 1, C = []) => {
-    let t = 0;
-    if (gap) { while (t < R && !inside(x + Math.cos(a) * t, y + Math.sin(a) * t, m)) t++; if (t >= R) return 0; }
-    while (t < 300 && inside(x + Math.cos(a) * t, y + Math.sin(a) * t, m) && ok(x + Math.cos(a) * t, y + Math.sin(a) * t, C)) t++;
-    return t;
-  };
-  // Branches never cross: every split draws a line along the parent at the fork, and each child's whole
-  // subtree keeps to its own side of it (C is the list of such half-planes [px, py, nx, ny] a branch inherits).
-  const ok = (x, y, C, margin = 0) => C.every(([px, py, nx, ny]) => (x - px) * nx + (y - py) * ny >= margin - .5);
-  const worst = (x, y, C) => C.reduce((b, c) => { const d = (x - c[0]) * c[2] + (y - c[1]) * c[3]; return !b || d < b.d ? { d, c } : b; }, null).c;
-  let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
-  for (const [bx, by, br] of blobs) { x0 = Math.min(x0, bx - br); y0 = Math.min(y0, by - br); x1 = Math.max(x1, bx + br); y1 = Math.max(y1, by + br); }
-  const R = Math.max(x1 - x0, y1 - y0) / 2;
-  const rr = rng(Math.floor(hash(Math.round(x1 - x0), Math.round(y1 - y0), Math.round(h * 7)) * 4294967296));
-  const pts = [];   // [dx, dy, width, nx, ny]: one stamp per pixel step, relative to the trunk base
-  // thick wood points up or out, never down; only the thinnest twigs may dip a little below horizontal
-  // (a branch that would dip too far is turned back up a little, rather than pinned flat)
-  const limit = (a, w) => {
-    const dip = w < 1.3 ? .3 : .06; a = Math.atan2(Math.sin(a), Math.cos(a));
-    if (a > dip && a <= Math.PI / 2) return dip - .1 - rr() * .3;
-    if (a > Math.PI / 2 && a < Math.PI - dip) return Math.PI - dip + .1 + rr() * .3;
-    return a;
-  };
-  // a branch about to cross its line is steered away from it, and stops if it still can't keep clear
-  function walk(x, y, a, len, w0, w1, curl, C = []) {
-    const n = Math.max(1, Math.round(len));
-    for (let i = 0; i < n; i++) {
-      const w = lerp(w0, w1, i / n);
-      pts.push([x - cx, y - base, w, -Math.sin(a), Math.cos(a)]);
-      a = limit(a + curl + (rr() - .5) * .08, w);
-      const margin = 0;
-      if (C.length && !ok(x + Math.cos(a), y + Math.sin(a), C, margin)) {
-        const c = worst(x + Math.cos(a), y + Math.sin(a), C), away = Math.atan2(c[3], c[2]);
-        a = limit(a + Math.sign(Math.sin(away - a)) * .25, w);
-        if (!ok(x + Math.cos(a), y + Math.sin(a), C, margin)) return [x, y, a, true];
-      }
-      x += Math.cos(a); y += Math.sin(a);
+  let x0 = Infinity, y0 = Infinity, x1 = -Infinity;
+  for (const [bx, by, br] of blobs) { x0 = Math.min(x0, bx - br); y0 = Math.min(y0, by - br); x1 = Math.max(x1, bx + br); }
+  const rr = rng(Math.floor(hash(Math.round(x1 - x0), Math.round(base - y0), Math.round(h * 7)) * 4294967296));
+  const up = -Math.PI / 2, sy = base - h * BARE_SPLIT;
+  // per-tree parameters (table 2.2 ranges: r1 ≈ 0.9, r2 0.7–0.8, a1 5–35°, a2 35–65°)
+  const r1 = .86 + rr() * .07, r2 = .7 + rr() * .1, a1 = (8 + rr() * 14) * DEG, a2 = (45 + rr() * 20) * DEG;
+  const q = .64 + rr() * .1, e = .1 + rr() * .08;
+  // first fork (production A): two limbs of equal length, 60–105° apart, both close to the trunk's width
+  const s0 = inward ? -inward : (rr() < .5 ? -1 : 1), lean = (8 + rr() * 8) * DEG, open = (60 + rr() * 45) * DEG;
+  const w0 = tw * .92, q0 = .55 + rr() * .1;
+
+  // 1. derive the structure generation by generation (so older, thicker wood always comes first)
+  const segs = [];   // { x0, y0, x1, y1, w, parent, cut }
+  let apices = [
+    { x: 0, y: 0, a: up + s0 * lean, l: 1, w: w0 * Math.sqrt(q0), side: -s0, parent: -1 },
+    { x: 0, y: 0, a: up + s0 * lean - s0 * open, l: 1, w: w0 * Math.sqrt(1 - q0), side: s0, parent: -1 }
+  ];
+  for (let gen = 0; apices.length && gen < 16; gen++) {
+    const next = [];
+    for (const p of apices) {
+      if (p.w < .7) continue;
+      // tropism: turn toward straight up by e·|H × T|, plus a little jitter
+      let a = p.a + e * Math.sin(up - p.a) + (rr() - .5) * 6 * DEG;
+      if (p.w > 2) a = Math.max(-Math.PI + .1, Math.min(-.1, Math.atan2(Math.sin(a), Math.cos(a))));   // thick wood never points down
+      const l = p.l * (.9 + rr() * .2), i = segs.length;
+      segs.push({ x0: p.x, y0: p.y, x1: p.x + Math.cos(a) * l, y1: p.y + Math.sin(a) * l, w: p.w, parent: p.parent, cut: false });
+      const x = segs[i].x1, y = segs[i].y1, sd = p.side;
+      // production B: leader turned by a1 one way, side branch by a2 the other; the leader's turn alternates
+      next.push({ x, y, a: a + sd * a1, l: p.l * r1, w: p.w * Math.sqrt(q), side: -sd, parent: i });
+      next.push({ x, y, a: a - sd * a2, l: p.l * r2, w: p.w * Math.sqrt(1 - q), side: sd, parent: i });
     }
-    return [x, y, a, false];
+    apices = next;
   }
-  const twig = (x, y, a, len, m = 1, C = []) => {
-    for (let i = 0; i < len; i++) { x += Math.cos(a); y += Math.sin(a); a = limit(a + (rr() - .5) * .5, .5); if (!inside(x, y, m * 1.1) || !ok(x, y, C)) return; pts.push([x - cx, y - base, .5, 0, 0]); }
-  };
-  // m: this branch line's reach (see inside); w0: width to start from (a leading child picks up at its parent's width)
-  function grow(x, y, a, w, len, depth, side, fixed = 0, m = 1, w0 = w, C = []) {
-    // wood that hasn't reached the crown yet (low limbs) may cross the gap up into it
-    const space = room(x, y, a, !inside(x, y, m) && y > (y0 + y1) / 2, m, C);
-    if (space < 3 || w < .9 || depth > 10) {
-      // thick wood never just ends: it splits into thinner branches that turn toward wherever there is room
-      if (w > 1.3 && depth < 16 && splay(x, y, a, w, depth, side, m, C)) return;
-      // the end of a run: whatever is left tapers off to a point, then a twig or two fans out,
-      // sideways and slightly down included
-      if (w > 1.2) [x, y, a] = walk(x, y, a, w * 2.5, w, .6, (rr() - .5) * .05, C);
-      for (let k = 0, nk = 1 + Math.floor(rr() * 2); k < nk; k++) twig(x, y, a + (rr() - .5) * 1.8, 2 + rr() * Math.min(3, space + 1), m, C);
-      return;
-    }
-    // each run is a share of the room ahead, so wood thins and forks well before it reaches the edge;
-    // the two main limbs get one shared, fixed length so they come out about equal
-    // thick wood also stops well short of the edge, leaving its children room to carry on
-    const run = fixed || clamp(Math.min(len, space - w * 2.5), 2, space * (.38 + rr() * .16)), curl = (rr() - .5) * .03;
-    // the main limbs and their first children hold their thickness longer (owner wanted them thicker)
-    const wEnd = Math.max(.5, w * (depth < 2 ? .95 : .88));
-    // short side shoots along longer runs
-    const start = pts.length;
-    let blocked;
-    [x, y, a, blocked] = walk(x, y, a, run, w0, wEnd, curl, C);
-    if (run > 4 && w > .8) for (let k = 0, ns = Math.floor(run / 5); k < ns; k++) {
-      const p = pts[start + Math.floor((.3 + .6 * rr()) * (pts.length - start - 1))];
-      const s2 = rr() < .5 ? -1 : 1;
-      twig(p[0] + cx, p[1] + base, a + s2 * (.7 + rr() * .6), 2 + rr() * 4, m, C);
-    }
-    // long runs of thick wood also put out real side branches, so no limb is a bare arm
-    // (just one, on the main limbs and their first children; more than that turns the crown into a thicket)
-    if (run > 14 && w > 3 && depth <= 1) {
-      const p = pts[start + Math.floor((.35 + .5 * rr()) * (pts.length - start - 1))], s2 = rr() < .5 ? -1 : 1;
-      const px = p[0] + cx, py = p[1] + base, ba = limit(a + s2 * (.6 + rr() * .5), w * .45);
-      // this branch keeps to its own side of the limb it leaves
-      grow(px, py, ba, w * .45, len * .45, depth + 3, s2, 0, m, w * .45, [...C, [px, py, -Math.sin(a) * s2, Math.cos(a) * s2]]);
-    }
-    // a branch that was stopped short at its line just tapers off instead of forking
-    if (blocked) { if (!(wEnd > 1.3 && splay(x, y, a, wEnd, depth, side, m, C))) walk(x, y, a, Math.min(wEnd * 2, 4), wEnd, .6, 0, C); return; }
-    fork(x, y, a, wEnd, len, depth, side, m, C);
-  }
-  // A forced split where a thick branch has run out of room: look either side of it for the direction with
-  // the most room, and send a thinner child each way that has any (returns false if neither side has room).
-  function splay(x, y, a, w, depth, side, m, C) {
-    const best = (sgn) => { let ba = 0, br = 0; for (let k = 1; k <= 6; k++) { const ca = limit(a + sgn * k * .25, w * .6), r = room(x, y, ca, false, m, C); if (r > br) { br = r; ba = ca; } } return [ba, br]; };
-    const [aa, ra] = best(side), [ab, rb] = best(-side);
-    // nowhere with real room: still fork, into two short thin shoots, rather than end on a thick stump
-    if (ra < 3 && rb < 3) {
-      for (const sg of [1, -1]) walk(x, y, limit(a + sg * (.4 + rr() * .3), .9), 3 + rr() * 3, Math.min(w * .5, 1.6), .6, (rr() - .5) * .1, C);
-      return true;
-    }
-    const nx = -Math.sin(a), ny = Math.cos(a);
-    if (ra >= 3) grow(x, y, aa, w * (ra >= rb ? .7 : .55), Math.max(3, ra * .6), depth + 1, -side, 0, m, w * .8, [...C, [x, y, nx * side, ny * side]]);
-    if (rb >= 3) grow(x, y, ab, w * (rb > ra ? .7 : .55), Math.max(3, rb * .6), depth + 1, side, 0, m, w * .8, [...C, [x, y, -nx * side, -ny * side]]);
-    return true;
-  }
-  // every split is in two: a leading child nearly parallel to its parent (a slight bend one way) and a
-  // thinner side child that swings off the other way, anywhere up to ~80° away; sides alternate down a branch
-  // Both children start a little way back inside the parent, so the side child grows out of the parent's
-  // flank (covering the joint) instead of being butted onto its tip, and the leader carries on at full width.
-  // Each child's reach wanders from its parent's, which gives the crown its uneven, starry edge.
-  function fork(x, y, a, w, len, depth, side, m, C) {
-    const back = Math.min(w * .8, 3), fx = x - Math.cos(a) * back, fy = y - Math.sin(a) * back;
-    // the dividing line runs along the parent; the leader bends to the `side` side of it, the side child the other
-    const nx = -Math.sin(a) * side, ny = Math.cos(a) * side;
-    // the leader takes a slight bend; the side child swings off the other way by up to ~80°
-    const lead = a + side * (.05 + rr() * .15), off = a - side * (.35 + rr() * 1.05);
-    // straight after the trunk split both children stay thick; later splits thin faster
-    const wl = w * (depth === 0 ? .92 + rr() * .04 : .84 + rr() * .06), ws = w * (depth === 0 ? .78 + rr() * .1 : .62 + rr() * .14);
-    const reach = () => clamp(m * (.8 + rr() * .45), .65, 1.45);
-    grow(x, y, limit(lead, wl), wl, len * (.72 + rr() * .16), depth + 1, -side, 0, reach(), w, [...C, [fx, fy, nx, ny]]);
-    grow(fx, fy, limit(off, ws), ws, len * (.5 + rr() * .25), depth + 1, side, 0, reach(), ws, [...C, [fx, fy, -nx, -ny]]);
-  }
-  // the trunk splits low, at ~40% of the tree's height, in two: a leader carrying on up and a thinner limb
-  // swinging out. Both start a little way inside the trunk so they grow out of it rather than sitting on top.
-  // the outward limb goes toward `inward` when given (the foreground oak half off-screen reaches into view)
-  const flip = rr() < .5 ? -1 : 1, sy = base - h * BARE_SPLIT, s0 = inward ? -inward : flip, up = -Math.PI / 2;
-  // the two main limbs open 60–105° apart: the leader leans a little one way, the outward limb takes the rest
-  const lean0 = .1 + rr() * .15, lx = cx + s0 * tw * .12, ox = cx - s0 * tw * .12, by = sy + tw * .4;
+  // 2. scale the unit-length structure to fill the summer crown
+  let mx0 = 0, mx1 = 0, my0 = 0;
+  for (const g of segs) { mx0 = Math.min(mx0, g.x1); mx1 = Math.max(mx1, g.x1); my0 = Math.min(my0, g.y1); }
+  const k = Math.min((x1 - x0) / Math.max(1e-6, mx1 - mx0), (sy - y0) / Math.max(1e-6, -my0));
+  // 3. rasterise oldest first; a branch that would run into other wood is cut there, and so are its children
+  const pts = [], occ = new Map(), dead = new Uint8Array(segs.length), kids = new Uint16Array(segs.length);
+  for (const g of segs) if (g.parent >= 0) kids[g.parent]++;
+  const stamp = (x, y, w, nx, ny) => pts.push([x - cx, y - base, w, nx, ny]);
   // a rounded crotch on top of the trunk, so the wide fork doesn't leave the trunk's flat top showing
-  for (let k = 0; k <= 3; k++) pts.push([0, sy - base + tw * (.6 - k * .25), tw * (1 - k * .06), 1, 0]);
-  let la = up + s0 * lean0, oa = up - s0 * (1.05 + rr() * .78 - lean0);
-  // the outward limb starts below the crown: if it would miss the crown entirely (and so die as a stub),
-  // swing the pair up step by step until it heads into the crown
-  const gapTo = (x, y, a) => { let t = 0; while (t < R && !inside(x + Math.cos(a) * t, y + Math.sin(a) * t)) t++; return t; };
-  // (the pair turns together, so the angle between them is kept)
-  for (let k = 0; k < 10 && room(ox, by, oa, true) - gapTo(ox, by, oa) < R * .5; k++) { la += s0 * .08; oa += s0 * .08; }
-  // both main limbs run the same distance before their first fork: a share of whichever has less room
-  // (long enough that both are well inside the crown when they first fork, so neither ends as a bare arm)
-  const run0 = Math.max(4, Math.min(room(lx, by, la, true), room(ox, by, oa, true)) * (.5 + rr() * .1), gapTo(lx, by, la) + 6, gapTo(ox, by, oa) + 6);
-  // the line between the two limbs' halves of the crown runs up the middle of the fork
-  const mid = (la + oa) / 2, mnx = -Math.sin(mid) * s0, mny = Math.cos(mid) * s0, wo = tw * (.72 + rr() * .1);
-  grow(lx, by, la, tw * .84, R * .6, 0, -s0, run0, 1, tw * .84, [[cx, by, mnx, mny]]);
-  grow(ox, by, oa, wo, R * .6, 0, s0, run0, 1, wo, [[cx, by, -mnx, -mny]]);
+  for (let j = 0; j <= 3; j++) pts.push([0, sy - base + tw * (.6 - j * .25), tw * (1 - j * .06), 1, 0]);
+  segs.forEach((g, i) => {
+    if (g.parent >= 0 && dead[g.parent]) { dead[i] = 1; return; }
+    const ax = cx + g.x0 * k, ay = sy + g.y0 * k, bx = cx + g.x1 * k, by = sy + g.y1 * k;
+    const len = Math.hypot(bx - ax, by - ay); if (len < 1) { dead[i] = 1; return; }
+    const ux = (bx - ax) / len, uy = (by - ay) / len, nx = -uy, ny = ux, n = Math.ceil(len);
+    // taper toward the thicker child's width
+    const wEnd = g.w * Math.sqrt(q), mine = [];
+    let stop = n;
+    for (let t = 0; t <= n; t++) {
+      const x = Math.round(ax + ux * t), y = Math.round(ay + uy * t), o = occ.get(x * 4096 + y);
+      // skip the joint itself, where a branch must overlap the wood it grows from
+      if (t > g.w + 2 && o !== undefined && o !== i && o !== g.parent && segs[o].parent !== g.parent) { stop = t - 2; break; }
+      mine.push([x, y]);
+    }
+    if (stop < n) { dead[i] = 1; }
+    const run = Math.max(0, stop);
+    for (let t = 0; t <= run; t++) {
+      const f = t / Math.max(1, n), w = lerp(g.w, wEnd, f);
+      stamp(ax + ux * t, ay + uy * t, w, nx, ny);
+    }
+    // a cut (or childless) thick branch tapers to a point rather than ending blunt
+    if ((dead[i] || !kids[i]) && g.w > 1.3) for (let t = 1; t <= g.w * 2; t++) stamp(ax + ux * (run + t), ay + uy * (run + t), lerp(g.w, .6, t / (g.w * 2)), nx, ny);
+    // claim the branch's whole width, so a later branch can't slip through it diagonally
+    const rad = Math.max(1, Math.round(g.w / 2));
+    for (const [x, y] of mine.slice(0, run + 1)) for (let dy = -rad; dy <= rad; dy++) for (let dx = -rad; dx <= rad; dx++) if (!occ.has((x + dx) * 4096 + y + dy)) occ.set((x + dx) * 4096 + y + dy, i);
+  });
   BARE.set(key, pts);
   return pts;
 }

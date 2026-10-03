@@ -182,20 +182,12 @@ Keep these unless asked otherwise.
 
 ## Open work
 
-- **Winter oak (`bare()`/`bareShape()` in `js/forest/draw.js`)** — being iterated with the owner. Current approach:
-  - In winter the trunk stops at ~40% of the tree's height and splits in two: a leader nearly as thick as the trunk carrying on almost straight up, and a thinner limb swinging out. Both start inside the trunk and the trunk casts no seam line onto them, so they grow out of it smoothly.
-  - The two main limbs open 60–105° apart (owner's rule): the leader leans 0.1–0.25 rad one way, the outward limb takes the rest. If the outward limb would miss the crown, the pair turns up together so the angle is kept. A rounded crotch is stamped on the trunk top so the wide fork doesn't leave its flat top showing. (Applying 60–105° at every later split too was tried: it made antler-like, stubby trees.)
-  - The two main limbs are about equal in length (owner's rule): both get one shared first run, long enough to be well inside the crown before they first fork.
-  - Every split is in two (owner's rule): a leading child nearly parallel to its parent (slight bend, ~0.85–0.9× width) and a side child (~0.6–0.75×) bending the other way by anything up to ~80°. Sides alternate down a branch. Wood tapers slowly (owner wanted thicker branches): the main limbs and their first children keep ~0.95× per run and the first split's children are ~0.9× / ~0.8× of their parent, and thick wood stops each run well short of the crown edge (at least ~2.5× its width) so its children have room to carry on.
-  - A thick branch never just ends (owner): when one runs out of room or is blocked while still thicker than ~1.3 px, `splay()` forces a split, sending a thinner child toward the side with the most room (both sides if both have some). If nowhere has room it still forks into two short thin shoots. Only wood already ~1 px may end, with a twig or two.
-  - Longer runs get short side shoots; long thick runs on the main limbs and their first children also put out one real side branch.
-  - Low limbs that haven't reached the summer crown yet may cross the gap up into it.
-  - The foreground oak stands half off-screen, so its outward limb always swings toward the screen's middle (`inward` option), and any first-split limb that would miss the crown is swung up until it enters it. Otherwise one of the two first limbs ends up off-screen or as a stub.
-  - Each run covers only a share of the room left before the crown's edge, so wood keeps dividing and thinning out to 1 px twigs.
-  - At every fork after the trunk split, the side child starts a few px back inside its parent so it grows out of the parent's flank (owner: it should cover the branch it diverges from), and the leading child carries on from the parent's full width.
-  - Branches never cross or curve into each other (owner): every split draws a line along the parent at the fork, and each child's whole subtree stays on its own side (inherited half-planes `C`). A branch about to cross is steered away and, if it still can't, tapers off. The trunk split's line runs up the middle of the fork.
-  - The crown edge should be star-like, not a circle (owner): each branch line carries its own reach (0.65–1.45× the summer crown), drifting at every fork, so tips land at uneven distances.
-  - Thick wood never points below horizontal; thin twigs may dip slightly. Branches wander a little instead of curving steadily upward.
+- **Winter oak (`bare()`/`bareShape()` in `js/forest/draw.js`)** — being iterated with the owner. It follows the sympodial tree model (Aono & Kunii) from *The Algorithmic Beauty of Plants*, ch. 2, fig. 2.7 (owner's choice):
+  - Productions: the trunk (A) ends in a fork of two limbs; every apex (B) forks again into a leader turned by a small angle a1 and a side branch turned the other way by a larger a2. The leader's turn alternates side at every fork (the 2-D stand-in for the 180° roll / `$`).
+  - Constant contraction ratios: child length = r1 (leader) or r2 (side) × parent. Widths follow da Vinci's rule, w² = w1² + w2², with the leader taking share q of the cross-section. Tropism turns each segment toward straight up by e·|H × T|.
+  - Per-tree parameters come from the ranges in the chapter's table 2.2 (r1 0.86–0.93, r2 0.7–0.8, a1 8–22°, a2 45–65°, q 0.64–0.74, e 0.1–0.18), plus small per-segment jitter.
+  - Owner's rules kept: the trunk stops at ~40% height and forks into two limbs of equal length, 60–105° apart and both close to trunk width, with a rounded crotch over the trunk top. The foreground oak's outward limb leans toward the screen's middle (`inward`). Thick wood never points below horizontal. Branches never cross: a branch that would run into other wood is cut there along with its children, and a cut or childless thick branch tapers to a point rather than ending blunt.
+  - The structure is derived at unit length, generation by generation, then scaled to fill the summer crown's bounding box, so the bare tree keeps roughly the same size and silhouette as the leafy one.
   - Shapes are cached per crown, so resizing doesn't regrow them.
 - **Résumé link** target.
 - **Hosting:** hook the repo up to the owner's Cloudflare domain (e.g. Cloudflare Pages, no build command, output directory `/`).
