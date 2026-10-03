@@ -195,18 +195,20 @@ function bareShape(cx, base, h, tw, blobs, key, inward) {
     // wood that hasn't reached the crown yet (low limbs) may cross the gap up into it
     const space = room(x, y, a, !inside(x, y, m) && y > (y0 + y1) / 2, m, C);
     if (space < 3 || w < .9 || depth > 10) {
-      // the end of a run: wood still thick here tapers off to a point instead of stopping blunt,
-      // then a twig or two fans out, sideways and slightly down included
+      // thick wood never just ends: it splits into thinner branches that turn toward wherever there is room
+      if (w > 1.3 && depth < 16 && splay(x, y, a, w, depth, side, m, C)) return;
+      // the end of a run: whatever is left tapers off to a point, then a twig or two fans out,
+      // sideways and slightly down included
       if (w > 1.2) [x, y, a] = walk(x, y, a, w * 2.5, w, .6, (rr() - .5) * .05, C);
       for (let k = 0, nk = 1 + Math.floor(rr() * 2); k < nk; k++) twig(x, y, a + (rr() - .5) * 1.8, 2 + rr() * Math.min(3, space + 1), m, C);
       return;
     }
     // each run is a share of the room ahead, so wood thins and forks well before it reaches the edge;
     // the two main limbs get one shared, fixed length so they come out about equal
-    const run = fixed || clamp(len, 2, space * (.38 + rr() * .16)), curl = (rr() - .5) * .03;
+    // thick wood also stops well short of the edge, leaving its children room to carry on
+    const run = fixed || clamp(Math.min(len, space - w * 2.5), 2, space * (.38 + rr() * .16)), curl = (rr() - .5) * .03;
     // the main limbs and their first children hold their thickness longer (owner wanted them thicker)
-    // ...but wood also thins with the room left: near the crown's edge it has to be down to twigs
-    const wEnd = Math.max(.5, Math.min(w * (depth < 2 ? .95 : .88), 1 + (space - run) * .25));
+    const wEnd = Math.max(.5, w * (depth < 2 ? .95 : .88));
     // short side shoots along longer runs
     const start = pts.length;
     let blocked;
@@ -225,8 +227,23 @@ function bareShape(cx, base, h, tw, blobs, key, inward) {
       grow(px, py, ba, w * .45, len * .45, depth + 3, s2, 0, m, w * .45, [...C, [px, py, -Math.sin(a) * s2, Math.cos(a) * s2]]);
     }
     // a branch that was stopped short at its line just tapers off instead of forking
-    if (blocked) { walk(x, y, a, Math.min(wEnd * 2, 4), wEnd, .6, 0, C); return; }
+    if (blocked) { if (!(wEnd > 1.3 && splay(x, y, a, wEnd, depth, side, m, C))) walk(x, y, a, Math.min(wEnd * 2, 4), wEnd, .6, 0, C); return; }
     fork(x, y, a, wEnd, len, depth, side, m, C);
+  }
+  // A forced split where a thick branch has run out of room: look either side of it for the direction with
+  // the most room, and send a thinner child each way that has any (returns false if neither side has room).
+  function splay(x, y, a, w, depth, side, m, C) {
+    const best = (sgn) => { let ba = 0, br = 0; for (let k = 1; k <= 6; k++) { const ca = limit(a + sgn * k * .25, w * .6), r = room(x, y, ca, false, m, C); if (r > br) { br = r; ba = ca; } } return [ba, br]; };
+    const [aa, ra] = best(side), [ab, rb] = best(-side);
+    // nowhere with real room: still fork, into two short thin shoots, rather than end on a thick stump
+    if (ra < 3 && rb < 3) {
+      for (const sg of [1, -1]) walk(x, y, limit(a + sg * (.4 + rr() * .3), .9), 3 + rr() * 3, Math.min(w * .5, 1.6), .6, (rr() - .5) * .1, C);
+      return true;
+    }
+    const nx = -Math.sin(a), ny = Math.cos(a);
+    if (ra >= 3) grow(x, y, aa, w * (ra >= rb ? .7 : .55), Math.max(3, ra * .6), depth + 1, -side, 0, m, w * .8, [...C, [x, y, nx * side, ny * side]]);
+    if (rb >= 3) grow(x, y, ab, w * (rb > ra ? .7 : .55), Math.max(3, rb * .6), depth + 1, side, 0, m, w * .8, [...C, [x, y, -nx * side, -ny * side]]);
+    return true;
   }
   // every split is in two: a leading child nearly parallel to its parent (a slight bend one way) and a
   // thinner side child that swings off the other way, anywhere up to ~80° away; sides alternate down a branch
