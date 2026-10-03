@@ -173,11 +173,17 @@ function bareShape(cx, base, h, tw, blobs, key, inward) {
   const turn = (f, axis, t) => ({ H: v3.rot(f.H, axis, t), L: v3.rot(f.L, axis, t), U: v3.rot(f.U, axis, t) });
   const pitch = (f, t) => turn(f, f.L, t), roll = (f, t) => turn(f, f.H, t);
   const tropism = (f) => { const c = v3.cross(f.H, T), m = Math.hypot(...c); return m < 1e-6 ? f : turn(f, [c[0] / m, c[1] / m, c[2] / m], e * m); };
-  // ω: the trunk heads straight up, then rolls 45°; on the foreground oak the roll is picked so the first
-  // branch leans toward the screen's middle (`inward`)
+  // ω: the trunk heads straight up, then rolls before the first fork
   const f0 = { H: [0, 0, 1], L: [0, 1, 0], U: [-1, 0, 0] };
-  let roll0 = 45 * DEG + rr() * Math.PI * 2;
-  if (inward) { let best = -Infinity; for (let t = 0; t < 24; t++) { const ro = t / 24 * Math.PI * 2, x = pitch(roll(f0, ro), a).H[0] * inward; if (x > best) { best = x; roll0 = ro; } } }
+  // The first fork decides how "standard" the tree looks, so its roll is picked rather than random: of 24
+  // candidates, the one whose three limbs spread widest across the picture and balance left and right
+  // (on the foreground oak, also leaning toward the screen's middle, `inward`).
+  let roll0 = 0, best = -Infinity;
+  for (let t = 0; t < 24; t++) {
+    const ro = t / 24 * Math.PI * 2 + rr() * .05, xs = [0, d1, d1 + d2].map(c => pitch(roll(roll(f0, ro), c), a).H[0]);
+    const score = Math.max(...xs) - Math.min(...xs) - 1.5 * Math.abs(xs.reduce((p, q) => p + q, 0) / 3) + (inward ? .6 * inward * xs.reduce((p, q) => p + q, 0) / 3 : 0);
+    if (score > best) { best = score; roll0 = ro; }
+  }
 
   // 1. derive the structure (lengths in units of the book's F(50), widths relative to the trunk)
   const segs = [];   // { x0, y0, x1, y1, w, wn, parent } in picture coordinates (y down)
@@ -190,8 +196,9 @@ function bareShape(cx, base, h, tw, blobs, key, inward) {
   // A made at step s: its stem F(50) and three branches, each a pitched F(50) ending in the next A
   function A(p, f, s, parent) {
     if (s > n) return;
-    // (the first stem, the top of the trunk, is kept 30% shorter so the tree branches low)
-    const l = Math.pow(lr, n - s) * (.92 + rr() * .16) * (s === 1 ? .7 : 1), w = Math.pow(vr, 1 - s), wn = w / vr;
+    // (the first stem, the top of the trunk, is kept 30% shorter so the tree branches low; the last, twig-thin
+    // generation is kept short so 1 px wood never runs on for long)
+    const l = Math.pow(lr, n - s) * (.92 + rr() * .16) * (s === 1 ? .7 : s === n ? .55 : 1), w = Math.pow(vr, 1 - s), wn = w / vr;
     genNow = 2 * s - 1;
     const [q, fq, i] = seg(p, roll(pitch(f, jit(3)), jit(8)), l, w, w, parent);
     let fr = fq;
@@ -232,7 +239,8 @@ function bareShape(cx, base, h, tw, blobs, key, inward) {
       const x = Math.round(ax + ux * t), y = Math.round(ay + uy * t), o = occ.get(x * 4096 + y);
       // skip the joint itself, where a branch must overlap the wood it grows from
       // only limbs are kept apart: thin branches may pass in front of or behind each other, as they do on a real tree
-      if (g.w >= 2 && t > g.w + 2 && o !== undefined && o !== i && o !== g.parent && segs[o].parent !== g.parent && segs[o].w >= 2) { stop = t - 2; break; }
+      // (sister branches leave a fork only ~20° apart, so the first stretch — three widths — overlaps freely)
+      if (g.w >= 2 && t > Math.max(g.w + 2, g.w * 3) && o !== undefined && o !== i && o !== g.parent && segs[o].parent !== g.parent && segs[o].w >= 2) { stop = t - 2; break; }
       mine.push([x, y]);
     }
     if (stop < n) { dead[i] = 1; }
@@ -260,7 +268,9 @@ function bare(L, cx, base, h, tw, blobs, obj, inward) {
   const pBig = ++PART, pFine = ++PART; L.under.add(pBig); L.under.add(pFine);
   for (const [dx, dy, w, nx, ny] of pts) {
     const x = Math.round(cx + dx), y = Math.round(base + dy);
-    if (w < 1.3) { L.put(x, y, w < .6 ? 'twig' : 'bark', w < .6 ? 2 : 2, pFine, fine); continue; }
+    if (w < 1.3) { L.put(x, y, w < .6 ? 'twig' : 'bark', 2, pFine, fine); continue; }
+    // thin wood steps up evenly, 1 px → 2 px → round stamps, so a branch never looks thicker than its parent
+    if (w < 2.4) { const ox = Math.abs(nx) > Math.abs(ny) ? Math.sign(nx) : 0, oy = ox ? 0 : Math.sign(ny) || 1; L.put(x, y, 'bark', 3, pFine, fine); L.put(x - ox, y - oy, 'bark', 2, pFine, fine); continue; }
     // lit from the upper left: shade each stamp across the branch
     let ux = nx, uy = ny; if (ux + uy > 0) { ux = -ux; uy = -uy; }
     const big = w >= 2.6, rad = w / 2, c = Math.ceil(rad);

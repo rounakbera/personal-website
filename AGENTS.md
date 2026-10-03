@@ -188,7 +188,9 @@ Keep these unless asked otherwise.
   - The turtle runs in true 3-D (H/L/U frame) and is projected onto the picture, so each fork shows one, two or three branches of similar size (owner's observation of the figure).
   - n is 6 in the book; here it's scaled to crown size (2–5; 5 for the foreground oak), because at pixel scale more steps merge into a solid brown mass and turn small background oaks into blobs.
   - The tree branches low (owner): the plain trunk ends at ~28% of height and the first stem (the top of the trunk) is 30% shorter than the model gives. Widths are scaled so the first stem matches the trunk. Lengths are scaled so the tree reaches the summer crown's top; the branches may spread up to 1.35× the leafy crown's width so a low split doesn't shrink the tree. The foreground oak's first roll is picked so its first branch leans toward the screen's middle (`inward`).
-  - Segments are rasterised oldest first. A limb (≥ 2 px) that would run into another limb is cut there and tapers to a point. Each branch segment tapers into the next width, so nothing steps down suddenly.
+  - To keep trees "standard" (owner saw odd ones), the first fork's roll isn't random: of 24 candidates, the one whose three limbs spread widest across the picture and balance left/right wins (plus the `inward` lean on the foreground oak).
+  - Segments are rasterised oldest first. A limb (≥ 2 px) that would run into another limb is cut there and tapers to a point. The first three widths of a branch may overlap freely, since sisters leave a fork only ~20° apart and cutting there left odd stubs at the trunk top. Each branch segment tapers into the next width, so nothing steps down suddenly.
+  - Thin wood: the last generation is kept short (×0.55), so 1 px wood never runs on for long. Widths render monotonically (1 px below 1.3, 2 px up to 2.4, round stamps above), so a branch never looks thicker than its parent.
   - Shapes are cached per crown, so resizing doesn't regrow them.
   - 2.8d constants, if the owner wants to try it: d1 180°, d2 252°, a 36°, lr 1.07, T (−0.61, 0.77, −0.19), e 0.40, n 6.
 - **Résumé link** target.
