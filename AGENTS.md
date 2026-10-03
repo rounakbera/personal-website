@@ -191,6 +191,7 @@ Keep these unless asked otherwise.
   - The foreground oak stands half off-screen, so its outward limb always swings toward the screen's middle (`inward` option), and any first-split limb that would miss the crown is swung up until it enters it. Otherwise one of the two first limbs ends up off-screen or as a stub.
   - Each run covers only a share of the room left before the crown's edge, so wood keeps dividing and thinning out to 1 px twigs.
   - At every fork after the trunk split, the side child starts a few px back inside its parent so it grows out of the parent's flank (owner: it should cover the branch it diverges from), and the leading child carries on from the parent's full width.
+  - Branches never cross or curve into each other (owner): every split draws a line along the parent at the fork, and each child's whole subtree stays on its own side (inherited half-planes `C`). A branch about to cross is steered away and, if it still can't, tapers off. The trunk split's line runs up the middle of the fork, and the two main limbs diverge clearly (leader 0.15–0.3 rad one way, outward limb 0.6–0.95 rad the other).
   - The crown edge should be star-like, not a circle (owner): each branch line carries its own reach (0.65–1.45× the summer crown), drifting at every fork, so tips land at uneven distances.
   - Thick wood never points below horizontal; thin twigs may dip slightly. Branches wander a little instead of curving steadily upward.
   - Shapes are cached per crown, so resizing doesn't regrow them.
