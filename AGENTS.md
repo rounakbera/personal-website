@@ -119,7 +119,7 @@ The scripts are native ES modules (`<script type="module">`), so the page has to
 - **Front:** foreground ground, ground cover and the three framing trees (big oak on one side, two different conifers on the other). Sized to the screen and rebuilt on every resize.
   - Every front object gets fixed part ids, its own random stream and its own texture origin, via `at(x, y, id)`. That way nothing reshuffles as it slides.
   - **Per-forest shift:** the oak slides up to ±14 layout px sideways (`plan.oakDX`), and the two conifers slide together as a pair (`plan.pairDX`). Both come from their own stream in `planFor`. Seed 21 keeps its hand-set positions (0, 0).
-  - **Trunks behind the toolbar:** a framing tree whose foot is already below the visible bottom (the oak at +186, the big conifer at +188) gets `sink`. Its trunk runs on to the canvas's bottom edge, so where the canvas reaches behind a phone's toolbar the foot stays hidden. The trees don't move or grow (owner: proportions are right as they are), and without a toolbar strip nothing changes.
+  - **Trunks behind the toolbar:** a framing tree whose foot is already below the visible bottom (the oak at +186, the big conifer at +188) gets `sink`. Its trunk runs on just 10 px further, so behind a phone's toolbar the foot (flare and all) shows through the bar partway down rather than lining up with the bar's top edge. Owner: only a little; the base should stay visible. The trees don't move or grow (proportions are right as they are), and without a toolbar strip nothing changes.
 
 **Rendering pipeline:**
 
@@ -206,7 +206,7 @@ The scripts are native ES modules (`<script type="module">`), so the page has to
   - season button (cycles spring → summer → autumn → winter);
   - dice (new random forest; keeps season and time);
   - reset (real time and real season).
-  - Hiding fades it out.
+  - Hiding slides it back up off the top edge, stepped like the way it came in (`tp-up`, its own keyframes so the animation restarts).
 
 ## Owner's design decisions
 

@@ -100,10 +100,10 @@ h1 { position: relative; }
   box-shadow: 0 -3px 0 0 var(--ink), 0 3px 0 0 var(--ink), -3px 0 0 0 var(--ink), 3px 0 0 0 var(--ink), inset 0 -3px 0 0 var(--parch-lo);
   filter: drop-shadow(6px 6px 0 rgba(8, 6, 28, .45)); animation: tp-in .35s steps(7) both;
 }
-/* slides down from above the top edge of the screen; closing fades it out in place */
+/* slides down from above the top edge of the screen, and back up the same stepped way when hidden */
 @keyframes tp-in { from { transform: translateY(calc(-100% - 40px)); } to { transform: none; } }
-@keyframes tp-out { from { opacity: 1; } to { opacity: 0; } }
-.timepanel.closing { animation: tp-out .25s ease-out both; pointer-events: none; }
+@keyframes tp-up { from { transform: none; } to { transform: translateY(calc(-100% - 40px)); } }
+.timepanel.closing { animation: tp-up .35s steps(7) both; pointer-events: none; }
 .timepanel[hidden] { display: none; }
 .tp-clock { display: block; flex: none; }
 .tp-btn { flex: none; display: grid; place-items: center; width: 24px; height: 24px; padding: 0; border: 0; cursor: pointer; color: var(--ink); background: var(--parch-hi);

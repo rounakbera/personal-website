@@ -22,7 +22,7 @@ export function initTimePanel(api) {
   function setTime(t) { overridden = true; api.setTime(t); showClock(t); }
   let closing = 0;
   function open() { clearTimeout(closing); panel.classList.remove('closing'); panel.hidden = false; range.value = Math.round(api.hoursNow() * 60) % 1440; showClock(api.hoursNow()); }
-  function close() { if (panel.hidden || panel.classList.contains('closing')) return; panel.classList.add('closing'); closing = setTimeout(() => { panel.hidden = true; panel.classList.remove('closing'); }, 250); }
+  function close() { if (panel.hidden || panel.classList.contains('closing')) return; panel.classList.add('closing'); closing = setTimeout(() => { panel.hidden = true; panel.classList.remove('closing'); }, 350); }
   // a double click or double tap on the portrait or name (detected in card.js) opens it, and another one hides it
   document.addEventListener('card:dblclick', () => (panel.hidden || panel.classList.contains('closing') ? open() : close()));
   range.addEventListener('input', () => setTime(range.value / 60));
