@@ -79,7 +79,7 @@ export function buildFront(seed, plan) {
   [[70, 26], [96, 20], [222, 20], [122, 16], [190, 18]].forEach(([x, w], i) => { at(MX(x), top(MX(x)), 2000 + i * 40); bush(ft, MX(x), top(MX(x)) + 3, w * ks, leafOf(br), br); });
   if (SEASON !== 'winter') [[84, 10], [150, 8], [206, 9], [244, 11]].forEach(([x, s], i) => { at(MX(x), 0, 3000 + i * 10); fern(ft, MX(x), top(MX(x)) + 1, s, SEASON === 'autumn' ? 'autY' : 'oak'); });
   [[168, 5, true], [108, 3, false], [140, 2, false], [236, 6, true], [246, 3, false], [200, 2, false], [56, 4, true]].forEach(([x, sz, moss], i) => { at(MX(x), top(MX(x)), 3500 + i * 10); rock(ft, MX(x), top(MX(x)) + 2 + sz * .3, sz, moss); });
-  at(LX(34), Y(186), 4000); oak(ft, LX(34), Y(186), 150 * ks, 'oak', rng(seed + 4), { k: 10, R: .38, sym: true });
+  at(LX(34), Y(186), 4000); oak(ft, LX(34), Y(186), 150 * ks, 'oak', rng(seed + 4), { k: 10, R: .38, sym: true, inward: plan.flip ? -1 : 1 });
   at(RX(264), Y(178), 5000); conifer(ft, RX(264), Y(178), 100 * ks, plan.small, rng(seed + 5), { lean: 0, tierVar: .08, div: plan.smallDiv });
   at(RX(302), Y(188), 6000); conifer(ft, RX(302), Y(188), 176 * ks, plan.big, rng(seed + 6), { lean: 0, flare: 3, tierVar: .08, div: plan.bigDiv, ...(plan.big === 'fir' ? { w: .3 } : {}) });
   clearOrigin();

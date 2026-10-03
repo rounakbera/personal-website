@@ -130,7 +130,7 @@ export function oak(L, cx, base, h, mat, r, o = {}) {
   }
   if (!o.sym) blobs.push([ccx, ccy - R * .2, R * .5]);
   blobs.sort((a, b) => b[1] - a[1]);
-  if (SEASON === 'winter') { bare(L, cx, base, h, tw, blobs, obj); return obj; }
+  if (SEASON === 'winter') { bare(L, cx, base, h, tw, blobs, obj, o.inward || 0); return obj; }
   for (const b of blobs) blob(L, b[0], b[1], b[2], mat, obj);
   return obj;
 }
@@ -140,7 +140,7 @@ export function oak(L, cx, base, h, mat, r, o = {}) {
 // steadily upward, and stops at the summer crown's outline, so the bare tree keeps the same silhouette.
 const BARE = new Map();   // seed-stable shapes, cached so resizing doesn't regrow the tree
 const BARE_SPLIT = .4;    // share of the tree's height at which the trunk splits
-function bareShape(cx, base, h, tw, blobs, key) {
+function bareShape(cx, base, h, tw, blobs, key, inward) {
   if (BARE.has(key)) return BARE.get(key);
   const inside = (x, y) => blobs.some(([bx, by, br]) => (x - bx) ** 2 + (y - by) ** 2 <= (br * 1.04) ** 2);
   // distance a branch can travel this way before leaving the crown
@@ -209,16 +209,21 @@ function bareShape(cx, base, h, tw, blobs, key) {
   }
   // the trunk splits low, at ~40% of the tree's height, in two: a leader carrying on up and a thinner limb
   // swinging out. Both start a little way inside the trunk so they grow out of it rather than sitting on top.
-  const sy = base - h * BARE_SPLIT, s0 = rr() < .5 ? -1 : 1, up = -Math.PI / 2;
-  const la = up + s0 * (.05 + rr() * .15), oa = up - s0 * (.4 + rr() * .7);
-  grow(cx + s0 * tw * .18, sy + tw * .9, la, tw * .84, R * .6, 0, -s0);
-  grow(cx - s0 * tw * .2, sy + tw * .9, oa, tw * (.62 + rr() * .12), R * (.5 + rr() * .12), 0, s0);
+  // the outward limb goes toward `inward` when given (the foreground oak half off-screen reaches into view)
+  const flip = rr() < .5 ? -1 : 1, sy = base - h * BARE_SPLIT, s0 = inward ? -inward : flip, up = -Math.PI / 2;
+  const la = up + s0 * (.05 + rr() * .15), lx = cx + s0 * tw * .18, ox = cx - s0 * tw * .2, by = sy + tw * .9;
+  let oa = up - s0 * (.4 + rr() * .7);
+  // the outward limb starts below the crown: if it would miss the crown entirely (and so die as a stub),
+  // swing it up step by step until it heads into the crown
+  for (let k = 0; k < 10 && room(ox, by, oa, true) < R * .35; k++) oa = lerp(oa, up, .2);
+  grow(lx, by, la, tw * .84, R * .6, 0, -s0);
+  grow(ox, by, oa, tw * (.62 + rr() * .12), R * (.5 + rr() * .12), 0, s0);
   BARE.set(key, pts);
   return pts;
 }
-function bare(L, cx, base, h, tw, blobs, obj) {
-  const key = [Math.round(h * 10), ...blobs.map(([bx, by, br]) => Math.round((bx - cx) * 4) + ',' + Math.round((by - base) * 4) + ',' + Math.round(br * 4))].join('|');
-  const pts = bareShape(cx, base, h, tw, blobs, key);
+function bare(L, cx, base, h, tw, blobs, obj, inward) {
+  const key = [inward, Math.round(h * 10), ...blobs.map(([bx, by, br]) => Math.round((bx - cx) * 4) + ',' + Math.round((by - base) * 4) + ',' + Math.round(br * 4))].join('|');
+  const pts = bareShape(cx, base, h, tw, blobs, key, inward);
   // fine wood is a separate, unoutlined object so it reads as twigs, not black wire
   const fine = ++OBJ; L.thin.add(fine);
   // the trunk (the part drawn just before this) and the big limbs blend without a seam line between them
