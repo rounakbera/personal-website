@@ -93,7 +93,7 @@ function snowify(L) {
     const o = L.obj[i];
     if (y > 0 && L.mat[i - w] !== null && L.obj[i - w] === o) continue;   // not a top surface
     const ol = L.outline && !L.thin.has(o), depth = m === 'rock' ? 3 : m === 'bark' ? 1 : 2;
-    if (m === 'bark' && hash(x, y, 61) < .35) continue;                     // patchy on branches
+    if (m === 'bark' && hash(x, y, 61) < .6) continue;                      // patchy on branches
     if (m === 'bark' && !ol && !(y + 1 < h && L.obj[i + w] === o && L.mat[i + w] === 'bark')) continue; // only on wood thick enough to hold it
     for (let k = ol ? 1 : 0; k <= depth - (ol ? 0 : 1); k++) {
       const yy = y + k, j = yy * w + x; if (yy >= h || L.obj[j] !== o || !SNOWY.has(L.mat[j])) break;

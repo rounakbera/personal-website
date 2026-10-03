@@ -133,75 +133,96 @@ export function oak(L, cx, base, h, mat, r, o = {}) {
   for (const b of blobs) blob(L, b[0], b[1], b[2], mat, obj);
   return obj;
 }
-// winter oak, grown by space colonisation: points scattered through the summer crown pull branches toward them,
-// so wood forks naturally and fills the crown; widths follow the pipe rule (a limb's cross-section = the sum of its children's)
-const BARE = new Map();
+// winter oak: the trunk splits into a few unequal scaffold limbs, and every limb keeps forking into a
+// leading child that carries on roughly straight and a thinner side child that splays off, alternating sides,
+// with short side shoots along the way. Wood thins at every fork, wanders a little rather than bending
+// steadily upward, and stops at the summer crown's outline, so the bare tree keeps the same silhouette.
+const BARE = new Map();   // seed-stable shapes, cached so resizing doesn't regrow the tree
 function bareShape(cx, base, h, tw, blobs, key) {
   if (BARE.has(key)) return BARE.get(key);
-  const inside = (x, y) => blobs.some(([bx, by, br]) => (x - bx) ** 2 + (y - by) ** 2 <= (br * 1.05) ** 2);
+  const inside = (x, y) => blobs.some(([bx, by, br]) => (x - bx) ** 2 + (y - by) ** 2 <= (br * 1.04) ** 2);
+  // distance a branch can travel this way before leaving the crown
+  const room = (x, y, a) => { let t = 0; while (t < 300 && inside(x + Math.cos(a) * t, y + Math.sin(a) * t)) t++; return t; };
   let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
   for (const [bx, by, br] of blobs) { x0 = Math.min(x0, bx - br); y0 = Math.min(y0, by - br); x1 = Math.max(x1, bx + br); y1 = Math.max(y1, by + br); }
-  const rr = rng(key.length * 7 + Math.floor(hash(Math.round(x1 - x0), Math.round(y1 - y0), Math.round(h)) * 1e9));
-  const R = Math.max(x1 - x0, y1 - y0) / 2, D = clamp(R / 22, 1, 2.6), di = Math.max(4, R * .4), dk = D * 2.2;
-  // attraction points, denser toward the crown's outer shell where the twigs are
-  const pts = [];
-  for (let tries = 0, want = Math.round((x1 - x0) * (y1 - y0) / (D * D * 4.5)); tries < want * 3 && pts.length < want; tries++) {
-    const x = lerp(x0, x1, rr()), y = lerp(y0, y1, rr()); if (inside(x, y)) pts.push([x, y]);
-  }
-  const nx = [cx], ny = [base - h * .58], par = [-1], cell = di, grid = new Map(), gk = (x, y) => (Math.floor(x / cell) + 500) * 4096 + Math.floor(y / cell) + 500;
-  const add = (x, y, p) => { const i = nx.length; nx.push(x); ny.push(y); par.push(p); const k = gk(x, y); (grid.get(k) || grid.set(k, []).get(k)).push(i); return i; };
-  grid.set(gk(nx[0], ny[0]), [0]);
-  let alive = pts.map(() => true), left = pts.length;
-  for (let it = 0; it < 400 && left > 0; it++) {
-    const pull = new Map();
-    pts.forEach(([px, py], j) => {
-      if (!alive[j]) return;
-      let best = -1, bd = di * di; const cx0 = Math.floor(px / cell), cy0 = Math.floor(py / cell);
-      for (let gx = cx0 - 1; gx <= cx0 + 1; gx++) for (let gy = cy0 - 1; gy <= cy0 + 1; gy++) for (const i of grid.get((gx + 500) * 4096 + gy + 500) || []) { const dd = (nx[i] - px) ** 2 + (ny[i] - py) ** 2; if (dd < bd) { bd = dd; best = i; } }
-      if (best < 0) return;
-      if (bd < dk * dk) { alive[j] = false; left--; return; }
-      const l = Math.sqrt(bd), v = pull.get(best) || [0, 0]; v[0] += (px - nx[best]) / l; v[1] += (py - ny[best]) / l; pull.set(best, v);
-    });
-    if (!pull.size) {
-      // nothing in reach yet (the crown starts above the trunk): reach up from the newest node toward what is left
-      let sx = 0, sy = 0, c = 0; pts.forEach(([px, py], j) => { if (alive[j]) { sx += px; sy += py; c++; } });
-      const i = nx.length - 1, dx = sx / c - nx[i], dy = sy / c - ny[i], l = Math.hypot(dx, dy) || 1;
-      add(nx[i] + dx / l * D, ny[i] + dy / l * D, i); continue;
+  const R = Math.max(x1 - x0, y1 - y0) / 2;
+  const rr = rng(Math.floor(hash(Math.round(x1 - x0), Math.round(y1 - y0), Math.round(h * 7)) * 4294967296));
+  const pts = [];   // [dx, dy, width, nx, ny]: one stamp per pixel step, relative to the trunk base
+  // thick wood points up or out, never down; only the thinnest twigs may dip a little below horizontal
+  // (a branch that would dip too far is turned back up a little, rather than pinned flat)
+  const limit = (a, w) => {
+    const dip = w < 1.3 ? .3 : .06; a = Math.atan2(Math.sin(a), Math.cos(a));
+    if (a > dip && a <= Math.PI / 2) return dip - .1 - rr() * .3;
+    if (a > Math.PI / 2 && a < Math.PI - dip) return Math.PI - dip + .1 + rr() * .3;
+    return a;
+  };
+  function walk(x, y, a, len, w0, w1, curl) {
+    const n = Math.max(1, Math.round(len));
+    for (let i = 0; i < n; i++) {
+      const w = lerp(w0, w1, i / n);
+      pts.push([x - cx, y - base, w, -Math.sin(a), Math.cos(a)]);
+      a = limit(a + curl + (rr() - .5) * .08, w);
+      x += Math.cos(a); y += Math.sin(a);
     }
-    for (const [i, [vx, vy]] of pull) {
-      let dx = vx, dy = vy - .35 * Math.hypot(vx, vy) + (rr() - .5) * .3; const l = Math.hypot(dx, dy) || 1;
-      add(nx[i] + dx / l * D, ny[i] + dy / l * D, i);
-    }
+    return [x, y, a];
   }
-  // pipe rule from the tips back to the root, scaled so the root matches the trunk
-  const n = nx.length, acc = new Float32Array(n), kids = new Uint16Array(n);
-  for (let i = 1; i < n; i++) kids[par[i]]++;
-  for (let i = n - 1; i > 0; i--) { if (!kids[i]) acc[i] += 1; acc[par[i]] += acc[i]; }
-  const k = tw * .8 / Math.sqrt(acc[0] || 1), w = Array.from(acc, (a) => Math.max(.5, Math.sqrt(a) * k));
-  const shape = { dx: nx.map(x => x - cx), dy: ny.map(y => y - base), par, w };
-  BARE.set(key, shape);
-  return shape;
+  const twig = (x, y, a, len) => {
+    for (let i = 0; i < len; i++) { x += Math.cos(a); y += Math.sin(a); a = limit(a + (rr() - .5) * .5, .5); if (!inside(x, y)) return; pts.push([x - cx, y - base, .5, 0, 0]); }
+  };
+  function grow(x, y, a, w, len, depth, side) {
+    const space = room(x, y, a);
+    if (space < 3 || w < .5 || depth > 12) {
+      // the end of a run: a few fine twigs fanning every way, sideways and slightly down included
+      for (let k = 0, nk = 1 + Math.floor(rr() * 2); k < nk; k++) twig(x, y, a + (rr() - .5) * 1.8, 2 + rr() * Math.min(3, space + 1));
+      return;
+    }
+    // each run is a share of the room ahead, so wood thins and forks well before it reaches the edge
+    const run = clamp(len, 2, space * (.28 + rr() * .14)), curl = (rr() - .5) * .03;
+    const wEnd = Math.max(.5, w * .82);
+    // short side shoots along longer runs
+    const start = pts.length;
+    [x, y, a] = walk(x, y, a, run, w, wEnd, curl);
+    if (run > 4 && w > .8) for (let k = 0, ns = Math.floor(run / 5); k < ns; k++) {
+      const p = pts[start + Math.floor((.3 + .6 * rr()) * (pts.length - start - 1))];
+      const s2 = rr() < .5 ? -1 : 1;
+      twig(p[0] + cx, p[1] + base, a + s2 * (.7 + rr() * .6), 2 + rr() * 4);
+    }
+    // fork: a leading child that keeps going and a thinner side child; the side alternates down the branch
+    const lead = a + side * (.08 + rr() * .22), off = a - side * (.5 + rr() * .5);
+    const wl = wEnd * (.72 + rr() * .08), ws = wEnd * (.45 + rr() * .15);
+    grow(x, y, limit(lead, wl), wl, len * (.72 + rr() * .16), depth + 1, -side);
+    grow(x, y, limit(off, ws), ws, len * (.5 + rr() * .25), depth + 1, side);
+    // now and then a third, small shoot
+    if (wEnd > 1.2 && rr() < .22) grow(x, y, limit(a + side * (.9 + rr() * .4), wEnd * .4), wEnd * .4, len * .45, depth + 2, -side);
+  }
+  // the trunk splits around half the tree's height into two to four unequal scaffold limbs
+  const sy = base - h * .56, ns = 3 + Math.floor(rr() * 2), w0 = tw * .7;
+  const order = Array.from({ length: ns }, (_, i) => i).sort(() => rr() - .5);
+  for (let i = 0; i < ns; i++) {
+    const k = order[i], f = ns === 1 ? 0 : k / (ns - 1) - .5;          // −0.5 … 0.5 across the fan
+    const a = -Math.PI / 2 + f * (1.1 + rr() * .5) + (rr() - .5) * .25;
+    const w = w0 * (i === 0 ? .85 : .55 + rr() * .2);                   // one leader, the rest thinner
+    grow(cx + f * tw * .4, sy, a, w, R * (i === 0 ? .55 : .4 + rr() * .15), 0, f < 0 ? 1 : -1);
+  }
+  BARE.set(key, pts);
+  return pts;
 }
 function bare(L, cx, base, h, tw, blobs, obj) {
   const key = [Math.round(h * 10), ...blobs.map(([bx, by, br]) => Math.round((bx - cx) * 4) + ',' + Math.round((by - base) * 4) + ',' + Math.round(br * 4))].join('|');
-  const { dx, dy, par, w } = bareShape(cx, base, h, tw, blobs, key);
+  const pts = bareShape(cx, base, h, tw, blobs, key);
   // fine wood is a separate, unoutlined object so it reads as twigs, not black wire
   const fine = ++OBJ; L.thin.add(fine);
   const pBig = ++PART, pFine = ++PART; L.under.add(pBig); L.under.add(pFine);
-  for (let i = 1; i < dx.length; i++) {
-    const p = par[i], x0 = cx + dx[p], y0 = base + dy[p], x1 = cx + dx[i], y1 = base + dy[i], ww = w[i];
-    const steps = Math.max(1, Math.ceil(Math.hypot(x1 - x0, y1 - y0))), ax = (y1 - y0), ay = -(x1 - x0), al = Math.hypot(ax, ay) || 1;
-    // normal pointing to the lit upper-left side
-    let ux = ax / al, uy = ay / al; if (ux + uy > 0) { ux = -ux; uy = -uy; }
-    for (let t = 0; t <= steps; t++) {
-      const x = Math.round(lerp(x0, x1, t / steps)), y = Math.round(lerp(y0, y1, t / steps));
-      if (ww < 1.25) { L.put(x, y, ww < .85 ? 'twig' : 'bark', ww < .85 ? 3 : 2, pFine, fine); continue; }
-      const big = ww >= 2.6, rad = ww / 2, c = Math.ceil(rad);
-      for (let yy = -c; yy <= c; yy++) for (let xx = -c; xx <= c; xx++) {
-        if (xx * xx + yy * yy > rad * rad + .3) continue;
-        const side = -(xx * ux + yy * uy) / rad;
-        L.put(x + xx, y + yy, 'bark', side < -.35 ? 4 : side < .35 ? 3 : 2, big ? pBig : pFine, big ? obj : fine);
-      }
+  for (const [dx, dy, w, nx, ny] of pts) {
+    const x = Math.round(cx + dx), y = Math.round(base + dy);
+    if (w < 1.3) { L.put(x, y, w < .8 ? 'twig' : 'bark', w < .8 ? 3 : 2, pFine, fine); continue; }
+    // lit from the upper left: shade each stamp across the branch
+    let ux = nx, uy = ny; if (ux + uy > 0) { ux = -ux; uy = -uy; }
+    const big = w >= 2.6, rad = w / 2, c = Math.ceil(rad);
+    for (let yy = -c; yy <= c; yy++) for (let xx = -c; xx <= c; xx++) {
+      if (xx * xx + yy * yy > rad * rad + .3) continue;
+      const side = -(xx * ux + yy * uy) / rad;
+      L.put(x + xx, y + yy, 'bark', side < -.35 ? 4 : side < .35 ? 3 : 2, big ? pBig : pFine, big ? obj : fine);
     }
   }
 }

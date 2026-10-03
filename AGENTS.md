@@ -182,10 +182,11 @@ Keep these unless asked otherwise.
 
 ## Open work
 
-- **Winter foreground oak looks wrong.** The background bare trees are acceptable. `bare()`/`bareShape()` in `js/forest/draw.js` currently grow branches by space colonisation; treat that as a stopgap. Plan:
-  - Rebuild the foreground tree with regular forking. The trunk splits at about half the tree's height into 2–3 limbs, then each limb forks into a continuing child (~0.8× width, 10–20° bend) and a side child (~0.6× width, 30–45°).
-  - Thickness shrinks from the trunk down to 1 px twigs, with a fine, lighter twig haze tracing the old crown edge.
-  - No branches pointing down.
-  - Cache the result per seed so resizing doesn't regrow it.
+- **Winter oak (`bare()`/`bareShape()` in `js/forest/draw.js`)** — being iterated with the owner. Current approach:
+  - The trunk splits at ~56% height into 3–4 unequal scaffold limbs (one leader, the rest thinner).
+  - Every limb repeatedly forks into a leading child (small bend, ~0.75× width) and a thinner side child (~0.5×, 30–55° off), alternating sides, plus short side shoots along longer runs.
+  - Each run covers only a share of the room left before the summer crown's edge, so wood keeps dividing and thinning out to 1 px twigs at the outline.
+  - Thick wood never points below horizontal; thin twigs may dip slightly. Branches wander a little instead of curving steadily upward.
+  - Shapes are cached per crown, so resizing doesn't regrow them.
 - **Résumé link** target.
 - **Hosting:** hook the repo up to the owner's Cloudflare domain (e.g. Cloudflare Pages, no build command, output directory `/`).
