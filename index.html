@@ -1,0 +1,1094 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Rounak Bera</title>
+<meta name="description" content="Rounak Bera: links to GitHub, LinkedIn and more, on a hand-generated pixel forest.">
+<style>
+/* Layout: full-bleed pixel forest (canvas sized to the screen in chunky pixels, sky follows local time) under one parchment card */
+:root {
+  color-scheme: dark;
+  --ink: #3a2414;
+  --ink-soft: #6b4528;
+  --parch: #ecd7a6;
+  --parch-hi: #f7eac8;
+  --parch-lo: #cfa96c;
+  --night: #0a0c26;
+  --px: 4px;
+}
+html, body { height: 100%; }
+body { background: var(--night); color: var(--ink); overflow-x: hidden; }
+#world { position: fixed; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: 50% 100%; image-rendering: pixelated; display: block; }
+.stage { position: relative; min-height: 100%; box-sizing: border-box; display: grid; place-items: center; padding-inline: 16px; padding-block: 40px; }
+.card-wrap { width: 100%; max-width: 620px; filter: drop-shadow(8px 8px 0 rgba(8, 6, 28, .45)); animation: drop .5s steps(5) both; }
+@keyframes drop { from { transform: translateY(-28px); } to { transform: none; } }
+.card {
+  position: relative; box-sizing: border-box; display: flex; align-items: center; gap: 28px; padding: 30px 34px;
+  background-color: var(--parch); background-image: var(--grain, none); background-size: 192px 192px; image-rendering: pixelated;
+  box-shadow:
+    0 calc(-1 * var(--px)) 0 0 var(--ink), 0 var(--px) 0 0 var(--ink), calc(-1 * var(--px)) 0 0 0 var(--ink), var(--px) 0 0 0 var(--ink),
+    inset var(--px) var(--px) 0 0 var(--parch-hi), inset calc(-1 * var(--px)) calc(-1 * var(--px)) 0 0 var(--parch-lo);
+}
+.card::before { content: ""; position: absolute; inset: 12px; border: 2px solid rgba(106, 69, 40, .22); pointer-events: none; }
+.portrait { flex: none; width: 144px; height: 144px; padding: 6px; cursor: pointer; background: var(--parch-lo); box-shadow: 0 calc(-1 * var(--px)) 0 0 var(--ink), 0 var(--px) 0 0 var(--ink), calc(-1 * var(--px)) 0 0 0 var(--ink), var(--px) 0 0 0 var(--ink); }
+.portrait canvas { width: 100%; height: 100%; display: block; image-rendering: pixelated; }
+.ident { min-width: 0; display: grid; gap: 20px; }
+h1 { margin: 0; line-height: 0; color: var(--ink); cursor: pointer; justify-self: start; }
+/* the name is baked from Jersey 10, 15, 20 and 25; all share one cap height, so stepping through them sharpens it */
+.ident { --cap: 40px; }
+h1 { position: relative; }
+.name { display: block; height: calc(var(--cap) * var(--r)); width: auto; max-width: none; transition: none; }
+/* Jersey 10 stays in the flow and sizes the heading; the sharper cuts are layered on top, so the links never move */
+.name ~ .name { position: absolute; top: 0; left: 0; opacity: 0; }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.links { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: nowrap; gap: 14px; }
+.links a {
+  position: relative; display: grid; place-items: center; width: 44px; height: 44px; color: var(--ink); background: var(--parch-hi);
+  box-shadow: 0 -3px 0 0 var(--ink), 0 3px 0 0 var(--ink), -3px 0 0 0 var(--ink), 3px 0 0 0 var(--ink), inset 0 -3px 0 0 var(--parch-lo);
+  transition: transform .12s steps(2);
+}
+/* hover is tracked on the list slot, which never moves, so the lifted button can't slide out from under the pointer */
+.links li { display: block; }
+.links li:hover > a, .links a:focus-visible { transform: translateY(-4px); color: var(--ink-soft); }
+.links a:focus-visible { outline: 3px dashed var(--ink); outline-offset: 6px; }
+.links li:hover > a:active, .links a:active { transform: translateY(0); }
+/* the link's clickable area covers its drawn ink border and reaches 4 px further down,
+   so the strip a lifted button leaves behind still counts as the button */
+.links a::after { content: ""; position: absolute; inset: -3px -3px -7px -3px; }
+.tip { position: absolute; top: calc(100% + 8px); left: -3px; line-height: 0; color: var(--parch-hi); background: var(--ink); padding: 3px 4px; pointer-events: none; visibility: hidden; }
+.links li:hover > a .tip, .links a:focus-visible .tip, .links a.copied .tip { visibility: visible; }
+.tip .clip { display: block; overflow: hidden; width: var(--w); }
+.tip .clip[hidden] { display: none; }
+.tip svg { display: block; }
+/* typed in left to right, one character per step; the dark box grows with the text */
+@keyframes type { from { width: 0; } to { width: var(--w); } }
+/* the email label hangs from the button's right edge and types right to left: the box grows leftward,
+   revealing the end of the text first, so it stays on screen in every layout */
+.links li:last-child .tip { left: auto; right: -3px; }
+.links li:last-child .clip { display: flex; justify-content: flex-end; }
+.links li:last-child .clip[hidden] { display: none; }
+.links li:last-child .tip svg { flex: none; }
+.links li:hover > a .clip, .links a:focus-visible .clip, .links a.copied .clip { animation: type calc(var(--n) * 22ms) steps(var(--n), end) both; }
+
+/* stack once the side-by-side card no longer fits on one line (portrait + name + padding + page gutters) */
+@media (max-width: 660px) {
+  .card-wrap { width: max-content; max-width: 100%; }
+  .card { flex-direction: column; text-align: center; padding: 28px 22px; gap: 22px; }
+  .ident { --cap: 30px; }
+  .name { margin-inline: auto; }
+  .name ~ .name { left: 50%; transform: translateX(-50%); }
+  .links { justify-content: center; }
+}
+/* very small phones: a slightly smaller name and tighter padding so the stacked card still fits */
+@media (max-width: 340px) { .ident { --cap: 26px; } .card { padding-inline: 14px; } }
+/* easter egg: click the name or portrait for a little time-of-day panel in the top-left corner */
+.timepanel {
+  position: fixed; top: calc(16px + env(safe-area-inset-top, 0px)); left: 16px; z-index: 5;
+  display: flex; align-items: center; gap: 8px; padding: 6px 8px; box-sizing: border-box; max-width: calc(100% - 32px);
+  background: var(--parch); color: var(--ink);
+  box-shadow: 0 -3px 0 0 var(--ink), 0 3px 0 0 var(--ink), -3px 0 0 0 var(--ink), 3px 0 0 0 var(--ink), inset 0 -3px 0 0 var(--parch-lo);
+  filter: drop-shadow(6px 6px 0 rgba(8, 6, 28, .45)); animation: tp-in .35s steps(7) both;
+}
+/* slides down from above the top edge of the screen; closing fades it out in place */
+@keyframes tp-in { from { transform: translateY(calc(-100% - 40px)); } to { transform: none; } }
+@keyframes tp-out { from { opacity: 1; } to { opacity: 0; } }
+.timepanel.closing { animation: tp-out .25s ease-out both; pointer-events: none; }
+.timepanel[hidden] { display: none; }
+.tp-clock { display: block; flex: none; }
+.tp-btn { flex: none; display: grid; place-items: center; width: 24px; height: 24px; padding: 0; border: 0; cursor: pointer; color: var(--ink); background: var(--parch-hi);
+  box-shadow: 0 -2px 0 0 var(--ink), 0 2px 0 0 var(--ink), -2px 0 0 0 var(--ink), 2px 0 0 0 var(--ink), inset 0 -2px 0 0 var(--parch-lo); }
+.tp-btn:hover { color: var(--ink-soft); transform: translateY(-2px); }
+.tp-btn:focus-visible, #tp-range:focus-visible { outline: 2px dashed var(--ink); outline-offset: 4px; }
+#tp-range { -webkit-appearance: none; appearance: none; width: 120px; min-width: 0; flex: 1 1 auto; height: 14px; margin: 0; background: transparent; cursor: pointer; }
+#tp-range::-webkit-slider-runnable-track { height: 3px; background: var(--ink); }
+#tp-range::-moz-range-track { height: 3px; background: var(--ink); }
+#tp-range::-webkit-slider-thumb { -webkit-appearance: none; width: 8px; height: 14px; margin-top: -5.5px; border: 0; background: var(--parch-hi); box-shadow: 0 0 0 2px var(--ink); }
+#tp-range::-moz-range-thumb { width: 8px; height: 14px; border: 0; border-radius: 0; background: var(--parch-hi); box-shadow: 0 0 0 2px var(--ink); }
+@media (prefers-reduced-motion: reduce) { .card-wrap { animation: none; } .links a { transition: none; } }
+</style>
+</head>
+<body>
+
+<canvas id="world" aria-hidden="true"></canvas>
+
+<main class="stage">
+  <div class="card-wrap">
+    <article class="card">
+      <div class="portrait"><canvas id="avatar" width="288" height="288" role="img" aria-label="Portrait of Rounak Bera"></canvas></div>
+      <div class="ident">
+        <h1><span class="sr">Rounak Bera</span><svg class="name" style="--r:1.1000" viewBox="0 0 82 11" shape-rendering="crispEdges" aria-hidden="true"><path d="M0 0h6v1h-6zM40 0h2v1h-2zM51 0h6v1h-6zM0 1h7v1h-7zM40 1h2v1h-2zM51 1h7v1h-7zM0 2h2v1h-2zM5 2h2v1h-2zM9 2h5v1h-5zM16 2h2v1h-2zM21 2h2v1h-2zM24 2h2v1h-2zM27 2h3v1h-3zM33 2h5v1h-5zM40 2h2v1h-2zM44 2h2v1h-2zM51 2h2v1h-2zM56 2h2v1h-2zM60 2h5v1h-5zM67 2h2v1h-2zM70 2h2v1h-2zM75 2h5v1h-5zM0 3h2v1h-2zM5 3h2v1h-2zM8 3h7v1h-7zM16 3h2v1h-2zM21 3h2v1h-2zM24 3h7v1h-7zM32 3h7v1h-7zM40 3h2v1h-2zM44 3h2v1h-2zM51 3h2v1h-2zM56 3h2v1h-2zM59 3h7v1h-7zM67 3h6v1h-6zM74 3h7v1h-7zM0 4h2v1h-2zM5 4h2v1h-2zM8 4h2v1h-2zM13 4h2v1h-2zM16 4h2v1h-2zM21 4h2v1h-2zM24 4h2v1h-2zM29 4h2v1h-2zM37 4h2v1h-2zM40 4h2v1h-2zM43 4h2v1h-2zM51 4h6v1h-6zM59 4h2v1h-2zM64 4h2v1h-2zM67 4h3v1h-3zM71 4h1v1h-1zM79 4h2v1h-2zM0 5h6v1h-6zM8 5h2v1h-2zM13 5h2v1h-2zM16 5h2v1h-2zM21 5h2v1h-2zM24 5h2v1h-2zM29 5h2v1h-2zM33 5h6v1h-6zM40 5h4v1h-4zM51 5h7v1h-7zM59 5h7v1h-7zM67 5h2v1h-2zM75 5h6v1h-6zM0 6h7v1h-7zM8 6h2v1h-2zM13 6h2v1h-2zM16 6h2v1h-2zM21 6h2v1h-2zM24 6h2v1h-2zM29 6h2v1h-2zM32 6h7v1h-7zM40 6h2v1h-2zM43 6h2v1h-2zM51 6h2v1h-2zM56 6h2v1h-2zM59 6h7v1h-7zM67 6h2v1h-2zM74 6h7v1h-7zM0 7h2v1h-2zM5 7h2v1h-2zM8 7h2v1h-2zM13 7h2v1h-2zM16 7h2v1h-2zM21 7h2v1h-2zM24 7h2v1h-2zM29 7h2v1h-2zM32 7h2v1h-2zM37 7h2v1h-2zM40 7h2v1h-2zM44 7h2v1h-2zM51 7h2v1h-2zM56 7h2v1h-2zM59 7h2v1h-2zM67 7h2v1h-2zM74 7h2v1h-2zM79 7h2v1h-2zM0 8h2v1h-2zM5 8h2v1h-2zM8 8h7v1h-7zM16 8h7v1h-7zM24 8h2v1h-2zM29 8h2v1h-2zM32 8h7v1h-7zM40 8h2v1h-2zM44 8h2v1h-2zM51 8h7v1h-7zM59 8h7v1h-7zM67 8h2v1h-2zM74 8h7v1h-7zM0 9h2v1h-2zM5 9h2v1h-2zM9 9h5v1h-5zM17 9h3v1h-3zM21 9h2v1h-2zM24 9h2v1h-2zM29 9h2v1h-2zM33 9h3v1h-3zM37 9h2v1h-2zM40 9h2v1h-2zM44 9h2v1h-2zM51 9h6v1h-6zM60 9h5v1h-5zM67 9h2v1h-2zM75 9h3v1h-3zM79 9h2v1h-2z" transform="translate(1 1)" fill="var(--parch-lo)"/><path d="M0 0h6v1h-6zM40 0h2v1h-2zM51 0h6v1h-6zM0 1h7v1h-7zM40 1h2v1h-2zM51 1h7v1h-7zM0 2h2v1h-2zM5 2h2v1h-2zM9 2h5v1h-5zM16 2h2v1h-2zM21 2h2v1h-2zM24 2h2v1h-2zM27 2h3v1h-3zM33 2h5v1h-5zM40 2h2v1h-2zM44 2h2v1h-2zM51 2h2v1h-2zM56 2h2v1h-2zM60 2h5v1h-5zM67 2h2v1h-2zM70 2h2v1h-2zM75 2h5v1h-5zM0 3h2v1h-2zM5 3h2v1h-2zM8 3h7v1h-7zM16 3h2v1h-2zM21 3h2v1h-2zM24 3h7v1h-7zM32 3h7v1h-7zM40 3h2v1h-2zM44 3h2v1h-2zM51 3h2v1h-2zM56 3h2v1h-2zM59 3h7v1h-7zM67 3h6v1h-6zM74 3h7v1h-7zM0 4h2v1h-2zM5 4h2v1h-2zM8 4h2v1h-2zM13 4h2v1h-2zM16 4h2v1h-2zM21 4h2v1h-2zM24 4h2v1h-2zM29 4h2v1h-2zM37 4h2v1h-2zM40 4h2v1h-2zM43 4h2v1h-2zM51 4h6v1h-6zM59 4h2v1h-2zM64 4h2v1h-2zM67 4h3v1h-3zM71 4h1v1h-1zM79 4h2v1h-2zM0 5h6v1h-6zM8 5h2v1h-2zM13 5h2v1h-2zM16 5h2v1h-2zM21 5h2v1h-2zM24 5h2v1h-2zM29 5h2v1h-2zM33 5h6v1h-6zM40 5h4v1h-4zM51 5h7v1h-7zM59 5h7v1h-7zM67 5h2v1h-2zM75 5h6v1h-6zM0 6h7v1h-7zM8 6h2v1h-2zM13 6h2v1h-2zM16 6h2v1h-2zM21 6h2v1h-2zM24 6h2v1h-2zM29 6h2v1h-2zM32 6h7v1h-7zM40 6h2v1h-2zM43 6h2v1h-2zM51 6h2v1h-2zM56 6h2v1h-2zM59 6h7v1h-7zM67 6h2v1h-2zM74 6h7v1h-7zM0 7h2v1h-2zM5 7h2v1h-2zM8 7h2v1h-2zM13 7h2v1h-2zM16 7h2v1h-2zM21 7h2v1h-2zM24 7h2v1h-2zM29 7h2v1h-2zM32 7h2v1h-2zM37 7h2v1h-2zM40 7h2v1h-2zM44 7h2v1h-2zM51 7h2v1h-2zM56 7h2v1h-2zM59 7h2v1h-2zM67 7h2v1h-2zM74 7h2v1h-2zM79 7h2v1h-2zM0 8h2v1h-2zM5 8h2v1h-2zM8 8h7v1h-7zM16 8h7v1h-7zM24 8h2v1h-2zM29 8h2v1h-2zM32 8h7v1h-7zM40 8h2v1h-2zM44 8h2v1h-2zM51 8h7v1h-7zM59 8h7v1h-7zM67 8h2v1h-2zM74 8h7v1h-7zM0 9h2v1h-2zM5 9h2v1h-2zM9 9h5v1h-5zM17 9h3v1h-3zM21 9h2v1h-2zM24 9h2v1h-2zM29 9h2v1h-2zM33 9h3v1h-3zM37 9h2v1h-2zM40 9h2v1h-2zM44 9h2v1h-2zM51 9h6v1h-6zM60 9h5v1h-5zM67 9h2v1h-2zM75 9h3v1h-3zM79 9h2v1h-2z" fill="currentColor"/></svg><svg class="name" style="--r:1.0667" viewBox="0 0 121 16" shape-rendering="crispEdges" aria-hidden="true"><path d="M0 0h8v1h-8zM60 0h3v1h-3zM76 0h8v1h-8zM0 1h9v1h-9zM60 1h3v1h-3zM76 1h9v1h-9zM0 2h10v1h-10zM60 2h3v1h-3zM76 2h10v1h-10zM0 3h3v1h-3zM6 3h4v1h-4zM60 3h3v1h-3zM76 3h3v1h-3zM82 3h4v1h-4zM0 4h3v1h-3zM7 4h3v1h-3zM14 4h6v1h-6zM24 4h3v1h-3zM31 4h3v1h-3zM36 4h3v1h-3zM40 4h4v1h-4zM50 4h6v1h-6zM60 4h3v1h-3zM65 4h3v1h-3zM76 4h3v1h-3zM83 4h3v1h-3zM90 4h6v1h-6zM100 4h3v1h-3zM104 4h4v1h-4zM112 4h6v1h-6zM0 5h3v1h-3zM7 5h3v1h-3zM13 5h8v1h-8zM24 5h3v1h-3zM31 5h3v1h-3zM36 5h9v1h-9zM49 5h8v1h-8zM60 5h3v1h-3zM65 5h3v1h-3zM76 5h3v1h-3zM82 5h4v1h-4zM89 5h8v1h-8zM100 5h9v1h-9zM111 5h8v1h-8zM0 6h3v1h-3zM6 6h4v1h-4zM12 6h10v1h-10zM24 6h3v1h-3zM31 6h3v1h-3zM36 6h10v1h-10zM48 6h10v1h-10zM60 6h3v1h-3zM65 6h3v1h-3zM76 6h10v1h-10zM88 6h10v1h-10zM100 6h8v1h-8zM110 6h10v1h-10zM0 7h10v1h-10zM12 7h3v1h-3zM19 7h3v1h-3zM24 7h3v1h-3zM31 7h3v1h-3zM36 7h4v1h-4zM43 7h3v1h-3zM55 7h3v1h-3zM60 7h3v1h-3zM64 7h4v1h-4zM76 7h9v1h-9zM88 7h3v1h-3zM95 7h3v1h-3zM100 7h4v1h-4zM106 7h1v1h-1zM117 7h3v1h-3zM0 8h9v1h-9zM12 8h3v1h-3zM19 8h3v1h-3zM24 8h3v1h-3zM31 8h3v1h-3zM36 8h3v1h-3zM43 8h3v1h-3zM50 8h8v1h-8zM60 8h7v1h-7zM76 8h10v1h-10zM88 8h3v1h-3zM95 8h3v1h-3zM100 8h3v1h-3zM112 8h8v1h-8zM0 9h9v1h-9zM12 9h3v1h-3zM19 9h3v1h-3zM24 9h3v1h-3zM31 9h3v1h-3zM36 9h3v1h-3zM43 9h3v1h-3zM49 9h9v1h-9zM60 9h6v1h-6zM76 9h3v1h-3zM82 9h4v1h-4zM88 9h10v1h-10zM100 9h3v1h-3zM111 9h9v1h-9zM0 10h3v1h-3zM6 10h4v1h-4zM12 10h3v1h-3zM19 10h3v1h-3zM24 10h3v1h-3zM31 10h3v1h-3zM36 10h3v1h-3zM43 10h3v1h-3zM48 10h3v1h-3zM55 10h3v1h-3zM60 10h7v1h-7zM76 10h3v1h-3zM83 10h3v1h-3zM88 10h10v1h-10zM100 10h3v1h-3zM110 10h3v1h-3zM117 10h3v1h-3zM0 11h3v1h-3zM7 11h3v1h-3zM12 11h3v1h-3zM19 11h3v1h-3zM24 11h3v1h-3zM30 11h4v1h-4zM36 11h3v1h-3zM43 11h3v1h-3zM48 11h3v1h-3zM55 11h3v1h-3zM60 11h3v1h-3zM64 11h4v1h-4zM76 11h3v1h-3zM82 11h4v1h-4zM88 11h3v1h-3zM100 11h3v1h-3zM110 11h3v1h-3zM117 11h3v1h-3zM0 12h3v1h-3zM7 12h3v1h-3zM12 12h10v1h-10zM24 12h10v1h-10zM36 12h3v1h-3zM43 12h3v1h-3zM48 12h10v1h-10zM60 12h3v1h-3zM65 12h3v1h-3zM76 12h10v1h-10zM88 12h10v1h-10zM100 12h3v1h-3zM110 12h10v1h-10zM0 13h3v1h-3zM7 13h3v1h-3zM13 13h8v1h-8zM25 13h9v1h-9zM36 13h3v1h-3zM43 13h3v1h-3zM49 13h9v1h-9zM60 13h3v1h-3zM65 13h3v1h-3zM76 13h9v1h-9zM89 13h8v1h-8zM100 13h3v1h-3zM111 13h9v1h-9zM0 14h3v1h-3zM7 14h3v1h-3zM14 14h6v1h-6zM26 14h4v1h-4zM31 14h3v1h-3zM36 14h3v1h-3zM43 14h3v1h-3zM50 14h4v1h-4zM55 14h3v1h-3zM60 14h3v1h-3zM65 14h3v1h-3zM76 14h8v1h-8zM90 14h6v1h-6zM100 14h3v1h-3zM112 14h4v1h-4zM117 14h3v1h-3z" transform="translate(1 1)" fill="var(--parch-lo)"/><path d="M0 0h8v1h-8zM60 0h3v1h-3zM76 0h8v1h-8zM0 1h9v1h-9zM60 1h3v1h-3zM76 1h9v1h-9zM0 2h10v1h-10zM60 2h3v1h-3zM76 2h10v1h-10zM0 3h3v1h-3zM6 3h4v1h-4zM60 3h3v1h-3zM76 3h3v1h-3zM82 3h4v1h-4zM0 4h3v1h-3zM7 4h3v1h-3zM14 4h6v1h-6zM24 4h3v1h-3zM31 4h3v1h-3zM36 4h3v1h-3zM40 4h4v1h-4zM50 4h6v1h-6zM60 4h3v1h-3zM65 4h3v1h-3zM76 4h3v1h-3zM83 4h3v1h-3zM90 4h6v1h-6zM100 4h3v1h-3zM104 4h4v1h-4zM112 4h6v1h-6zM0 5h3v1h-3zM7 5h3v1h-3zM13 5h8v1h-8zM24 5h3v1h-3zM31 5h3v1h-3zM36 5h9v1h-9zM49 5h8v1h-8zM60 5h3v1h-3zM65 5h3v1h-3zM76 5h3v1h-3zM82 5h4v1h-4zM89 5h8v1h-8zM100 5h9v1h-9zM111 5h8v1h-8zM0 6h3v1h-3zM6 6h4v1h-4zM12 6h10v1h-10zM24 6h3v1h-3zM31 6h3v1h-3zM36 6h10v1h-10zM48 6h10v1h-10zM60 6h3v1h-3zM65 6h3v1h-3zM76 6h10v1h-10zM88 6h10v1h-10zM100 6h8v1h-8zM110 6h10v1h-10zM0 7h10v1h-10zM12 7h3v1h-3zM19 7h3v1h-3zM24 7h3v1h-3zM31 7h3v1h-3zM36 7h4v1h-4zM43 7h3v1h-3zM55 7h3v1h-3zM60 7h3v1h-3zM64 7h4v1h-4zM76 7h9v1h-9zM88 7h3v1h-3zM95 7h3v1h-3zM100 7h4v1h-4zM106 7h1v1h-1zM117 7h3v1h-3zM0 8h9v1h-9zM12 8h3v1h-3zM19 8h3v1h-3zM24 8h3v1h-3zM31 8h3v1h-3zM36 8h3v1h-3zM43 8h3v1h-3zM50 8h8v1h-8zM60 8h7v1h-7zM76 8h10v1h-10zM88 8h3v1h-3zM95 8h3v1h-3zM100 8h3v1h-3zM112 8h8v1h-8zM0 9h9v1h-9zM12 9h3v1h-3zM19 9h3v1h-3zM24 9h3v1h-3zM31 9h3v1h-3zM36 9h3v1h-3zM43 9h3v1h-3zM49 9h9v1h-9zM60 9h6v1h-6zM76 9h3v1h-3zM82 9h4v1h-4zM88 9h10v1h-10zM100 9h3v1h-3zM111 9h9v1h-9zM0 10h3v1h-3zM6 10h4v1h-4zM12 10h3v1h-3zM19 10h3v1h-3zM24 10h3v1h-3zM31 10h3v1h-3zM36 10h3v1h-3zM43 10h3v1h-3zM48 10h3v1h-3zM55 10h3v1h-3zM60 10h7v1h-7zM76 10h3v1h-3zM83 10h3v1h-3zM88 10h10v1h-10zM100 10h3v1h-3zM110 10h3v1h-3zM117 10h3v1h-3zM0 11h3v1h-3zM7 11h3v1h-3zM12 11h3v1h-3zM19 11h3v1h-3zM24 11h3v1h-3zM30 11h4v1h-4zM36 11h3v1h-3zM43 11h3v1h-3zM48 11h3v1h-3zM55 11h3v1h-3zM60 11h3v1h-3zM64 11h4v1h-4zM76 11h3v1h-3zM82 11h4v1h-4zM88 11h3v1h-3zM100 11h3v1h-3zM110 11h3v1h-3zM117 11h3v1h-3zM0 12h3v1h-3zM7 12h3v1h-3zM12 12h10v1h-10zM24 12h10v1h-10zM36 12h3v1h-3zM43 12h3v1h-3zM48 12h10v1h-10zM60 12h3v1h-3zM65 12h3v1h-3zM76 12h10v1h-10zM88 12h10v1h-10zM100 12h3v1h-3zM110 12h10v1h-10zM0 13h3v1h-3zM7 13h3v1h-3zM13 13h8v1h-8zM25 13h9v1h-9zM36 13h3v1h-3zM43 13h3v1h-3zM49 13h9v1h-9zM60 13h3v1h-3zM65 13h3v1h-3zM76 13h9v1h-9zM89 13h8v1h-8zM100 13h3v1h-3zM111 13h9v1h-9zM0 14h3v1h-3zM7 14h3v1h-3zM14 14h6v1h-6zM26 14h4v1h-4zM31 14h3v1h-3zM36 14h3v1h-3zM43 14h3v1h-3zM50 14h4v1h-4zM55 14h3v1h-3zM60 14h3v1h-3zM65 14h3v1h-3zM76 14h8v1h-8zM90 14h6v1h-6zM100 14h3v1h-3zM112 14h4v1h-4zM117 14h3v1h-3z" fill="currentColor"/></svg><svg class="name" style="--r:1.0500" viewBox="0 0 158 21" shape-rendering="crispEdges" aria-hidden="true"><path d="M0 0h10v1h-10zM80 0h4v1h-4zM101 0h10v1h-10zM0 1h12v1h-12zM80 1h4v1h-4zM101 1h12v1h-12zM0 2h12v1h-12zM80 2h4v1h-4zM101 2h12v1h-12zM0 3h13v1h-13zM80 3h4v1h-4zM101 3h13v1h-13zM0 4h4v1h-4zM8 4h5v1h-5zM80 4h4v1h-4zM101 4h4v1h-4zM109 4h5v1h-5zM0 5h4v1h-4zM9 5h4v1h-4zM19 5h7v1h-7zM32 5h4v1h-4zM41 5h4v1h-4zM48 5h4v1h-4zM53 5h5v1h-5zM67 5h7v1h-7zM80 5h4v1h-4zM87 5h4v1h-4zM101 5h4v1h-4zM110 5h4v1h-4zM120 5h7v1h-7zM132 5h4v1h-4zM137 5h4v1h-4zM147 5h7v1h-7zM0 6h4v1h-4zM9 6h4v1h-4zM17 6h11v1h-11zM32 6h4v1h-4zM41 6h4v1h-4zM48 6h12v1h-12zM65 6h11v1h-11zM80 6h4v1h-4zM87 6h4v1h-4zM101 6h4v1h-4zM110 6h4v1h-4zM118 6h11v1h-11zM132 6h10v1h-10zM145 6h11v1h-11zM0 7h4v1h-4zM9 7h4v1h-4zM17 7h11v1h-11zM32 7h4v1h-4zM41 7h4v1h-4zM48 7h12v1h-12zM65 7h11v1h-11zM80 7h4v1h-4zM87 7h4v1h-4zM101 7h4v1h-4zM109 7h5v1h-5zM118 7h11v1h-11zM132 7h11v1h-11zM145 7h11v1h-11zM0 8h4v1h-4zM9 8h4v1h-4zM16 8h5v1h-5zM24 8h5v1h-5zM32 8h4v1h-4zM41 8h4v1h-4zM48 8h5v1h-5zM56 8h5v1h-5zM64 8h5v1h-5zM72 8h5v1h-5zM80 8h4v1h-4zM86 8h5v1h-5zM101 8h12v1h-12zM117 8h5v1h-5zM125 8h5v1h-5zM132 8h5v1h-5zM139 8h3v1h-3zM144 8h5v1h-5zM152 8h5v1h-5zM0 9h4v1h-4zM8 9h5v1h-5zM16 9h4v1h-4zM25 9h4v1h-4zM32 9h4v1h-4zM41 9h4v1h-4zM48 9h4v1h-4zM57 9h4v1h-4zM64 9h4v1h-4zM73 9h4v1h-4zM80 9h4v1h-4zM85 9h6v1h-6zM101 9h11v1h-11zM117 9h4v1h-4zM126 9h4v1h-4zM132 9h4v1h-4zM140 9h1v1h-1zM144 9h4v1h-4zM153 9h4v1h-4zM0 10h13v1h-13zM16 10h4v1h-4zM25 10h4v1h-4zM32 10h4v1h-4zM41 10h4v1h-4zM48 10h4v1h-4zM57 10h4v1h-4zM73 10h4v1h-4zM80 10h10v1h-10zM101 10h12v1h-12zM117 10h4v1h-4zM126 10h4v1h-4zM132 10h4v1h-4zM153 10h4v1h-4zM0 11h12v1h-12zM16 11h4v1h-4zM25 11h4v1h-4zM32 11h4v1h-4zM41 11h4v1h-4zM48 11h4v1h-4zM57 11h4v1h-4zM73 11h4v1h-4zM80 11h9v1h-9zM101 11h13v1h-13zM117 11h13v1h-13zM132 11h4v1h-4zM153 11h4v1h-4zM0 12h11v1h-11zM16 12h4v1h-4zM25 12h4v1h-4zM32 12h4v1h-4zM41 12h4v1h-4zM48 12h4v1h-4zM57 12h4v1h-4zM67 12h10v1h-10zM80 12h8v1h-8zM101 12h4v1h-4zM109 12h5v1h-5zM117 12h13v1h-13zM132 12h4v1h-4zM147 12h10v1h-10zM0 13h12v1h-12zM16 13h4v1h-4zM25 13h4v1h-4zM32 13h4v1h-4zM41 13h4v1h-4zM48 13h4v1h-4zM57 13h4v1h-4zM65 13h12v1h-12zM80 13h9v1h-9zM101 13h4v1h-4zM110 13h4v1h-4zM117 13h4v1h-4zM132 13h4v1h-4zM145 13h12v1h-12zM0 14h4v1h-4zM7 14h6v1h-6zM16 14h4v1h-4zM25 14h4v1h-4zM32 14h4v1h-4zM41 14h4v1h-4zM48 14h4v1h-4zM57 14h4v1h-4zM65 14h4v1h-4zM73 14h4v1h-4zM80 14h4v1h-4zM85 14h5v1h-5zM101 14h4v1h-4zM110 14h4v1h-4zM117 14h4v1h-4zM132 14h4v1h-4zM145 14h4v1h-4zM153 14h4v1h-4zM0 15h4v1h-4zM8 15h5v1h-5zM16 15h4v1h-4zM25 15h4v1h-4zM32 15h4v1h-4zM41 15h4v1h-4zM48 15h4v1h-4zM57 15h4v1h-4zM64 15h4v1h-4zM73 15h4v1h-4zM80 15h4v1h-4zM86 15h5v1h-5zM101 15h4v1h-4zM109 15h5v1h-5zM117 15h4v1h-4zM126 15h4v1h-4zM132 15h4v1h-4zM144 15h4v1h-4zM153 15h4v1h-4zM0 16h4v1h-4zM9 16h4v1h-4zM16 16h5v1h-5zM24 16h5v1h-5zM32 16h5v1h-5zM40 16h5v1h-5zM48 16h4v1h-4zM57 16h4v1h-4zM64 16h5v1h-5zM73 16h4v1h-4zM80 16h4v1h-4zM87 16h4v1h-4zM101 16h13v1h-13zM117 16h5v1h-5zM125 16h5v1h-5zM132 16h4v1h-4zM144 16h5v1h-5zM153 16h4v1h-4zM0 17h4v1h-4zM9 17h4v1h-4zM17 17h11v1h-11zM33 17h12v1h-12zM48 17h4v1h-4zM57 17h4v1h-4zM65 17h12v1h-12zM80 17h4v1h-4zM87 17h4v1h-4zM101 17h12v1h-12zM118 17h11v1h-11zM132 17h4v1h-4zM145 17h12v1h-12zM0 18h4v1h-4zM9 18h4v1h-4zM17 18h11v1h-11zM33 18h12v1h-12zM48 18h4v1h-4zM57 18h4v1h-4zM65 18h12v1h-12zM80 18h4v1h-4zM87 18h4v1h-4zM101 18h12v1h-12zM118 18h11v1h-11zM132 18h4v1h-4zM145 18h12v1h-12zM0 19h4v1h-4zM9 19h4v1h-4zM19 19h7v1h-7zM35 19h5v1h-5zM41 19h4v1h-4zM48 19h4v1h-4zM57 19h4v1h-4zM67 19h5v1h-5zM73 19h4v1h-4zM80 19h4v1h-4zM87 19h4v1h-4zM101 19h10v1h-10zM120 19h7v1h-7zM132 19h4v1h-4zM147 19h5v1h-5zM153 19h4v1h-4z" transform="translate(1 1)" fill="var(--parch-lo)"/><path d="M0 0h10v1h-10zM80 0h4v1h-4zM101 0h10v1h-10zM0 1h12v1h-12zM80 1h4v1h-4zM101 1h12v1h-12zM0 2h12v1h-12zM80 2h4v1h-4zM101 2h12v1h-12zM0 3h13v1h-13zM80 3h4v1h-4zM101 3h13v1h-13zM0 4h4v1h-4zM8 4h5v1h-5zM80 4h4v1h-4zM101 4h4v1h-4zM109 4h5v1h-5zM0 5h4v1h-4zM9 5h4v1h-4zM19 5h7v1h-7zM32 5h4v1h-4zM41 5h4v1h-4zM48 5h4v1h-4zM53 5h5v1h-5zM67 5h7v1h-7zM80 5h4v1h-4zM87 5h4v1h-4zM101 5h4v1h-4zM110 5h4v1h-4zM120 5h7v1h-7zM132 5h4v1h-4zM137 5h4v1h-4zM147 5h7v1h-7zM0 6h4v1h-4zM9 6h4v1h-4zM17 6h11v1h-11zM32 6h4v1h-4zM41 6h4v1h-4zM48 6h12v1h-12zM65 6h11v1h-11zM80 6h4v1h-4zM87 6h4v1h-4zM101 6h4v1h-4zM110 6h4v1h-4zM118 6h11v1h-11zM132 6h10v1h-10zM145 6h11v1h-11zM0 7h4v1h-4zM9 7h4v1h-4zM17 7h11v1h-11zM32 7h4v1h-4zM41 7h4v1h-4zM48 7h12v1h-12zM65 7h11v1h-11zM80 7h4v1h-4zM87 7h4v1h-4zM101 7h4v1h-4zM109 7h5v1h-5zM118 7h11v1h-11zM132 7h11v1h-11zM145 7h11v1h-11zM0 8h4v1h-4zM9 8h4v1h-4zM16 8h5v1h-5zM24 8h5v1h-5zM32 8h4v1h-4zM41 8h4v1h-4zM48 8h5v1h-5zM56 8h5v1h-5zM64 8h5v1h-5zM72 8h5v1h-5zM80 8h4v1h-4zM86 8h5v1h-5zM101 8h12v1h-12zM117 8h5v1h-5zM125 8h5v1h-5zM132 8h5v1h-5zM139 8h3v1h-3zM144 8h5v1h-5zM152 8h5v1h-5zM0 9h4v1h-4zM8 9h5v1h-5zM16 9h4v1h-4zM25 9h4v1h-4zM32 9h4v1h-4zM41 9h4v1h-4zM48 9h4v1h-4zM57 9h4v1h-4zM64 9h4v1h-4zM73 9h4v1h-4zM80 9h4v1h-4zM85 9h6v1h-6zM101 9h11v1h-11zM117 9h4v1h-4zM126 9h4v1h-4zM132 9h4v1h-4zM140 9h1v1h-1zM144 9h4v1h-4zM153 9h4v1h-4zM0 10h13v1h-13zM16 10h4v1h-4zM25 10h4v1h-4zM32 10h4v1h-4zM41 10h4v1h-4zM48 10h4v1h-4zM57 10h4v1h-4zM73 10h4v1h-4zM80 10h10v1h-10zM101 10h12v1h-12zM117 10h4v1h-4zM126 10h4v1h-4zM132 10h4v1h-4zM153 10h4v1h-4zM0 11h12v1h-12zM16 11h4v1h-4zM25 11h4v1h-4zM32 11h4v1h-4zM41 11h4v1h-4zM48 11h4v1h-4zM57 11h4v1h-4zM73 11h4v1h-4zM80 11h9v1h-9zM101 11h13v1h-13zM117 11h13v1h-13zM132 11h4v1h-4zM153 11h4v1h-4zM0 12h11v1h-11zM16 12h4v1h-4zM25 12h4v1h-4zM32 12h4v1h-4zM41 12h4v1h-4zM48 12h4v1h-4zM57 12h4v1h-4zM67 12h10v1h-10zM80 12h8v1h-8zM101 12h4v1h-4zM109 12h5v1h-5zM117 12h13v1h-13zM132 12h4v1h-4zM147 12h10v1h-10zM0 13h12v1h-12zM16 13h4v1h-4zM25 13h4v1h-4zM32 13h4v1h-4zM41 13h4v1h-4zM48 13h4v1h-4zM57 13h4v1h-4zM65 13h12v1h-12zM80 13h9v1h-9zM101 13h4v1h-4zM110 13h4v1h-4zM117 13h4v1h-4zM132 13h4v1h-4zM145 13h12v1h-12zM0 14h4v1h-4zM7 14h6v1h-6zM16 14h4v1h-4zM25 14h4v1h-4zM32 14h4v1h-4zM41 14h4v1h-4zM48 14h4v1h-4zM57 14h4v1h-4zM65 14h4v1h-4zM73 14h4v1h-4zM80 14h4v1h-4zM85 14h5v1h-5zM101 14h4v1h-4zM110 14h4v1h-4zM117 14h4v1h-4zM132 14h4v1h-4zM145 14h4v1h-4zM153 14h4v1h-4zM0 15h4v1h-4zM8 15h5v1h-5zM16 15h4v1h-4zM25 15h4v1h-4zM32 15h4v1h-4zM41 15h4v1h-4zM48 15h4v1h-4zM57 15h4v1h-4zM64 15h4v1h-4zM73 15h4v1h-4zM80 15h4v1h-4zM86 15h5v1h-5zM101 15h4v1h-4zM109 15h5v1h-5zM117 15h4v1h-4zM126 15h4v1h-4zM132 15h4v1h-4zM144 15h4v1h-4zM153 15h4v1h-4zM0 16h4v1h-4zM9 16h4v1h-4zM16 16h5v1h-5zM24 16h5v1h-5zM32 16h5v1h-5zM40 16h5v1h-5zM48 16h4v1h-4zM57 16h4v1h-4zM64 16h5v1h-5zM73 16h4v1h-4zM80 16h4v1h-4zM87 16h4v1h-4zM101 16h13v1h-13zM117 16h5v1h-5zM125 16h5v1h-5zM132 16h4v1h-4zM144 16h5v1h-5zM153 16h4v1h-4zM0 17h4v1h-4zM9 17h4v1h-4zM17 17h11v1h-11zM33 17h12v1h-12zM48 17h4v1h-4zM57 17h4v1h-4zM65 17h12v1h-12zM80 17h4v1h-4zM87 17h4v1h-4zM101 17h12v1h-12zM118 17h11v1h-11zM132 17h4v1h-4zM145 17h12v1h-12zM0 18h4v1h-4zM9 18h4v1h-4zM17 18h11v1h-11zM33 18h12v1h-12zM48 18h4v1h-4zM57 18h4v1h-4zM65 18h12v1h-12zM80 18h4v1h-4zM87 18h4v1h-4zM101 18h12v1h-12zM118 18h11v1h-11zM132 18h4v1h-4zM145 18h12v1h-12zM0 19h4v1h-4zM9 19h4v1h-4zM19 19h7v1h-7zM35 19h5v1h-5zM41 19h4v1h-4zM48 19h4v1h-4zM57 19h4v1h-4zM67 19h5v1h-5zM73 19h4v1h-4zM80 19h4v1h-4zM87 19h4v1h-4zM101 19h10v1h-10zM120 19h7v1h-7zM132 19h4v1h-4zM147 19h5v1h-5zM153 19h4v1h-4z" fill="currentColor"/></svg><svg class="name" style="--r:1.0400" viewBox="0 0 193 26" shape-rendering="crispEdges" aria-hidden="true"><path d="M0 0h12v1h-12zM95 0h5v1h-5zM123 0h12v1h-12zM0 1h14v1h-14zM95 1h5v1h-5zM123 1h14v1h-14zM0 2h15v1h-15zM95 2h5v1h-5zM123 2h15v1h-15zM0 3h15v1h-15zM95 3h5v1h-5zM123 3h15v1h-15zM0 4h16v1h-16zM95 4h5v1h-5zM123 4h16v1h-16zM0 5h5v1h-5zM10 5h6v1h-6zM95 5h5v1h-5zM123 5h5v1h-5zM133 5h6v1h-6zM0 6h5v1h-5zM11 6h5v1h-5zM23 6h8v1h-8zM37 6h5v1h-5zM48 6h5v1h-5zM57 6h5v1h-5zM63 6h6v1h-6zM79 6h8v1h-8zM95 6h5v1h-5zM104 6h5v1h-5zM123 6h5v1h-5zM134 6h5v1h-5zM146 6h8v1h-8zM161 6h5v1h-5zM167 6h6v1h-6zM180 6h8v1h-8zM0 7h5v1h-5zM11 7h5v1h-5zM21 7h12v1h-12zM37 7h5v1h-5zM48 7h5v1h-5zM57 7h14v1h-14zM77 7h12v1h-12zM95 7h5v1h-5zM104 7h5v1h-5zM123 7h5v1h-5zM134 7h5v1h-5zM144 7h12v1h-12zM161 7h13v1h-13zM178 7h12v1h-12zM0 8h5v1h-5zM11 8h5v1h-5zM20 8h14v1h-14zM37 8h5v1h-5zM48 8h5v1h-5zM57 8h15v1h-15zM76 8h14v1h-14zM95 8h5v1h-5zM104 8h5v1h-5zM123 8h5v1h-5zM134 8h5v1h-5zM143 8h14v1h-14zM161 8h14v1h-14zM177 8h14v1h-14zM0 9h5v1h-5zM11 9h5v1h-5zM20 9h14v1h-14zM37 9h5v1h-5zM48 9h5v1h-5zM57 9h15v1h-15zM76 9h14v1h-14zM95 9h5v1h-5zM104 9h5v1h-5zM123 9h5v1h-5zM133 9h6v1h-6zM143 9h14v1h-14zM161 9h13v1h-13zM177 9h14v1h-14zM0 10h5v1h-5zM11 10h5v1h-5zM19 10h6v1h-6zM29 10h6v1h-6zM37 10h5v1h-5zM48 10h5v1h-5zM57 10h6v1h-6zM67 10h6v1h-6zM75 10h6v1h-6zM85 10h6v1h-6zM95 10h5v1h-5zM103 10h6v1h-6zM123 10h16v1h-16zM142 10h6v1h-6zM152 10h6v1h-6zM161 10h6v1h-6zM170 10h3v1h-3zM176 10h6v1h-6zM186 10h6v1h-6zM0 11h5v1h-5zM10 11h6v1h-6zM19 11h5v1h-5zM30 11h5v1h-5zM37 11h5v1h-5zM48 11h5v1h-5zM57 11h5v1h-5zM68 11h5v1h-5zM75 11h5v1h-5zM86 11h5v1h-5zM95 11h5v1h-5zM102 11h6v1h-6zM123 11h15v1h-15zM142 11h5v1h-5zM153 11h5v1h-5zM161 11h5v1h-5zM171 11h1v1h-1zM176 11h5v1h-5zM187 11h5v1h-5zM0 12h16v1h-16zM19 12h5v1h-5zM30 12h5v1h-5zM37 12h5v1h-5zM48 12h5v1h-5zM57 12h5v1h-5zM68 12h5v1h-5zM86 12h5v1h-5zM95 12h12v1h-12zM123 12h14v1h-14zM142 12h5v1h-5zM153 12h5v1h-5zM161 12h5v1h-5zM187 12h5v1h-5zM0 13h15v1h-15zM19 13h5v1h-5zM30 13h5v1h-5zM37 13h5v1h-5zM48 13h5v1h-5zM57 13h5v1h-5zM68 13h5v1h-5zM86 13h5v1h-5zM95 13h11v1h-11zM123 13h15v1h-15zM142 13h5v1h-5zM153 13h5v1h-5zM161 13h5v1h-5zM187 13h5v1h-5zM0 14h14v1h-14zM19 14h5v1h-5zM30 14h5v1h-5zM37 14h5v1h-5zM48 14h5v1h-5zM57 14h5v1h-5zM68 14h5v1h-5zM79 14h12v1h-12zM95 14h10v1h-10zM123 14h16v1h-16zM142 14h16v1h-16zM161 14h5v1h-5zM180 14h12v1h-12zM0 15h15v1h-15zM19 15h5v1h-5zM30 15h5v1h-5zM37 15h5v1h-5zM48 15h5v1h-5zM57 15h5v1h-5zM68 15h5v1h-5zM77 15h14v1h-14zM95 15h11v1h-11zM123 15h5v1h-5zM133 15h6v1h-6zM142 15h16v1h-16zM161 15h5v1h-5zM178 15h14v1h-14zM0 16h16v1h-16zM19 16h5v1h-5zM30 16h5v1h-5zM37 16h5v1h-5zM48 16h5v1h-5zM57 16h5v1h-5zM68 16h5v1h-5zM76 16h15v1h-15zM95 16h12v1h-12zM123 16h5v1h-5zM134 16h5v1h-5zM142 16h16v1h-16zM161 16h5v1h-5zM177 16h15v1h-15zM0 17h5v1h-5zM11 17h5v1h-5zM19 17h5v1h-5zM30 17h5v1h-5zM37 17h5v1h-5zM48 17h5v1h-5zM57 17h5v1h-5zM68 17h5v1h-5zM76 17h5v1h-5zM86 17h5v1h-5zM95 17h5v1h-5zM102 17h6v1h-6zM123 17h5v1h-5zM134 17h5v1h-5zM142 17h5v1h-5zM161 17h5v1h-5zM177 17h5v1h-5zM187 17h5v1h-5zM0 18h5v1h-5zM11 18h5v1h-5zM19 18h5v1h-5zM30 18h5v1h-5zM37 18h5v1h-5zM48 18h5v1h-5zM57 18h5v1h-5zM68 18h5v1h-5zM75 18h5v1h-5zM86 18h5v1h-5zM95 18h5v1h-5zM103 18h6v1h-6zM123 18h5v1h-5zM134 18h5v1h-5zM142 18h5v1h-5zM161 18h5v1h-5zM176 18h5v1h-5zM187 18h5v1h-5zM0 19h5v1h-5zM11 19h5v1h-5zM19 19h5v1h-5zM30 19h5v1h-5zM37 19h5v1h-5zM48 19h5v1h-5zM57 19h5v1h-5zM68 19h5v1h-5zM75 19h5v1h-5zM86 19h5v1h-5zM95 19h5v1h-5zM104 19h5v1h-5zM123 19h5v1h-5zM133 19h6v1h-6zM142 19h5v1h-5zM153 19h5v1h-5zM161 19h5v1h-5zM176 19h5v1h-5zM187 19h5v1h-5zM0 20h5v1h-5zM11 20h5v1h-5zM19 20h6v1h-6zM29 20h6v1h-6zM37 20h6v1h-6zM47 20h6v1h-6zM57 20h5v1h-5zM68 20h5v1h-5zM75 20h6v1h-6zM85 20h6v1h-6zM95 20h5v1h-5zM104 20h5v1h-5zM123 20h16v1h-16zM142 20h6v1h-6zM152 20h6v1h-6zM161 20h5v1h-5zM176 20h6v1h-6zM186 20h6v1h-6zM0 21h5v1h-5zM11 21h5v1h-5zM20 21h14v1h-14zM38 21h15v1h-15zM57 21h5v1h-5zM68 21h5v1h-5zM76 21h15v1h-15zM95 21h5v1h-5zM104 21h5v1h-5zM123 21h15v1h-15zM143 21h14v1h-14zM161 21h5v1h-5zM177 21h15v1h-15zM0 22h5v1h-5zM11 22h5v1h-5zM20 22h14v1h-14zM38 22h15v1h-15zM57 22h5v1h-5zM68 22h5v1h-5zM76 22h15v1h-15zM95 22h5v1h-5zM104 22h5v1h-5zM123 22h15v1h-15zM143 22h14v1h-14zM161 22h5v1h-5zM177 22h15v1h-15zM0 23h5v1h-5zM11 23h5v1h-5zM21 23h12v1h-12zM39 23h14v1h-14zM57 23h5v1h-5zM68 23h5v1h-5zM77 23h14v1h-14zM95 23h5v1h-5zM104 23h5v1h-5zM123 23h14v1h-14zM144 23h12v1h-12zM161 23h5v1h-5zM178 23h14v1h-14zM0 24h5v1h-5zM11 24h5v1h-5zM23 24h8v1h-8zM41 24h6v1h-6zM48 24h5v1h-5zM57 24h5v1h-5zM68 24h5v1h-5zM78 24h7v1h-7zM86 24h5v1h-5zM95 24h5v1h-5zM104 24h5v1h-5zM123 24h12v1h-12zM146 24h8v1h-8zM161 24h5v1h-5zM179 24h7v1h-7zM187 24h5v1h-5z" transform="translate(1 1)" fill="var(--parch-lo)"/><path d="M0 0h12v1h-12zM95 0h5v1h-5zM123 0h12v1h-12zM0 1h14v1h-14zM95 1h5v1h-5zM123 1h14v1h-14zM0 2h15v1h-15zM95 2h5v1h-5zM123 2h15v1h-15zM0 3h15v1h-15zM95 3h5v1h-5zM123 3h15v1h-15zM0 4h16v1h-16zM95 4h5v1h-5zM123 4h16v1h-16zM0 5h5v1h-5zM10 5h6v1h-6zM95 5h5v1h-5zM123 5h5v1h-5zM133 5h6v1h-6zM0 6h5v1h-5zM11 6h5v1h-5zM23 6h8v1h-8zM37 6h5v1h-5zM48 6h5v1h-5zM57 6h5v1h-5zM63 6h6v1h-6zM79 6h8v1h-8zM95 6h5v1h-5zM104 6h5v1h-5zM123 6h5v1h-5zM134 6h5v1h-5zM146 6h8v1h-8zM161 6h5v1h-5zM167 6h6v1h-6zM180 6h8v1h-8zM0 7h5v1h-5zM11 7h5v1h-5zM21 7h12v1h-12zM37 7h5v1h-5zM48 7h5v1h-5zM57 7h14v1h-14zM77 7h12v1h-12zM95 7h5v1h-5zM104 7h5v1h-5zM123 7h5v1h-5zM134 7h5v1h-5zM144 7h12v1h-12zM161 7h13v1h-13zM178 7h12v1h-12zM0 8h5v1h-5zM11 8h5v1h-5zM20 8h14v1h-14zM37 8h5v1h-5zM48 8h5v1h-5zM57 8h15v1h-15zM76 8h14v1h-14zM95 8h5v1h-5zM104 8h5v1h-5zM123 8h5v1h-5zM134 8h5v1h-5zM143 8h14v1h-14zM161 8h14v1h-14zM177 8h14v1h-14zM0 9h5v1h-5zM11 9h5v1h-5zM20 9h14v1h-14zM37 9h5v1h-5zM48 9h5v1h-5zM57 9h15v1h-15zM76 9h14v1h-14zM95 9h5v1h-5zM104 9h5v1h-5zM123 9h5v1h-5zM133 9h6v1h-6zM143 9h14v1h-14zM161 9h13v1h-13zM177 9h14v1h-14zM0 10h5v1h-5zM11 10h5v1h-5zM19 10h6v1h-6zM29 10h6v1h-6zM37 10h5v1h-5zM48 10h5v1h-5zM57 10h6v1h-6zM67 10h6v1h-6zM75 10h6v1h-6zM85 10h6v1h-6zM95 10h5v1h-5zM103 10h6v1h-6zM123 10h16v1h-16zM142 10h6v1h-6zM152 10h6v1h-6zM161 10h6v1h-6zM170 10h3v1h-3zM176 10h6v1h-6zM186 10h6v1h-6zM0 11h5v1h-5zM10 11h6v1h-6zM19 11h5v1h-5zM30 11h5v1h-5zM37 11h5v1h-5zM48 11h5v1h-5zM57 11h5v1h-5zM68 11h5v1h-5zM75 11h5v1h-5zM86 11h5v1h-5zM95 11h5v1h-5zM102 11h6v1h-6zM123 11h15v1h-15zM142 11h5v1h-5zM153 11h5v1h-5zM161 11h5v1h-5zM171 11h1v1h-1zM176 11h5v1h-5zM187 11h5v1h-5zM0 12h16v1h-16zM19 12h5v1h-5zM30 12h5v1h-5zM37 12h5v1h-5zM48 12h5v1h-5zM57 12h5v1h-5zM68 12h5v1h-5zM86 12h5v1h-5zM95 12h12v1h-12zM123 12h14v1h-14zM142 12h5v1h-5zM153 12h5v1h-5zM161 12h5v1h-5zM187 12h5v1h-5zM0 13h15v1h-15zM19 13h5v1h-5zM30 13h5v1h-5zM37 13h5v1h-5zM48 13h5v1h-5zM57 13h5v1h-5zM68 13h5v1h-5zM86 13h5v1h-5zM95 13h11v1h-11zM123 13h15v1h-15zM142 13h5v1h-5zM153 13h5v1h-5zM161 13h5v1h-5zM187 13h5v1h-5zM0 14h14v1h-14zM19 14h5v1h-5zM30 14h5v1h-5zM37 14h5v1h-5zM48 14h5v1h-5zM57 14h5v1h-5zM68 14h5v1h-5zM79 14h12v1h-12zM95 14h10v1h-10zM123 14h16v1h-16zM142 14h16v1h-16zM161 14h5v1h-5zM180 14h12v1h-12zM0 15h15v1h-15zM19 15h5v1h-5zM30 15h5v1h-5zM37 15h5v1h-5zM48 15h5v1h-5zM57 15h5v1h-5zM68 15h5v1h-5zM77 15h14v1h-14zM95 15h11v1h-11zM123 15h5v1h-5zM133 15h6v1h-6zM142 15h16v1h-16zM161 15h5v1h-5zM178 15h14v1h-14zM0 16h16v1h-16zM19 16h5v1h-5zM30 16h5v1h-5zM37 16h5v1h-5zM48 16h5v1h-5zM57 16h5v1h-5zM68 16h5v1h-5zM76 16h15v1h-15zM95 16h12v1h-12zM123 16h5v1h-5zM134 16h5v1h-5zM142 16h16v1h-16zM161 16h5v1h-5zM177 16h15v1h-15zM0 17h5v1h-5zM11 17h5v1h-5zM19 17h5v1h-5zM30 17h5v1h-5zM37 17h5v1h-5zM48 17h5v1h-5zM57 17h5v1h-5zM68 17h5v1h-5zM76 17h5v1h-5zM86 17h5v1h-5zM95 17h5v1h-5zM102 17h6v1h-6zM123 17h5v1h-5zM134 17h5v1h-5zM142 17h5v1h-5zM161 17h5v1h-5zM177 17h5v1h-5zM187 17h5v1h-5zM0 18h5v1h-5zM11 18h5v1h-5zM19 18h5v1h-5zM30 18h5v1h-5zM37 18h5v1h-5zM48 18h5v1h-5zM57 18h5v1h-5zM68 18h5v1h-5zM75 18h5v1h-5zM86 18h5v1h-5zM95 18h5v1h-5zM103 18h6v1h-6zM123 18h5v1h-5zM134 18h5v1h-5zM142 18h5v1h-5zM161 18h5v1h-5zM176 18h5v1h-5zM187 18h5v1h-5zM0 19h5v1h-5zM11 19h5v1h-5zM19 19h5v1h-5zM30 19h5v1h-5zM37 19h5v1h-5zM48 19h5v1h-5zM57 19h5v1h-5zM68 19h5v1h-5zM75 19h5v1h-5zM86 19h5v1h-5zM95 19h5v1h-5zM104 19h5v1h-5zM123 19h5v1h-5zM133 19h6v1h-6zM142 19h5v1h-5zM153 19h5v1h-5zM161 19h5v1h-5zM176 19h5v1h-5zM187 19h5v1h-5zM0 20h5v1h-5zM11 20h5v1h-5zM19 20h6v1h-6zM29 20h6v1h-6zM37 20h6v1h-6zM47 20h6v1h-6zM57 20h5v1h-5zM68 20h5v1h-5zM75 20h6v1h-6zM85 20h6v1h-6zM95 20h5v1h-5zM104 20h5v1h-5zM123 20h16v1h-16zM142 20h6v1h-6zM152 20h6v1h-6zM161 20h5v1h-5zM176 20h6v1h-6zM186 20h6v1h-6zM0 21h5v1h-5zM11 21h5v1h-5zM20 21h14v1h-14zM38 21h15v1h-15zM57 21h5v1h-5zM68 21h5v1h-5zM76 21h15v1h-15zM95 21h5v1h-5zM104 21h5v1h-5zM123 21h15v1h-15zM143 21h14v1h-14zM161 21h5v1h-5zM177 21h15v1h-15zM0 22h5v1h-5zM11 22h5v1h-5zM20 22h14v1h-14zM38 22h15v1h-15zM57 22h5v1h-5zM68 22h5v1h-5zM76 22h15v1h-15zM95 22h5v1h-5zM104 22h5v1h-5zM123 22h15v1h-15zM143 22h14v1h-14zM161 22h5v1h-5zM177 22h15v1h-15zM0 23h5v1h-5zM11 23h5v1h-5zM21 23h12v1h-12zM39 23h14v1h-14zM57 23h5v1h-5zM68 23h5v1h-5zM77 23h14v1h-14zM95 23h5v1h-5zM104 23h5v1h-5zM123 23h14v1h-14zM144 23h12v1h-12zM161 23h5v1h-5zM178 23h14v1h-14zM0 24h5v1h-5zM11 24h5v1h-5zM23 24h8v1h-8zM41 24h6v1h-6zM48 24h5v1h-5zM57 24h5v1h-5zM68 24h5v1h-5zM78 24h7v1h-7zM86 24h5v1h-5zM95 24h5v1h-5zM104 24h5v1h-5zM123 24h12v1h-12zM146 24h8v1h-8zM161 24h5v1h-5zM179 24h7v1h-7zM187 24h5v1h-5z" fill="currentColor"/></svg></h1>
+        <ul class="links">
+          <li><a href="https://github.com/rounakbera" data-icon="github" aria-label="GitHub"><span class="tip"><span class="clip" style="--w:40px;--n:6"><svg class="tip-text" viewBox="0 0 40 14" width="40" height="14" shape-rendering="crispEdges" aria-hidden="true"><path d="M8 2h2v1h-2zM13 2h1v1h-1zM17 2h2v1h-2zM33 2h2v1h-2zM8 3h2v1h-2zM12 3h2v1h-2zM17 3h2v1h-2zM33 3h2v1h-2zM1 4h6v1h-6zM12 4h2v1h-2zM17 4h2v1h-2zM20 4h3v1h-3zM25 4h2v1h-2zM30 4h2v1h-2zM33 4h2v1h-2zM36 4h3v1h-3zM0 5h7v1h-7zM8 5h2v1h-2zM11 5h5v1h-5zM17 5h7v1h-7zM25 5h2v1h-2zM30 5h2v1h-2zM33 5h7v1h-7zM0 6h2v1h-2zM5 6h2v1h-2zM8 6h2v1h-2zM11 6h5v1h-5zM17 6h2v1h-2zM22 6h2v1h-2zM25 6h2v1h-2zM30 6h2v1h-2zM33 6h2v1h-2zM38 6h2v1h-2zM0 7h2v1h-2zM5 7h2v1h-2zM8 7h2v1h-2zM12 7h2v1h-2zM17 7h2v1h-2zM22 7h2v1h-2zM25 7h2v1h-2zM30 7h2v1h-2zM33 7h2v1h-2zM38 7h2v1h-2zM0 8h2v1h-2zM5 8h2v1h-2zM8 8h2v1h-2zM12 8h2v1h-2zM17 8h2v1h-2zM22 8h2v1h-2zM25 8h2v1h-2zM30 8h2v1h-2zM33 8h2v1h-2zM38 8h2v1h-2zM0 9h7v1h-7zM8 9h2v1h-2zM12 9h2v1h-2zM17 9h2v1h-2zM22 9h2v1h-2zM25 9h2v1h-2zM30 9h2v1h-2zM33 9h2v1h-2zM38 9h2v1h-2zM1 10h3v1h-3zM5 10h2v1h-2zM8 10h2v1h-2zM12 10h4v1h-4zM17 10h2v1h-2zM22 10h2v1h-2zM25 10h7v1h-7zM33 10h7v1h-7zM5 11h2v1h-2zM8 11h2v1h-2zM13 11h3v1h-3zM17 11h2v1h-2zM22 11h2v1h-2zM26 11h3v1h-3zM30 11h2v1h-2zM33 11h6v1h-6zM0 12h7v1h-7zM1 13h5v1h-5z" fill="currentColor"/></svg></span></span></a></li>
+          <li><a href="https://www.linkedin.com/in/rbera" data-icon="linkedin" aria-label="LinkedIn"><span class="tip"><span class="clip" style="--w:47px;--n:8"><svg class="tip-text" viewBox="0 0 47 14" width="47" height="14" shape-rendering="crispEdges" aria-hidden="true"><path d="M0 2h2v1h-2zM3 2h2v1h-2zM14 2h2v1h-2zM34 2h2v1h-2zM37 2h2v1h-2zM0 3h2v1h-2zM3 3h2v1h-2zM14 3h2v1h-2zM34 3h2v1h-2zM37 3h2v1h-2zM0 4h2v1h-2zM6 4h2v1h-2zM9 4h3v1h-3zM14 4h2v1h-2zM18 4h2v1h-2zM22 4h5v1h-5zM30 4h6v1h-6zM40 4h2v1h-2zM43 4h3v1h-3zM0 5h2v1h-2zM3 5h2v1h-2zM6 5h7v1h-7zM14 5h2v1h-2zM18 5h2v1h-2zM21 5h7v1h-7zM29 5h7v1h-7zM37 5h2v1h-2zM40 5h7v1h-7zM0 6h2v1h-2zM3 6h2v1h-2zM6 6h2v1h-2zM11 6h2v1h-2zM14 6h2v1h-2zM17 6h2v1h-2zM21 6h2v1h-2zM26 6h2v1h-2zM29 6h2v1h-2zM34 6h2v1h-2zM37 6h2v1h-2zM40 6h2v1h-2zM45 6h2v1h-2zM0 7h2v1h-2zM3 7h2v1h-2zM6 7h2v1h-2zM11 7h2v1h-2zM14 7h4v1h-4zM21 7h7v1h-7zM29 7h2v1h-2zM34 7h2v1h-2zM37 7h2v1h-2zM40 7h2v1h-2zM45 7h2v1h-2zM0 8h2v1h-2zM3 8h2v1h-2zM6 8h2v1h-2zM11 8h2v1h-2zM14 8h2v1h-2zM17 8h2v1h-2zM21 8h7v1h-7zM29 8h2v1h-2zM34 8h2v1h-2zM37 8h2v1h-2zM40 8h2v1h-2zM45 8h2v1h-2zM0 9h2v1h-2zM3 9h2v1h-2zM6 9h2v1h-2zM11 9h2v1h-2zM14 9h2v1h-2zM18 9h2v1h-2zM21 9h2v1h-2zM29 9h2v1h-2zM34 9h2v1h-2zM37 9h2v1h-2zM40 9h2v1h-2zM45 9h2v1h-2zM0 10h2v1h-2zM3 10h2v1h-2zM6 10h2v1h-2zM11 10h2v1h-2zM14 10h2v1h-2zM18 10h2v1h-2zM21 10h7v1h-7zM29 10h7v1h-7zM37 10h2v1h-2zM40 10h2v1h-2zM45 10h2v1h-2zM0 11h2v1h-2zM3 11h2v1h-2zM6 11h2v1h-2zM11 11h2v1h-2zM14 11h2v1h-2zM18 11h2v1h-2zM22 11h5v1h-5zM30 11h3v1h-3zM34 11h2v1h-2zM37 11h2v1h-2zM40 11h2v1h-2zM45 11h2v1h-2z" fill="currentColor"/></svg></span></span></a></li>
+          <li><a href="#" data-icon="scroll" aria-label="Résumé"><span class="tip"><span class="clip" style="--w:48px;--n:6"><svg class="tip-text" viewBox="0 0 48 14" width="48" height="14" shape-rendering="crispEdges" aria-hidden="true"><path d="M11 0h1v1h-1zM45 0h1v1h-1zM10 1h2v1h-2zM44 1h2v1h-2zM9 2h2v1h-2zM43 2h2v1h-2zM0 4h2v1h-2zM3 4h2v1h-2zM8 4h5v1h-5zM16 4h4v1h-4zM22 4h2v1h-2zM27 4h2v1h-2zM30 4h2v1h-2zM33 4h2v1h-2zM37 4h2v1h-2zM42 4h5v1h-5zM0 5h6v1h-6zM7 5h7v1h-7zM15 5h6v1h-6zM22 5h2v1h-2zM27 5h2v1h-2zM30 5h10v1h-10zM41 5h7v1h-7zM0 6h3v1h-3zM4 6h1v1h-1zM7 6h2v1h-2zM12 6h2v1h-2zM15 6h2v1h-2zM22 6h2v1h-2zM27 6h2v1h-2zM30 6h2v1h-2zM34 6h2v1h-2zM38 6h2v1h-2zM41 6h2v1h-2zM46 6h2v1h-2zM0 7h2v1h-2zM7 7h7v1h-7zM15 7h5v1h-5zM22 7h2v1h-2zM27 7h2v1h-2zM30 7h2v1h-2zM34 7h2v1h-2zM38 7h2v1h-2zM41 7h7v1h-7zM0 8h2v1h-2zM7 8h7v1h-7zM16 8h5v1h-5zM22 8h2v1h-2zM27 8h2v1h-2zM30 8h2v1h-2zM34 8h2v1h-2zM38 8h2v1h-2zM41 8h7v1h-7zM0 9h2v1h-2zM7 9h2v1h-2zM19 9h2v1h-2zM22 9h2v1h-2zM27 9h2v1h-2zM30 9h2v1h-2zM34 9h2v1h-2zM38 9h2v1h-2zM41 9h2v1h-2zM0 10h2v1h-2zM7 10h7v1h-7zM15 10h6v1h-6zM22 10h7v1h-7zM30 10h2v1h-2zM34 10h2v1h-2zM38 10h2v1h-2zM41 10h7v1h-7zM0 11h2v1h-2zM8 11h5v1h-5zM16 11h4v1h-4zM23 11h3v1h-3zM27 11h2v1h-2zM30 11h2v1h-2zM34 11h2v1h-2zM38 11h2v1h-2zM42 11h5v1h-5z" fill="currentColor"/></svg></span></span></a></li>
+          <li><a href="#" data-icon="mail" data-copy-email aria-label="Copy email address: first name plus last name at gmail.com"><span class="tip"><span class="clip" data-state="hint" style="--w:224px;--n:33"><svg class="tip-text" viewBox="0 0 224 14" width="224" height="14" shape-rendering="crispEdges" aria-hidden="true"><path d="M2 2h3v1h-3zM6 2h2v1h-2zM25 2h1v1h-1zM83 2h2v1h-2zM103 2h1v1h-1zM152 2h7v1h-7zM189 2h2v1h-2zM192 2h2v1h-2zM1 3h4v1h-4zM6 3h2v1h-2zM24 3h2v1h-2zM83 3h2v1h-2zM102 3h2v1h-2zM151 3h9v1h-9zM189 3h2v1h-2zM192 3h2v1h-2zM1 4h2v1h-2zM9 4h2v1h-2zM12 4h2v1h-2zM17 4h4v1h-4zM24 4h2v1h-2zM33 4h2v1h-2zM36 4h3v1h-3zM42 4h5v1h-5zM49 4h2v1h-2zM52 4h2v1h-2zM56 4h2v1h-2zM61 4h5v1h-5zM74 4h2v1h-2zM83 4h2v1h-2zM87 4h5v1h-5zM95 4h4v1h-4zM102 4h2v1h-2zM111 4h2v1h-2zM114 4h3v1h-3zM120 4h5v1h-5zM127 4h2v1h-2zM130 4h2v1h-2zM134 4h2v1h-2zM139 4h5v1h-5zM150 4h3v1h-3zM158 4h3v1h-3zM163 4h6v1h-6zM170 4h2v1h-2zM173 4h2v1h-2zM177 4h2v1h-2zM182 4h5v1h-5zM192 4h2v1h-2zM199 4h5v1h-5zM207 4h5v1h-5zM214 4h2v1h-2zM217 4h2v1h-2zM221 4h2v1h-2zM0 5h5v1h-5zM6 5h2v1h-2zM9 5h6v1h-6zM16 5h6v1h-6zM23 5h5v1h-5zM33 5h7v1h-7zM41 5h7v1h-7zM49 5h10v1h-10zM60 5h7v1h-7zM74 5h2v1h-2zM83 5h2v1h-2zM86 5h7v1h-7zM94 5h6v1h-6zM101 5h5v1h-5zM111 5h7v1h-7zM119 5h7v1h-7zM127 5h10v1h-10zM138 5h7v1h-7zM150 5h2v1h-2zM154 5h4v1h-4zM159 5h2v1h-2zM162 5h7v1h-7zM170 5h10v1h-10zM181 5h7v1h-7zM189 5h2v1h-2zM192 5h2v1h-2zM198 5h7v1h-7zM206 5h7v1h-7zM214 5h10v1h-10zM0 6h5v1h-5zM6 6h2v1h-2zM9 6h3v1h-3zM13 6h1v1h-1zM16 6h2v1h-2zM23 6h5v1h-5zM33 6h2v1h-2zM38 6h2v1h-2zM46 6h2v1h-2zM49 6h2v1h-2zM53 6h2v1h-2zM57 6h2v1h-2zM60 6h2v1h-2zM65 6h2v1h-2zM72 6h6v1h-6zM83 6h2v1h-2zM91 6h2v1h-2zM94 6h2v1h-2zM101 6h5v1h-5zM111 6h2v1h-2zM116 6h2v1h-2zM124 6h2v1h-2zM127 6h2v1h-2zM131 6h2v1h-2zM135 6h2v1h-2zM138 6h2v1h-2zM143 6h2v1h-2zM150 6h2v1h-2zM153 6h5v1h-5zM159 6h2v1h-2zM162 6h2v1h-2zM167 6h2v1h-2zM170 6h2v1h-2zM174 6h2v1h-2zM178 6h2v1h-2zM186 6h2v1h-2zM189 6h2v1h-2zM192 6h2v1h-2zM198 6h2v1h-2zM203 6h2v1h-2zM206 6h2v1h-2zM211 6h2v1h-2zM214 6h2v1h-2zM218 6h2v1h-2zM222 6h2v1h-2zM1 7h2v1h-2zM6 7h2v1h-2zM9 7h2v1h-2zM16 7h5v1h-5zM24 7h2v1h-2zM33 7h2v1h-2zM38 7h2v1h-2zM42 7h6v1h-6zM49 7h2v1h-2zM53 7h2v1h-2zM57 7h2v1h-2zM60 7h7v1h-7zM72 7h6v1h-6zM83 7h2v1h-2zM87 7h6v1h-6zM94 7h5v1h-5zM102 7h2v1h-2zM111 7h2v1h-2zM116 7h2v1h-2zM120 7h6v1h-6zM127 7h2v1h-2zM131 7h2v1h-2zM135 7h2v1h-2zM138 7h7v1h-7zM150 7h2v1h-2zM153 7h2v1h-2zM156 7h2v1h-2zM159 7h2v1h-2zM162 7h2v1h-2zM167 7h2v1h-2zM170 7h2v1h-2zM174 7h2v1h-2zM178 7h2v1h-2zM182 7h6v1h-6zM189 7h2v1h-2zM192 7h2v1h-2zM198 7h2v1h-2zM206 7h2v1h-2zM211 7h2v1h-2zM214 7h2v1h-2zM218 7h2v1h-2zM222 7h2v1h-2zM1 8h2v1h-2zM6 8h2v1h-2zM9 8h2v1h-2zM17 8h5v1h-5zM24 8h2v1h-2zM33 8h2v1h-2zM38 8h2v1h-2zM41 8h7v1h-7zM49 8h2v1h-2zM53 8h2v1h-2zM57 8h2v1h-2zM60 8h7v1h-7zM74 8h2v1h-2zM83 8h2v1h-2zM86 8h7v1h-7zM95 8h5v1h-5zM102 8h2v1h-2zM111 8h2v1h-2zM116 8h2v1h-2zM119 8h7v1h-7zM127 8h2v1h-2zM131 8h2v1h-2zM135 8h2v1h-2zM138 8h7v1h-7zM150 8h2v1h-2zM153 8h5v1h-5zM159 8h2v1h-2zM162 8h2v1h-2zM167 8h2v1h-2zM170 8h2v1h-2zM174 8h2v1h-2zM178 8h2v1h-2zM181 8h7v1h-7zM189 8h2v1h-2zM192 8h2v1h-2zM198 8h2v1h-2zM206 8h2v1h-2zM211 8h2v1h-2zM214 8h2v1h-2zM218 8h2v1h-2zM222 8h2v1h-2zM1 9h2v1h-2zM6 9h2v1h-2zM9 9h2v1h-2zM20 9h2v1h-2zM24 9h2v1h-2zM33 9h2v1h-2zM38 9h2v1h-2zM41 9h2v1h-2zM46 9h2v1h-2zM49 9h2v1h-2zM53 9h2v1h-2zM57 9h2v1h-2zM60 9h2v1h-2zM74 9h2v1h-2zM83 9h2v1h-2zM86 9h2v1h-2zM91 9h2v1h-2zM98 9h2v1h-2zM102 9h2v1h-2zM111 9h2v1h-2zM116 9h2v1h-2zM119 9h2v1h-2zM124 9h2v1h-2zM127 9h2v1h-2zM131 9h2v1h-2zM135 9h2v1h-2zM138 9h2v1h-2zM150 9h2v1h-2zM154 9h2v1h-2zM157 9h3v1h-3zM162 9h7v1h-7zM170 9h2v1h-2zM174 9h2v1h-2zM178 9h2v1h-2zM181 9h2v1h-2zM186 9h2v1h-2zM189 9h2v1h-2zM192 9h2v1h-2zM198 9h2v1h-2zM203 9h2v1h-2zM206 9h2v1h-2zM211 9h2v1h-2zM214 9h2v1h-2zM218 9h2v1h-2zM222 9h2v1h-2zM1 10h2v1h-2zM6 10h2v1h-2zM9 10h2v1h-2zM16 10h6v1h-6zM24 10h4v1h-4zM33 10h2v1h-2zM38 10h2v1h-2zM41 10h7v1h-7zM49 10h2v1h-2zM53 10h2v1h-2zM57 10h2v1h-2zM60 10h7v1h-7zM83 10h2v1h-2zM86 10h7v1h-7zM94 10h6v1h-6zM102 10h4v1h-4zM111 10h2v1h-2zM116 10h2v1h-2zM119 10h7v1h-7zM127 10h2v1h-2zM131 10h2v1h-2zM135 10h2v1h-2zM138 10h7v1h-7zM150 10h3v1h-3zM163 10h3v1h-3zM167 10h2v1h-2zM170 10h2v1h-2zM174 10h2v1h-2zM178 10h2v1h-2zM181 10h7v1h-7zM189 10h2v1h-2zM192 10h2v1h-2zM195 10h2v1h-2zM198 10h7v1h-7zM206 10h7v1h-7zM214 10h2v1h-2zM218 10h2v1h-2zM222 10h2v1h-2zM1 11h2v1h-2zM6 11h2v1h-2zM9 11h2v1h-2zM17 11h4v1h-4zM25 11h3v1h-3zM33 11h2v1h-2zM38 11h2v1h-2zM42 11h3v1h-3zM46 11h2v1h-2zM49 11h2v1h-2zM53 11h2v1h-2zM57 11h2v1h-2zM61 11h5v1h-5zM83 11h2v1h-2zM87 11h3v1h-3zM91 11h2v1h-2zM95 11h4v1h-4zM103 11h3v1h-3zM111 11h2v1h-2zM116 11h2v1h-2zM120 11h3v1h-3zM124 11h2v1h-2zM127 11h2v1h-2zM131 11h2v1h-2zM135 11h2v1h-2zM139 11h5v1h-5zM151 11h8v1h-8zM167 11h2v1h-2zM170 11h2v1h-2zM174 11h2v1h-2zM178 11h2v1h-2zM182 11h3v1h-3zM186 11h2v1h-2zM189 11h2v1h-2zM192 11h2v1h-2zM195 11h2v1h-2zM199 11h5v1h-5zM207 11h5v1h-5zM214 11h2v1h-2zM218 11h2v1h-2zM222 11h2v1h-2zM152 12h6v1h-6zM162 12h7v1h-7zM163 13h5v1h-5z" fill="currentColor"/></svg></span><span class="clip" data-state="copied" hidden style="--w:45px;--n:7"><svg class="tip-text" viewBox="0 0 45 14" width="45" height="14" shape-rendering="crispEdges" aria-hidden="true"><path d="M24 2h2v1h-2zM40 2h2v1h-2zM43 2h2v1h-2zM24 3h2v1h-2zM40 3h2v1h-2zM43 3h2v1h-2zM1 4h5v1h-5zM9 4h5v1h-5zM16 4h2v1h-2zM19 4h3v1h-3zM28 4h5v1h-5zM36 4h6v1h-6zM43 4h2v1h-2zM0 5h7v1h-7zM8 5h7v1h-7zM16 5h7v1h-7zM24 5h2v1h-2zM27 5h7v1h-7zM35 5h7v1h-7zM43 5h2v1h-2zM0 6h2v1h-2zM5 6h2v1h-2zM8 6h2v1h-2zM13 6h2v1h-2zM16 6h2v1h-2zM21 6h2v1h-2zM24 6h2v1h-2zM27 6h2v1h-2zM32 6h2v1h-2zM35 6h2v1h-2zM40 6h2v1h-2zM43 6h2v1h-2zM0 7h2v1h-2zM8 7h2v1h-2zM13 7h2v1h-2zM16 7h2v1h-2zM21 7h2v1h-2zM24 7h2v1h-2zM27 7h7v1h-7zM35 7h2v1h-2zM40 7h2v1h-2zM43 7h2v1h-2zM0 8h2v1h-2zM8 8h2v1h-2zM13 8h2v1h-2zM16 8h2v1h-2zM21 8h2v1h-2zM24 8h2v1h-2zM27 8h7v1h-7zM35 8h2v1h-2zM40 8h2v1h-2zM43 8h2v1h-2zM0 9h2v1h-2zM5 9h2v1h-2zM8 9h2v1h-2zM13 9h2v1h-2zM16 9h2v1h-2zM21 9h2v1h-2zM24 9h2v1h-2zM27 9h2v1h-2zM35 9h2v1h-2zM40 9h2v1h-2zM0 10h7v1h-7zM8 10h7v1h-7zM16 10h7v1h-7zM24 10h2v1h-2zM27 10h7v1h-7zM35 10h7v1h-7zM43 10h2v1h-2zM1 11h5v1h-5zM9 11h5v1h-5zM16 11h6v1h-6zM24 11h2v1h-2zM28 11h5v1h-5zM36 11h3v1h-3zM40 11h2v1h-2zM43 11h2v1h-2zM16 12h2v1h-2zM16 13h2v1h-2z" fill="currentColor"/></svg></span></span></a></li>
+        </ul>
+      </div>
+    </article>
+  </div>
+</main>
+
+<div class="timepanel" id="timepanel" role="dialog" aria-label="Time of day" hidden>
+  <svg class="tp-clock" id="tp-clock" height="15" shape-rendering="crispEdges" role="img" aria-label=""></svg>
+  <input id="tp-range" type="range" min="0" max="1439" step="1" aria-label="Time of day">
+  <button class="tp-btn" id="tp-season" type="button" aria-label="Season"><svg viewBox="0 0 9 9" width="14" height="14" shape-rendering="crispEdges" aria-hidden="true"><path d="" fill="currentColor"/></svg></button>
+  <button class="tp-btn" id="tp-reseed" type="button" aria-label="Grow a new forest" title="new forest"><svg viewBox="0 0 9 9" width="14" height="14" shape-rendering="crispEdges" aria-hidden="true"><path d="M0 0h9v1h-9zM0 1h1v1h-1zM8 1h1v1h-1zM0 2h1v1h-1zM2 2h1v1h-1zM8 2h1v1h-1zM0 3h1v1h-1zM8 3h1v1h-1zM0 4h1v1h-1zM4 4h1v1h-1zM8 4h1v1h-1zM0 5h1v1h-1zM8 5h1v1h-1zM0 6h1v1h-1zM6 6h1v1h-1zM8 6h1v1h-1zM0 7h1v1h-1zM8 7h1v1h-1zM0 8h9v1h-9z" fill="currentColor"/></svg></button>
+  <button class="tp-btn" id="tp-reset" type="button" aria-label="Back to the current time and season"><svg class="" viewBox="0 0 10 10" width="15" height="15" shape-rendering="crispEdges" aria-hidden="true"><path d="M4 0h4v1h-4zM0 1h2v1h-2zM3 1h1v1h-1zM8 1h1v1h-1zM0 2h3v1h-3zM9 2h1v1h-1zM0 3h4v1h-4zM9 3h1v1h-1zM9 4h1v1h-1zM0 5h1v1h-1zM9 5h1v1h-1zM0 6h1v1h-1zM9 6h1v1h-1zM1 7h1v1h-1zM8 7h1v1h-1zM2 8h1v1h-1zM7 8h1v1h-1zM3 9h4v1h-4z" fill="currentColor"/></svg></button>
+  <button class="tp-btn" id="tp-close" type="button" aria-label="Close"><svg class="" viewBox="0 0 8 8" width="12" height="12" shape-rendering="crispEdges" aria-hidden="true"><path d="M0 0h2v1h-2zM6 0h2v1h-2zM0 1h3v1h-3zM5 1h3v1h-3zM1 2h6v1h-6zM2 3h4v1h-4zM2 4h4v1h-4zM1 5h6v1h-6zM0 6h3v1h-3zM5 6h3v1h-3zM0 7h2v1h-2zM6 7h2v1h-2z" fill="currentColor"/></svg></button>
+</div>
+<script>
+(() => {
+  /* ---------- helpers ---------- */
+  const rng = (seed) => () => { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
+  const lerp = (a, b, t) => a + (b - a) * t;
+  const mix = (a, b, t) => [lerp(a[0], b[0], t), lerp(a[1], b[1], t), lerp(a[2], b[2], t)];
+  const css = (c) => `rgb(${c[0] | 0},${c[1] | 0},${c[2] | 0})`;
+  const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+  const mk = (w, h) => { const c = document.createElement('canvas'); c.width = w; c.height = h; return c; };
+  const disc = (g, cx, cy, r) => { for (let dy = -r; dy <= r; dy++) { const h = Math.floor(Math.sqrt(Math.max(0, r * r - dy * dy + r * .8))); g.fillRect(cx - h, cy + dy, 2 * h + 1, 1); } };
+  const BAYER = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5];
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  /* ---------- link icons (pixel grids) ---------- */
+  const ICONS = {
+    // GitHub: the mark from GitHub's brand assets, reduced to a 16 px grid
+    github: ["......####......","....########....","..##.######.##..","..##..####..##..",".###...##...###.",".###........###.","####........####","####........####","####........####","####........####",".#.##......####.",".##.##....#####.","..##......####..","..####....####..","....##....##....","................"],
+    // LinkedIn: the "in" mark from LinkedIn's brand assets, reduced to a 12 px grid
+    linkedin: ["##.........","##.........","...........","##.##.###..","##.#######.","##.###..###","##.##....##","##.##....##","##.##....##","##.##....##","##.##....##","##.##....##"],
+    // résumé: a sheet leaning between its two rolls, both sides parallel diagonals
+    scroll: ["..##########..",".#..#.......#.",".#.##.......#.","..##########..","...#........#.","...#.######.#.","..#........#..","..#.######.#..",".#........#...",".#.######.#...",".##########...","#........###..",".##########..."],
+    // email: an envelope with feathered wings
+    mail: ["#..................#","##................##","#.#.############.#.#","######........######",".#.##.#......#.##.#.","..###..#....#..###..","....#...#..#...#....","....#....##....#....","....#..........#....","....############...."]
+  };
+  const iconSVG = (rows) => {
+    const h = rows.length, w = Math.max(...rows.map(r => r.length)); let out = '';
+    rows.forEach((row, y) => { let x = 0; while (x < row.length) { if (row[x] === '#') { const s = x; while (x < row.length && row[x] === '#') x++; out += `<rect x="${s}" y="${y}" width="${x - s}" height="1"/>`; } else x++; } });
+    return `<svg viewBox="0 0 ${w} ${h}" width="${w * 2}" height="${h * 2}" shape-rendering="crispEdges" fill="currentColor" aria-hidden="true">${out}</svg>`;
+  };
+  document.querySelectorAll('.links a[data-icon]').forEach(a => a.insertAdjacentHTML('afterbegin', iconSVG(ICONS[a.dataset.icon])));
+
+  /* ---------- email: never written out in the page; built from the name and copied on click ---------- */
+  {
+    const a = document.querySelector('[data-copy-email]'), hint = a.querySelector('[data-state="hint"]'), done = a.querySelector('[data-state="copied"]');
+    let t = 0;
+    a.addEventListener('click', async (e) => {
+      e.preventDefault();
+      const addr = document.querySelector('h1 .sr').textContent.toLowerCase().replace(/[^a-z]/g, '') + '@' + 'gmail.com';
+      try { await navigator.clipboard.writeText(addr); }
+      catch { const ta = document.createElement('textarea'); ta.value = addr; ta.style.position = 'fixed'; ta.style.opacity = '0'; document.body.append(ta); ta.select(); try { document.execCommand('copy'); } catch {} ta.remove(); }
+      hint.hidden = true; done.hidden = false; a.classList.add('copied');
+      clearTimeout(t); t = setTimeout(reset, 1500);
+    });
+    // "copied!" goes away as soon as the pointer leaves the button (e.g. onto another link)
+    function reset() { clearTimeout(t); hint.hidden = false; done.hidden = true; a.classList.remove('copied'); }
+    a.parentElement.addEventListener('pointerleave', reset);
+  }
+
+  /* ---------- parchment grain ---------- */
+  {
+    const c = mk(48, 48), g = c.getContext('2d'), r = rng(3);
+    g.fillStyle = '#ecd7a6'; g.fillRect(0, 0, 48, 48);
+    for (let i = 0; i < 280; i++) { const v = r(); g.fillStyle = v < .5 ? '#e3ca94' : v < .86 ? '#f3e3bb' : '#d6b77e'; g.fillRect(r() * 48 | 0, r() * 48 | 0, r() < .2 ? 2 : 1, 1); }
+    for (let i = 0; i < 7; i++) { g.fillStyle = 'rgba(169,122,69,.28)'; g.fillRect(r() * 48 | 0, r() * 48 | 0, 3 + (r() * 5 | 0), 1); }
+    document.querySelector('.card').style.setProperty('--grain', `url(${c.toDataURL()})`);
+  }
+
+  /* ---------- portrait: pixel art that resolves into the photo on hover ---------- */
+  {
+    const cv = document.getElementById('avatar'), g = cv.getContext('2d'), N = cv.width;
+    const art = new Image(), photo = new Image(), tmp = document.createElement('canvas'), tg = tmp.getContext('2d');
+    art.src = 'portrait-pixel.png'; photo.src = 'portrait.jpg';
+    // one continuous progress value p (0 = pixel art, 1 = photo) eased over ~0.45 s.
+    // The block size shrinks linearly (6 → 1 canvas px), so the image visibly de-pixelates the whole way
+    // instead of jumping sharp at the start; the art fades out over the first 40%, the smooth photo fades in at the end,
+    // and the name steps Jersey 10 → 15 → 20 → 25 alongside it
+    const names = [...document.querySelectorAll('h1 .name')], DUR = 450;
+    let p = 0, target = 0, raf = 0, last = 0;
+    const ease = (x) => x * x * (3 - 2 * x);
+    function paint() {
+      // the name swaps crisply at even points along the way (blending two pixel grids just looks muddy)
+      const e = ease(p), step = Math.min(3, Math.floor(e * 4));
+      names.forEach((n, k) => { n.style.opacity = k === step ? 1 : 0; });
+      g.imageSmoothingEnabled = false; g.globalAlpha = 1;
+      if (e <= 0 || !photo.complete) { if (art.complete) g.drawImage(art, 0, 0, N, N); return; }
+      const b = Math.round(N / lerp(N / 48, 1, e));
+      if (b >= N) { g.imageSmoothingEnabled = true; g.drawImage(photo, 0, 0, N, N); }
+      else { tmp.width = tmp.height = b; tg.imageSmoothingEnabled = true; tg.drawImage(photo, 0, 0, b, b); g.drawImage(tmp, 0, 0, N, N); }
+      if (e < .4 && art.complete) { g.globalAlpha = 1 - e / .4; g.drawImage(art, 0, 0, N, N); }
+      if (e > .85) { g.imageSmoothingEnabled = true; g.globalAlpha = (e - .85) / .15; g.drawImage(photo, 0, 0, N, N); }
+      g.globalAlpha = 1;
+    }
+    function tick(now) {
+      const dt = now - last; last = now;
+      p = clamp01(p + Math.sign(target - p) * dt / DUR);
+      if ((target === 1 && p >= 1) || (target === 0 && p <= 0)) { p = target; paint(); raf = 0; return; }
+      paint(); raf = requestAnimationFrame(tick);
+    }
+    const clamp01 = (x) => Math.max(0, Math.min(1, x));
+    function go(t) {
+      target = t ? 1 : 0;
+      // no reduced-motion shortcut: this is an in-place fade, not movement
+      if (!raf) { last = performance.now(); raf = requestAnimationFrame(tick); }
+    }
+    art.onload = paint; photo.onload = () => { if (p) paint(); };
+    // hovering the portrait or the name resolves both; tap toggles on touch screens
+    for (const el of [cv.parentElement, document.querySelector('h1')]) {
+      el.addEventListener('pointerenter', (e) => { if (e.pointerType === 'mouse') go(4); });
+      el.addEventListener('pointerleave', (e) => { if (e.pointerType === 'mouse') go(0); });
+      el.addEventListener('click', (e) => { if (e.pointerType && e.pointerType !== 'mouse') go(target ? 0 : 4); });   // touch only; mouse uses hover
+    }
+  }
+
+
+})();
+
+(() => {
+  // scene size in pixels, set from the screen; YO pushes the land down when the screen is taller than 16:9
+  let W = 320, H = 180, YO = 0;
+  // the wide fixed strip the background is laid out in, and the texture origin of the object being drawn
+  // (textures are hashed from coordinates relative to it, so they stick to objects that slide on resize)
+  const WW = 960, WH = 180;
+  let ORX = 0, ORY = 0;
+  // top of the card in scene pixels: on tall screens the sun and moon arc over it instead of the horizon
+  let SKYB = 112;
+  let PX = 5; // screen pixels per scene pixel
+  const rng = (seed) => () => { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
+  const hash = (x, y, s = 0) => { let h = (Math.imul(x | 0, 374761393) + Math.imul(y | 0, 668265263) + Math.imul(s, 982451653)) | 0; h = Math.imul(h ^ (h >>> 13), 1274126177); return ((h ^ (h >>> 16)) >>> 0) / 4294967296; };
+  const lerp = (a, b, t) => a + (b - a) * t;
+  const mix = (a, b, t) => [lerp(a[0], b[0], t), lerp(a[1], b[1], t), lerp(a[2], b[2], t)];
+  const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+  const hex = (h) => [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)];
+  const BAYER = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5];
+
+  // six tones per material: outline, deep shadow, shadow, mid, light, highlight
+  const PAL = Object.fromEntries(Object.entries({
+    pine:   ['#0d2419', '#163626', '#1f4a33', '#2b6141', '#447d4c', '#6fa35c'],
+    deep:   ['#08150f', '#0f2219', '#163022', '#1f402c', '#2c573a', '#45744a'],
+    oak:    ['#15301a', '#22451f', '#305e29', '#447a32', '#64993f', '#97c457'],
+    oak2:   ['#1b2f14', '#2b451c', '#3d5f25', '#527b2e', '#74993c', '#a6c457'],
+    oak3:   ['#12291b', '#1d3d24', '#285630', '#356f3a', '#52904a', '#82b462'],
+    // bushes are evergreen shrubs: same greens as the oaks, but they keep them all year
+    shrub:  ['#15301a', '#22451f', '#305e29', '#447a32', '#64993f', '#97c457'],
+    shrub2: ['#1b2f14', '#2b451c', '#3d5f25', '#527b2e', '#74993c', '#a6c457'],
+    shrub3: ['#12291b', '#1d3d24', '#285630', '#356f3a', '#52904a', '#82b462'],
+    twig:   ['#2a2420', '#3e3530', '#5a4e46', '#76695e', '#928476', '#b0a292'],
+    bark:   ['#1b120c', '#2c1e15', '#44301f', '#5c3f29', '#775435', '#946c45'],
+    moss:   ['#1a2a10', '#2a4116', '#3e5c1d', '#567b25', '#789c33', '#a3c34d'],
+    grass:  ['#11251a', '#1b3720', '#264d28', '#35662f', '#4f843b', '#78a94c'],
+    rock:   ['#22242a', '#363a42', '#4c525c', '#646b75', '#828a92', '#a8b0b6'],
+    flower: ['#4a1a3a', '#7a2a5a', '#b5487a', '#e27aa2', '#f6b0c8', '#fff4f8'],
+    blue:   ['#0e2026', '#17323c', '#21474f', '#2d5f63', '#4a7f7b', '#7aa899'],
+    olive:  ['#1b2911', '#283c17', '#38521f', '#4b6a28', '#6a8a36', '#95b254'],
+    mount:  ['#2f3e55', '#3d5068', '#4e6680', '#5f7a94', '#7590a8', '#9ab3c6'],
+    // autumn canopies and grass
+    autO:   ['#3a1a0c', '#6a2c10', '#9a4416', '#c8621e', '#e6893a', '#f6b660'],
+    autY:   ['#3a2a0c', '#6a4a12', '#9a6e1a', '#c89a26', '#e6c044', '#f8e07a'],
+    autR:   ['#34100e', '#5e1a14', '#8c2618', '#b63a1e', '#d85a30', '#f08a52'],
+    grassA: ['#1f2412', '#33391a', '#4a5122', '#636a2c', '#848a3c', '#aaa852'],
+    // spring: fresh, pale leaves, blossom and wildflowers
+    sprA:   ['#17321a', '#25502a', '#367036', '#4c9040', '#74b450', '#a8d878'],
+    sprB:   ['#1e3418', '#305222', '#46722c', '#629438', '#8cb84a', '#c0de78'],
+    sprC:   ['#163220', '#22502e', '#32703c', '#46904c', '#6cb066', '#a2d494'],
+    grassS: ['#13281a', '#1e3c22', '#2b542b', '#3c7034', '#5a9242', '#88bc5a'],
+    bloom:  ['#5a2a40', '#8a4a66', '#c97a98', '#ef9fbc', '#fbcadc', '#fff3f7'],
+    bloomW: ['#4a4450', '#7a7484', '#b0aabc', '#dcd6e4', '#f2eef6', '#ffffff'],
+    fy:     ['#4a3a0a', '#7a6010', '#b8901a', '#e8c02a', '#f8dc5a', '#fff2a8'],
+    fw:     ['#4a4a54', '#7a7a88', '#b0b0c0', '#dcdce8', '#f2f2f8', '#ffffff'],
+    fv:     ['#2a1a4a', '#46307a', '#6a4ab0', '#9070d8', '#b49af0', '#dcd0ff'],
+    fb:     ['#0e2a4a', '#18467a', '#2a6ab0', '#4a92d8', '#7ab6f0', '#bcdcff'],
+    // winter
+    snow:   ['#4a5468', '#6c7890', '#9aa6bc', '#c4cedc', '#e2e8f0', '#f8fbff'],
+    snowG:  ['#3e4658', '#7d8aa2', '#a9b5c8', '#c9d2e0', '#e3e9f1', '#f6f9fd'],
+    straw:  ['#2a2214', '#4a3c22', '#6a5834', '#8c7648', '#ad9660', '#cdb882']
+  }).map(([k, v]) => [k, v.map(hex)]));
+
+  /* ---------- seasons ---------- */
+  // one of four looks, picked by the date; the layout is the same in every season, only colours and details change
+  const SEASONS = ['spring', 'summer', 'autumn', 'winter'];
+  const seasonOf = (d = new Date()) => SEASONS[Math.floor(((d.getMonth() + 10) % 12) / 3)]; // Mar–May spring … Dec–Feb winter
+  let SEASON = 'summer';
+  // materials swapped at paint time
+  const REMAP = {
+    summer: {},
+    autumn: { oak: 'autO', oak2: 'autY', oak3: 'autR', grass: 'grassA' },
+    spring: { oak: 'sprA', oak2: 'sprB', oak3: 'sprC', grass: 'grassS' },
+    winter: { moss: 'snow', grass: 'snowG' }
+  };
+  const SNOWY = new Set(['pine', 'deep', 'blue', 'olive', 'rock', 'mount', 'bark', 'shrub', 'shrub2', 'shrub3']);
+
+  /* ---------- sky by hour ---------- */
+  // hour, top, middle, horizon, daylight (0–1), warmth (0–1); dawn runs ~3.75–9h and dusk ~16–22.25h
+  const KEYS = [
+    [0,     [10, 12, 38],   [20, 24, 64],    [40, 40, 90],    0,   0],
+    [3.75,  [10, 12, 38],   [20, 24, 64],    [40, 40, 90],    0,   0],
+    [4.75,  [16, 18, 52],   [40, 38, 90],    [92, 62, 112],   .05, .15],
+    [5.75,  [28, 32, 82],   [78, 64, 122],   [196, 110, 120], .2,  .45],
+    [6.75,  [60, 96, 170],  [190, 140, 160], [250, 180, 120], .55, .6],
+    [7.75,  [66, 124, 206], [160, 170, 200], [245, 205, 160], .85, .35],
+    [9,     [70, 140, 220], [120, 180, 235], [190, 225, 240], 1,   .08],
+    [12,    [52, 128, 222], [104, 172, 236], [180, 220, 244], 1,   0],
+    [16,    [60, 126, 210], [120, 170, 225], [220, 210, 190], 1,   .12],
+    [17.5,  [62, 104, 184], [170, 150, 170], [245, 190, 130], .85, .5],
+    [18.75, [64, 80, 150],  [200, 120, 120], [250, 170, 90],  .65, .8],
+    [19.75, [40, 40, 96],   [120, 70, 120],  [230, 110, 80],  .35, .7],
+    [20.75, [22, 24, 64],   [56, 46, 104],   [120, 70, 110],  .14, .35],
+    [22.25, [10, 12, 38],   [20, 24, 64],    [40, 40, 90],    0,   0],
+    [24,    [10, 12, 38],   [20, 24, 64],    [40, 40, 90],    0,   0]
+  ];
+  const palette = (t) => {
+    let i = 0; while (i < KEYS.length - 2 && KEYS[i + 1][0] <= t) i++;
+    const a = KEYS[i], b = KEYS[i + 1], f = (t - a[0]) / (b[0] - a[0]);
+    return { top: mix(a[1], b[1], f), mid: mix(a[2], b[2], f), hor: mix(a[3], b[3], f), L: lerp(a[4], b[4], f), Wm: lerp(a[5], b[5], f) };
+  };
+  const phaseName = (t) => t < 4.5 ? 'Night' : t < 5.75 ? 'First light' : t < 8 ? 'Dawn' : t < 11 ? 'Morning' : t < 16 ? 'Day' : t < 19 ? 'Golden hour' : t < 20.5 ? 'Dusk' : t < 22 ? 'Blue hour' : 'Night';
+
+  /* ---------- layer buffers ---------- */
+  let OBJ = 0, PART = 0;
+  class Layer {
+    constructor(atm, outline = true, w = W, h = H) {
+      this.atm = atm; this.outline = outline; this.w = w; this.h = h;
+      this.mat = new Array(w * h).fill(null);
+      this.tone = new Uint8Array(w * h);
+      this.part = new Int32Array(w * h).fill(-1);
+      this.obj = new Int32Array(w * h).fill(-1);
+      this.thin = new Set();
+      this.under = new Set(); // underlayer parts that never cast the tier/clump shadow line
+    }
+    put(x, y, mat, tone, part, obj) {
+      x = Math.round(x); y = Math.round(y);
+      if (x < 0 || y < 0 || x >= this.w || y >= this.h) return;
+      const i = y * this.w + x; this.mat[i] = mat; this.tone[i] = tone; this.part[i] = part; this.obj[i] = obj;
+    }
+    finalize() {
+      const t = this.tone.slice();
+      const W = this.w, H = this.h;
+      for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+        const i = y * W + x; if (this.mat[i] === null) continue;
+        const o = this.obj[i];
+        if (this.outline && !this.thin.has(o)) {
+          let edge = false;
+          for (const [a, b] of [[x - 1, y], [x + 1, y], [x, y - 1], [x, y + 1]]) {
+            if (a < 0 || b < 0 || a >= W || b >= H) continue;
+            const j = b * W + a; if (this.mat[j] === null || this.obj[j] < o) { edge = true; break; }
+          }
+          if (edge) { t[i] = 0; continue; }
+        }
+        if (y > 0) { const j = i - W; if (this.mat[j] !== null && this.obj[j] === o && this.part[j] !== this.part[i] && !this.under.has(this.part[j])) t[i] = Math.max(1, this.tone[i] - 2); }
+      }
+      this.tone = t;
+      return this;
+    }
+  }
+  const toneOf = (l) => l > .8 ? 5 : l > .32 ? 4 : l > -.15 ? 3 : l > -.6 ? 2 : 1;
+
+  /* ---------- primitives ---------- */
+  const dith = (x, y) => BAYER[((y & 3) * 4) + (x & 3)] / 16 - .5;
+  // smooth value noise (0–1) on a grid of the given cell size: gives clumpy, uneven leaf texture
+  const vnoise = (x, y, cell, s) => {
+    const gx = x / cell, gy = y / cell, x0 = Math.floor(gx), y0 = Math.floor(gy), fx = gx - x0, fy = gy - y0;
+    const sx = fx * fx * (3 - 2 * fx), sy = fy * fy * (3 - 2 * fy);
+    return lerp(lerp(hash(x0, y0, s), hash(x0 + 1, y0, s), sx), lerp(hash(x0, y0 + 1, s), hash(x0 + 1, y0 + 1, s), sx), sy);
+  };
+  function blob(L, cx, cy, r, mat, obj, sx = 1, sy = 1, o = {}) {
+    const part = ++PART, seed = hash((cx - ORX) | 0, (cy - ORY) | 0, part) * 6.28, sc = o.scallop ?? (.05 + hash(part, 1, 9) * .06), lobes = 4 + Math.floor(hash(part, 2, 9) * 4) + Math.round(r / 5);
+    if (o.under) L.under.add(part);
+    for (let y = Math.floor(cy - r * sy) - 2; y <= cy + r * sy + 2; y++) for (let x = Math.floor(cx - r * sx) - 2; x <= cx + r * sx + 2; x++) {
+      const dx = (x - cx) / sx, dy = (y - cy) / sy, d = Math.hypot(dx, dy);
+      // edge waviness mostly on the underside; the sunlit top stays smooth
+      if (d > r * (1 + sc * Math.sin(Math.atan2(dy, dx) * lobes + seed) * (dy < 0 ? .55 : 1)) + .4) continue;
+      const nx = dx / r, ny = dy / r;
+      // lighting per clump, broken up by two scales of leaf-cluster noise so clumps don't read as smooth balls
+      let tone = o.tone ?? (o.shade ? (vnoise(x - ORX, y - ORY, 2.6, part) < .45 ? 1 : 2) : toneOf(-(nx * .5 + ny * .8) + dith(x - ORX, y - ORY) * .2 + (vnoise(x - ORX, y - ORY, 2.6, part) - .5) * .7 + (vnoise(x - ORX, y - ORY, 1.3, part + 7) - .5) * .45));
+      if (o.tone === undefined && !o.shade && ny < .1 && tone < 5 && hash(x - ORX, y - ORY, part) < .05) tone++;
+      // spring blossom: small clusters of petals on the sunnier side of leafy clumps, pink or white per tree
+      if (SEASON === 'spring' && !o.shade && mat.startsWith('oak') && tone >= 3 && vnoise(x - ORX, y - ORY, 2.2, part + 3) > .7 - (ny < 0 ? .06 : 0) && hash(x - ORX, y - ORY, part + 4) < .8) { L.put(x, y, hash(obj, 5, 77) < .65 ? 'bloom' : 'bloomW', tone >= 4 ? 4 : 3, part, obj); continue; }
+      L.put(x, y, mat, tone, part, obj);
+    }
+  }
+  function trunk(L, cx, top, base, w, mat, obj, flare = 0, grooves = .18) {
+    const part = ++PART;
+    for (let y = Math.floor(top); y < base; y++) {
+      const fy = flare ? Math.max(0, y - (base - flare * 2.2)) * .55 : 0, hw = w / 2 + fy;
+      for (let x = Math.floor(cx - hw); x < Math.ceil(cx + hw); x++) {
+        const u = (x - (cx - hw)) / (2 * hw);
+        let tone = u < .2 ? 4 : u < .55 ? 3 : u < .85 ? 2 : 1;
+        if (hash(x - ORX, 0, part) < grooves && hash(x - ORX, (y - ORY) >> 2, part + 1) < .75) tone = Math.max(1, tone - 1);
+        if (u > .12 && u < .3 && hash(x - ORX, (y - ORY) >> 1, part + 2) < .25) tone = 5;
+        L.put(x, y, mat, tone, part, obj);
+      }
+    }
+  }
+  function limb(L, x0, y0, x1, y1, w, mat, obj) {
+    const part = ++PART, n = Math.ceil(Math.hypot(x1 - x0, y1 - y0));
+    for (let i = 0; i <= n; i++) {
+      const x = lerp(x0, x1, i / n), y = lerp(y0, y1, i / n), ww = Math.max(1, w * (1 - i / n * .6));
+      for (let k = 0; k < ww; k++) L.put(x + k - ww / 2, y, mat, k < ww / 2 ? 4 : 2, part, obj);
+    }
+  }
+  function tier(L, cx, ty, th, hw, mat, obj) {
+    const part = ++PART;
+    for (let y = Math.floor(ty); y <= ty + th + hw * .35 + 2; y++) {
+      const ry = (y - ty) / th;
+      for (let x = Math.floor(cx - hw - 1); x <= cx + hw + 1; x++) {
+        const ax = Math.abs(x - cx) / hw; if (ax > 1) continue;
+        // ragged edges: each column's needle tip ends at its own length, occasionally drooping further
+        const jag = hash(x - ORX, part, 5) * .18 - (hash(x - ORX, part, 6) < .12 ? .12 : 0), side = (hash(y - ORY, part, 8) - .5) * .1 * ry; // sides calmer near the top
+        if (ax > ry * 1.05 + side || ry > 1 + ax * .32 - jag) continue;
+        const nx = (x - cx) / hw;
+        let l = -nx * .75 + (.45 - ry) * 1.1 + dith(x - ORX, y - ORY) * .25 + (vnoise(x - ORX, y - ORY, 2.2, part) - .5) * .55;
+        if (ry < .7 && hash(x - ORX, y - ORY, part + 9) < .04) l += .5;
+        // winter: a few clumps of snow caught in the needles
+        if (SEASON === 'winter' && ry > .25 && ry < .9 && nx < .5 && hash(x - ORX, y - ORY, part + 11) < .06) { L.put(x, y, 'snow', l > 0 ? 5 : 4, part, obj); continue; }
+        L.put(x, y, mat, toneOf(l), part, obj);
+      }
+    }
+  }
+  function pine(L, cx, base, h, mat = 'pine', o = {}) {
+    const obj = ++OBJ;
+    const n = o.tiers || Math.max(3, Math.round(h / (o.div || 15)));
+    const tw = Math.max(2, Math.round(h / 20)), trunkH = Math.round(h * (o.trunk || .16));
+    const mw = h * (o.w || .27), crownTop = base - h, crownH = h - trunkH, step = crownH / (n + .6);
+    const r = o.r, jit = r ? Math.max(.6, h / 45) : 0, lean = o.lean || 0;
+    if (h > 20) trunk(L, cx, base - trunkH - step, base, tw, 'bark', obj, o.flare || 0);
+    // tier heights: uniform by default; with tierVar each tier gets its own height, rescaled to fill the crown
+    const wts = Array.from({ length: n }, (_, i) => r && o.tierVar && i > 0 ? Math.max(.55, 1 + (r() - .5) * 2 * o.tierVar) : 1);
+    const span = step * n / wts.reduce((a, b) => a + b, 0), tops = []; let acc = 0;
+    wts.forEach(w => { tops.push(acc); acc += w * span; });
+    for (let i = n - 1; i >= 0; i--) {
+      const th = wts[i] * span * 1.7, f = clamp((tops[i] + th * .85) / crownH, 0, 1);
+      // width follows one smooth outline for the whole tree; only a little per-tier wobble
+      const prof = o.round ? (f < .62 ? Math.pow(f / .62, .55) : 1 - (f - .62) * .5) : Math.pow(f, .92);
+      const wob = r ? .93 + r() * .12 : 1, dx = r && i > 1 && h > 40 ? Math.round((r() - .5) * 1.6) : 0;
+      // lean: 0 at the bottom layer (so the crown sits on its trunk), easing to at most 2 px at the top
+      const leanOff = n > 1 ? Math.round(lean * 4 * (n - 1 - i) / (n - 1)) : 0;
+      tier(L, cx + dx + leanOff, crownTop + tops[i], th, Math.max(1.5, mw * prof * wob), mat, obj);
+    }
+    return obj;
+  }
+  // conifer species: width, tier spacing, bare-trunk share, palette, crown profile
+  const KINDS = {
+    spruce: { w: .21, div: 9,  trunk: .1,  mat: 'pine' },
+    fir:    { w: .34, div: 17, trunk: .12, mat: 'deep' },
+    blue:   { w: .27, div: 11, trunk: .12, mat: 'blue' },
+    column: { w: .15, div: 6,  trunk: .05, mat: 'olive', round: true },
+    lodge:  { w: .19, div: 9,  trunk: .45, mat: 'pine' },
+    sapling:{ w: .3,  div: 8,  trunk: .18, mat: 'oak' }
+  };
+  const KIND_LIST = ['spruce', 'spruce', 'fir', 'blue', 'column', 'lodge', 'spruce', 'blue'];
+  function conifer(L, cx, base, h, kind, r, extra = {}) {
+    const k = KINDS[kind];
+    return pine(L, cx, base, h, k.mat, { ...k, r, div: k.div * (.75 + r() * .5), tierVar: .06, lean: r() < .2 ? (r() < .5 ? -.5 : .5) : 0, ...extra });
+  }
+  function oak(L, cx, base, h, mat, r, o = {}) {
+    const obj = ++OBJ, tw = Math.max(3, Math.round(h / 11));
+    trunk(L, cx, base - h * .6, base, tw, 'bark', obj, Math.round(tw * .6));
+    if (SEASON !== 'winter') {
+      limb(L, cx, base - h * .42, cx - h * .2, base - h * .64, Math.max(1, tw * .45), 'bark', obj);
+      limb(L, cx, base - h * .48, cx + h * .22, base - h * .7, Math.max(1, tw * .45), 'bark', obj);
+    }
+    const R = h * (o.R || .34), ccx = cx, ccy = base - h * .7, blobs = [];
+    const k = o.k || 10;
+    // dark underlayer that fills gaps between clumps: kept smaller than the canopy so it never pokes out, smooth-edged, and mottled like leaves
+    if (SEASON !== 'winter') blob(L, ccx, ccy, R * (o.sym ? .74 : .62), mat, obj, o.sym ? 1.06 : 1.2, o.sym ? .94 : .8, { shade: true, scallop: .03, under: true });
+    if (o.sym) {
+      // rounder crown: an outer ring of clumps at near-even angles, plus a few filling the middle
+      // outer ring: clump sizes vary a lot, but each is pushed in or out so its edge lands near the same radius
+      for (let i = 0; i < k; i++) {
+        const a = i / k * Math.PI * 2 + (r() - .5) * .45, s = Math.pow(r(), 1.4), rad = R * (.2 + s * .3), d = R * (.86 + s * .14) - rad;
+        blobs.push([ccx + Math.cos(a) * d * 1.06, ccy + Math.sin(a) * d * .94, rad]);
+      }
+      for (let i = 0; i < 4; i++) { const a = (i + r() * .6) / 4 * Math.PI * 2, d = R * (.15 + r() * .25); blobs.push([ccx + Math.cos(a) * d, ccy + Math.sin(a) * d * .9, R * (.24 + r() * .22)]); }
+    } else {
+      for (let i = 0; i < k; i++) { const a = r() * Math.PI * 2, d = Math.sqrt(r()) * R * .62; blobs.push([ccx + Math.cos(a) * d * 1.25, ccy + Math.sin(a) * d * .75, R * (.36 + r() * .2)]); }
+    }
+    if (!o.sym) blobs.push([ccx, ccy - R * .2, R * .5]);
+    blobs.sort((a, b) => b[1] - a[1]);
+    if (SEASON === 'winter') { bare(L, cx, base, h, tw, blobs, obj); return obj; }
+    for (const b of blobs) blob(L, b[0], b[1], b[2], mat, obj);
+    return obj;
+  }
+  // winter oak, grown by space colonisation: points scattered through the summer crown pull branches toward them,
+  // so wood forks naturally and fills the crown; widths follow the pipe rule (a limb's cross-section = the sum of its children's)
+  const BARE = new Map();
+  function bareShape(cx, base, h, tw, blobs, key) {
+    if (BARE.has(key)) return BARE.get(key);
+    const inside = (x, y) => blobs.some(([bx, by, br]) => (x - bx) ** 2 + (y - by) ** 2 <= (br * 1.05) ** 2);
+    let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+    for (const [bx, by, br] of blobs) { x0 = Math.min(x0, bx - br); y0 = Math.min(y0, by - br); x1 = Math.max(x1, bx + br); y1 = Math.max(y1, by + br); }
+    const rr = rng(key.length * 7 + Math.floor(hash(Math.round(x1 - x0), Math.round(y1 - y0), Math.round(h)) * 1e9));
+    const R = Math.max(x1 - x0, y1 - y0) / 2, D = clamp(R / 22, 1, 2.6), di = Math.max(4, R * .4), dk = D * 2.2;
+    // attraction points, denser toward the crown's outer shell where the twigs are
+    const pts = [];
+    for (let tries = 0, want = Math.round((x1 - x0) * (y1 - y0) / (D * D * 4.5)); tries < want * 3 && pts.length < want; tries++) {
+      const x = lerp(x0, x1, rr()), y = lerp(y0, y1, rr()); if (inside(x, y)) pts.push([x, y]);
+    }
+    const nx = [cx], ny = [base - h * .58], par = [-1], cell = di, grid = new Map(), gk = (x, y) => (Math.floor(x / cell) + 500) * 4096 + Math.floor(y / cell) + 500;
+    const add = (x, y, p) => { const i = nx.length; nx.push(x); ny.push(y); par.push(p); const k = gk(x, y); (grid.get(k) || grid.set(k, []).get(k)).push(i); return i; };
+    grid.set(gk(nx[0], ny[0]), [0]);
+    let alive = pts.map(() => true), left = pts.length;
+    for (let it = 0; it < 400 && left > 0; it++) {
+      const pull = new Map();
+      pts.forEach(([px, py], j) => {
+        if (!alive[j]) return;
+        let best = -1, bd = di * di; const cx0 = Math.floor(px / cell), cy0 = Math.floor(py / cell);
+        for (let gx = cx0 - 1; gx <= cx0 + 1; gx++) for (let gy = cy0 - 1; gy <= cy0 + 1; gy++) for (const i of grid.get((gx + 500) * 4096 + gy + 500) || []) { const dd = (nx[i] - px) ** 2 + (ny[i] - py) ** 2; if (dd < bd) { bd = dd; best = i; } }
+        if (best < 0) return;
+        if (bd < dk * dk) { alive[j] = false; left--; return; }
+        const l = Math.sqrt(bd), v = pull.get(best) || [0, 0]; v[0] += (px - nx[best]) / l; v[1] += (py - ny[best]) / l; pull.set(best, v);
+      });
+      if (!pull.size) {
+        // nothing in reach yet (the crown starts above the trunk): reach up from the newest node toward what is left
+        let sx = 0, sy = 0, c = 0; pts.forEach(([px, py], j) => { if (alive[j]) { sx += px; sy += py; c++; } });
+        const i = nx.length - 1, dx = sx / c - nx[i], dy = sy / c - ny[i], l = Math.hypot(dx, dy) || 1;
+        add(nx[i] + dx / l * D, ny[i] + dy / l * D, i); continue;
+      }
+      for (const [i, [vx, vy]] of pull) {
+        let dx = vx, dy = vy - .35 * Math.hypot(vx, vy) + (rr() - .5) * .3; const l = Math.hypot(dx, dy) || 1;
+        add(nx[i] + dx / l * D, ny[i] + dy / l * D, i);
+      }
+    }
+    // pipe rule from the tips back to the root, scaled so the root matches the trunk
+    const n = nx.length, acc = new Float32Array(n), kids = new Uint16Array(n);
+    for (let i = 1; i < n; i++) kids[par[i]]++;
+    for (let i = n - 1; i > 0; i--) { if (!kids[i]) acc[i] += 1; acc[par[i]] += acc[i]; }
+    const k = tw * .8 / Math.sqrt(acc[0] || 1), w = Array.from(acc, (a) => Math.max(.5, Math.sqrt(a) * k));
+    const shape = { dx: nx.map(x => x - cx), dy: ny.map(y => y - base), par, w };
+    BARE.set(key, shape);
+    return shape;
+  }
+  function bare(L, cx, base, h, tw, blobs, obj) {
+    const key = [Math.round(h * 10), ...blobs.map(([bx, by, br]) => Math.round((bx - cx) * 4) + ',' + Math.round((by - base) * 4) + ',' + Math.round(br * 4))].join('|');
+    const { dx, dy, par, w } = bareShape(cx, base, h, tw, blobs, key);
+    // fine wood is a separate, unoutlined object so it reads as twigs, not black wire
+    const fine = ++OBJ; L.thin.add(fine);
+    const pBig = ++PART, pFine = ++PART; L.under.add(pBig); L.under.add(pFine);
+    for (let i = 1; i < dx.length; i++) {
+      const p = par[i], x0 = cx + dx[p], y0 = base + dy[p], x1 = cx + dx[i], y1 = base + dy[i], ww = w[i];
+      const steps = Math.max(1, Math.ceil(Math.hypot(x1 - x0, y1 - y0))), ax = (y1 - y0), ay = -(x1 - x0), al = Math.hypot(ax, ay) || 1;
+      // normal pointing to the lit upper-left side
+      let ux = ax / al, uy = ay / al; if (ux + uy > 0) { ux = -ux; uy = -uy; }
+      for (let t = 0; t <= steps; t++) {
+        const x = Math.round(lerp(x0, x1, t / steps)), y = Math.round(lerp(y0, y1, t / steps));
+        if (ww < 1.25) { L.put(x, y, ww < .85 ? 'twig' : 'bark', ww < .85 ? 3 : 2, pFine, fine); continue; }
+        const big = ww >= 2.6, rad = ww / 2, c = Math.ceil(rad);
+        for (let yy = -c; yy <= c; yy++) for (let xx = -c; xx <= c; xx++) {
+          if (xx * xx + yy * yy > rad * rad + .3) continue;
+          const side = -(xx * ux + yy * uy) / rad;
+          L.put(x + xx, y + yy, 'bark', side < -.35 ? 4 : side < .35 ? 3 : 2, big ? pBig : pFine, big ? obj : fine);
+        }
+      }
+    }
+  }
+  // flat dark patch on the ground so small objects sit on it instead of floating
+  function contact(L, cx, y, rx) {
+    const obj = ++OBJ, part = ++PART; L.thin.add(obj);
+    for (let dy = 0; dy < 2; dy++) { const w = Math.round(rx * (dy ? .7 : 1)); for (let x = -w; x <= w; x++) L.put(cx + x, y + dy, 'grass', dy ? 1 : 0, part, obj); }
+  }
+  function bush(L, cx, base, w, mat, r) {
+    contact(L, cx, Math.round(base + 1), w * .62);
+    const obj = ++OBJ, blobs = [];
+    mat = { oak: 'shrub', oak2: 'shrub2', oak3: 'shrub3' }[mat] || mat;
+    for (let i = 0; i < 4; i++) { const rad = w * (.24 + r() * .12); blobs.push([cx + (r() - .5) * w * .9, base - rad * (.7 + r() * .5), rad]); }
+    blobs.sort((a, b) => b[1] - a[1]);
+    for (const b of blobs) blob(L, b[0], b[1], b[2], mat, obj, 1.3, 1);
+    return obj;
+  }
+  function fern(L, x0, base, s, mat) {
+    const obj = ++OBJ; L.thin.add(obj);
+    for (let f = 0; f < 5; f++) {
+      const part = ++PART; let x = x0, y = base, a = -Math.PI / 2 + (f - 2) * .5;
+      const bend = f < 2 ? -.075 : f > 2 ? .075 : 0, len = s * (f === 2 ? 1 : .85);
+      for (let i = 0; i < len; i++) {
+        L.put(x, y, mat, i > len * .65 ? 3 : 4, part, obj);
+        if (i % 2 === 0 && i > 1) {
+          L.put(x + Math.cos(a + 1.5) * 1.4, y + Math.sin(a + 1.5) * 1.4, mat, 2, part, obj);
+          L.put(x + Math.cos(a - 1.5) * 1.4, y + Math.sin(a - 1.5) * 1.4, mat, 5, part, obj);
+        }
+        x += Math.cos(a); y += Math.sin(a); a += bend;
+      }
+    }
+  }
+  function rock(L, cx, base, r, moss) {
+    contact(L, cx, Math.round(base + r * .8), r * 1.4);
+    const obj = ++OBJ;
+    blob(L, cx, base, r, 'rock', obj, 1.4, .8, .15);
+    if (moss) blob(L, cx - r * .4, base - r * .55, r * .45, 'moss', obj, 1.6, .5);
+  }
+  function flowers(L, r, x0, x1, yAt, n, mat = 'flower') {
+    for (let i = 0; i < n; i++) {
+      const obj = ++OBJ; L.thin.add(obj); const part = ++PART, x = Math.round(x0 + r() * (x1 - x0)), y = yAt(x) + 3 + Math.floor(r() * 7);
+      if (SEASON === 'autumn') {
+        // fallen leaves lying flat in the grass
+        const m = ['autO', 'autY', 'autR'][Math.floor(hash(i, 1, 41) * 3)];
+        L.put(x, y, m, 4, part, obj); L.put(x + 1, y, m, 3, part, obj); if (hash(i, 2, 41) < .5) L.put(x + 1, y - 1, m, 5, part, obj);
+        continue;
+      }
+      // spring wildflowers come in several colours, summer's are all pink
+      const m = SEASON === 'spring' ? ['flower', 'fy', 'fw', 'fv', 'fb', 'fy'][Math.floor(hash(i, 1, 43) * 6)] : mat;
+      L.put(x, y + 1, 'grass', 4, part, obj); L.put(x, y, m, 4, part, obj); L.put(x + 1, y, m, 2, part, obj); L.put(x, y - 1, m, 5, part, obj);
+    }
+  }
+  // ox converts this layer's x to world x, so the ground's waves and tufts stay put when the screen width changes
+  function ground(L, y0, amp, mat, seed, r, tufts = true, ox = 0) {
+    const obj = ++OBJ; L.thin.add(obj); const part = ++PART;
+    const top = (x) => Math.round(y0 + Math.sin((x + ox) * .035 + seed) * amp + Math.sin((x + ox) * .11 + seed * 2) * amp * .4);
+    for (let x = 0; x < L.w; x++) {
+      const t0 = top(x), wx = x + ox;
+      for (let y = t0; y < L.h; y++) {
+        const d = y - t0;
+        let tone = d === 0 ? 5 : d < 3 ? 4 : hash(wx, y - t0, 3) < .14 ? 2 : 3;
+        if (d > 10) tone = hash(wx, y - t0, 4) < .2 ? 1 : 2;
+        L.put(x, y, mat, tone, part, obj);
+      }
+      // grass tufts along the top; in winter only the odd dry stalk pokes through the snow
+      if (tufts && hash(wx, 17, seed) < (SEASON === 'winter' ? .07 : .25)) { const hgt = 1 + Math.floor(hash(wx, 18, seed) * 3), tm = SEASON === 'winter' ? 'straw' : mat; for (let k = 1; k <= hgt; k++) L.put(x, t0 - k, tm, k === hgt ? 5 : 4, part, obj); }
+    }
+    return top;
+  }
+  function ridge(L, y0, amp, seed) {
+    const obj = ++OBJ, part = ++PART; let prev = null;
+    for (let x = 0; x < L.w; x++) {
+      const u = (x - L.w / 2) / 320 * Math.PI * 2;
+      const n = Math.sin(u * 1.3 + seed) * .5 + Math.sin(u * 3.1 + seed * 1.7) * .3 + Math.sin(u * 7 + seed * 2.3) * .12;
+      const y = Math.round(y0 - (n * .5 + .5) * amp);
+      for (let yy = y; yy < L.h; yy++) L.put(x, yy, 'mount', prev !== null && y <= prev && yy - y < 5 ? 4 : 3, part, obj);
+      prev = y;
+    }
+  }
+  function treeline(L, base, r, hMin, hMax, gapMin, gapMax, mat = 'pine') {
+    for (let x = -6; x < L.w + 6; x += gapMin + Math.floor(r() * (gapMax - gapMin))) pine(L, x, base + Math.floor(r() * 3), Math.round(hMin + r() * (hMax - hMin)), mat);
+  }
+
+
+  /* ---------- clouds ---------- */
+  // tone codes: 1 body, 2 shade, 3 sunlit rim, 4 wisp, 5 faint wisp
+  function puffs(circles, flat = null, sc = 0) {
+    let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+    for (const [cx, cy, r] of circles) { x0 = Math.min(x0, cx - r - 1); y0 = Math.min(y0, cy - r - 1); x1 = Math.max(x1, cx + r + 1); y1 = Math.max(y1, cy + r + 1); }
+    if (flat !== null) y1 = Math.min(y1, flat);
+    x0 = Math.floor(x0); y0 = Math.floor(y0); x1 = Math.ceil(x1); y1 = Math.ceil(y1);
+    const w = x1 - x0 + 1, h = y1 - y0 + 1, t = new Uint8Array(w * h);
+    // sc > 0 gives each puff a wavy (lumpy) edge instead of a clean circle
+    const owner = (x, y) => {
+      if (flat !== null && y > flat) return -1;
+      for (let i = circles.length - 1; i >= 0; i--) {
+        const [cx, cy, r] = circles[i], dx = x - cx, dy = y - cy;
+        const re = sc ? r * (1 + sc * Math.sin(Math.atan2(dy, dx) * (4 + Math.round(r / 2)) + i * 2.4)) : r;
+        if (dx * dx + dy * dy <= re * re + re * .5) return i;
+      }
+      return -1;
+    };
+    for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) {
+      const o = owner(x, y); if (o < 0) continue;
+      const [cx, cy, r] = circles[o], nx = (x - cx) / r, ny = (y - cy) / r;
+      let tone = owner(x, y - 1) < 0 || (owner(x - 1, y - 1) < 0 && ny < 0) ? 3 : (flat !== null && y >= flat - 1) || owner(x + 1, y + 1) < 0 ? 2 : 1;
+      if (tone === 1) { const l = -(nx * .5 + ny * .9) + dith(x, y) * .1; tone = l > .6 ? 3 : l < -.15 ? 2 : 1; }
+      t[(y - y0) * w + (x - x0)] = tone;
+    }
+    return { ox: x0, oy: y0, w, h, t };
+  }
+  const CLOUDS = {
+    cumulus(cr, s) {
+      // lumpy cumulus: an uneven flat-bottomed base, a few domes of mixed size, small cauliflower puffs on the domes
+      const n = 4 + Math.floor(cr() * 4), base = []; let x = 0;
+      for (let i = 0; i < n; i++) { const r = s * (2 + cr() * 2.5); base.push([x + r, -r * .45 + (cr() - .5) * s * 1.5, r]); x += r * (.9 + cr() * .4); }
+      const lift = cr(), domes = [], tufts = [], nd = 1 + Math.floor(cr() * (lift < .3 ? 2 : 3));
+      for (let i = 0; i < nd; i++) {
+        const r = s * (2.8 + cr() * 2.5 + lift * 2.5), cx = x * (.15 + .7 * (i + cr()) / nd), cy = -r * (.65 + lift * .4) - cr() * s * 2;
+        domes.push([cx, cy, r]);
+        for (let k = 0; k < 2 + Math.floor(cr() * 2); k++) { const a = -Math.PI / 2 + (cr() - .5) * 1.9; tufts.push([cx + Math.cos(a) * r * .72, cy + Math.sin(a) * r * .72, r * (.32 + cr() * .22)]); }
+      }
+      return { ...puffs([...tufts, ...domes, ...base], 0, .11), a: .95 };
+    },
+    stratus(cr, s) {
+      // a long, low, lumpy sheet
+      const len = s * (80 + cr() * 70), c = []; let x = 0;
+      while (x < len) { const r = s * (2.5 + cr() * 2.5) * (.55 + .45 * Math.sin(Math.PI * x / len)); c.push([x + r, -r * .35, r]); x += r * (1 + cr() * .6); }
+      return { ...puffs(c, 0), a: .85 };
+    },
+    cirrus(cr, s) {
+      const w = Math.round((55 + cr() * 60) * s), h = 26, t = new Uint8Array(w * h);
+      const streaks = 6 + Math.floor(cr() * 5), slope = -.06 - cr() * .12;
+      for (let k = 0; k < streaks; k++) {
+        const sx = cr() * w * .55, sy = 5 + cr() * (h - 10), len = (14 + cr() * 36) * s, hook = cr() < .5;
+        for (let i = 0; i < len; i++) {
+          const x = Math.round(sx + i), y = Math.round(sy + i * slope + (hook && i > len * .75 ? (i - len * .75) * .45 : 0));
+          if (x < 0 || x >= w || y < 0 || y + 1 >= h) continue;
+          const f = i / len, core = f > .12 && f < .82;
+          t[y * w + x] = core ? 4 : 5;
+          if (core && f > .25 && f < .65) t[(y + 1) * w + x] = 5;
+        }
+      }
+      return { ox: 0, oy: -h, w, h, t, a: 1 };
+    }
+  };
+  // a sky mixes two or three formation types, staggered in height and kept from overlapping
+  const SKY = {
+    //          weight  count    height band
+    cumulus:  [3,      [2, 5],  [16, 64]],
+    cirrus:   [2,      [1, 2],  [6, 36]],
+    stratus:  [2,      [1, 2],  [40, 82]]
+  };
+  function buildClouds(seed) {
+    const cr = rng(Math.floor(hash(seed, 7, 3) * 4294967296)), pool = Object.keys(SKY), kinds = [];
+    const want = 2 + (cr() < .4 ? 1 : 0);
+    while (kinds.length < want) {
+      const left = pool.filter(k => !kinds.includes(k)), tot = left.reduce((a, k) => a + SKY[k][0], 0);
+      let roll = cr() * tot; for (const k of left) { roll -= SKY[k][0]; if (roll <= 0) { kinds.push(k); break; } }
+    }
+    const out = [], boxes = [];
+    // the usual bands just above the horizon, then extra cumulus and cirrus filling the sky above them;
+    // y is fixed relative to the land, so a taller screen simply reveals more of the upper sky
+    const groups = kinds.map(kind => [kind, ...SKY[kind].slice(1)]);
+    for (const kind of kinds.filter(k => k !== 'stratus')) groups.push([kind, kind === 'cumulus' ? [4, 6] : [2, 4], [-300, -45]]); // starts clear of a 180 px-tall screen, so wide screens never see half of one
+    for (const [kind, [lo, hi], [y0, y1]] of groups) {
+      const n = Math.round((lo + Math.floor(cr() * (hi - lo + 1))) * WW / 320 * (SEASON === 'spring' ? 1.7 : 1));
+      for (let i = 0; i < n; i++) {
+        // sizes skew small with the occasional big one
+        const c = CLOUDS[kind](cr, (kind === 'cumulus' ? .7 : .6) + Math.pow(cr(), 1.6) * (kind === 'cumulus' ? 1.2 : 1));
+        for (let tries = 0; tries < 8; tries++) {
+          // alternate high and low within the band so a row of clouds never lines up
+          // x in the world strip; y in the 180 px layout (negative = above it, seen on taller screens)
+          c.x = Math.round(cr() * (WW + 20) - 10 - c.w / 2);
+          c.y = Math.round(y0 + ((i % 2) * .5 + cr() * .5) * (y1 - y0));
+          const top = c.y + c.oy;
+          if (!boxes.some(([bx, by, bw, bh]) => c.x < bx + bw + 6 && bx < c.x + c.w + 6 && top < by + bh + 3 && by < top + c.h + 3)) break;
+        }
+        boxes.push([c.x, c.y + c.oy, c.w, c.h]);
+        // each cloud steps one pixel right on its own beat, a multiple of 0.5 s: cirrus 1–2.5 s, cumulus 1.5–3.5 s, stratus 2.5–5 s
+        const [k0, k1] = { cirrus: [2, 5], cumulus: [3, 7], stratus: [5, 10] }[kind];
+        c.step = .5 * (k0 + Math.floor(hash(seed, out.length, 99) * (k1 - k0 + 1)));
+        out.push(c);
+      }
+    }
+    out.mood = kinds.join(' + ');
+    return out;
+  }
+
+  /* ---------- scene: a fixed world strip plus a screen-sized front ---------- */
+  // foreground plan: which side the big oak stands on and which two conifers frame the other side
+  function planFor(seed) {
+    const fr = rng(seed * 7919 + 13), choose = (list) => list[Math.floor(fr() * list.length)];
+    let plan = { flip: false, small: 'column', big: 'fir', smallDiv: 6, bigDiv: 15 };
+    if (seed !== 21) {
+      const small = choose(['column', 'column', 'spruce', 'blue', 'fir']);
+      // spruce and fir read as the same dark-green tiered tree, so the pair must come from different looks
+      const LOOK = { spruce: 'green', fir: 'green', lodge: 'green', blue: 'blue', column: 'olive' };
+      plan = { flip: fr() < .5, small, big: choose(['fir', 'spruce', 'blue'].filter(k => LOOK[k] !== LOOK[small])) };
+      // one tree gets tight layers, the other loose ones (layer height in px ≈ div)
+      const tight = 6 + fr() * 2, loose = 13 + fr() * 4;
+      [plan.smallDiv, plan.bigDiv] = fr() < .5 ? [tight, loose] : [loose, tight];
+    }
+    return plan;
+  }
+  const leafOf = (r) => ['oak', 'oak2', 'oak3'][Math.floor(r() * 3)];
+  // the world: mountains, the field and its groves across a 960 px strip; built once per seed, then windowed by the screen
+  function buildWorld(seed) {
+    OBJ = 0; PART = 0; ORX = 0; ORY = 0;
+    const r = rng(seed), out = [], pick = () => KIND_LIST[Math.floor(r() * KIND_LIST.length)], NL = (atm, ol = true) => new Layer(atm, ol, WW, WH);
+    const m = NL(.55, false); ridge(m, 100, 30, 1.2); out.push(m);
+    const f = NL(.4, false); treeline(f, 110, r, 8, 14, 3, 6); out.push(f);
+    const mg = NL(.2, false); ground(mg, 119, 2, 'grass', 2, r, false, -WW / 2); out.push(mg);
+    // meadow specks across the field: wildflowers in spring, fallen leaves in autumn (own random stream, so the layout never shifts)
+    if (SEASON === 'spring' || SEASON === 'autumn') {
+      const md = NL(.12, false), mr = rng(seed + 77), cols = { spring: ['flower', 'fy', 'fw', 'fv', 'fb'], autumn: ['autO', 'autY', 'autR'] }[SEASON];
+      const obj = ++OBJ, part = ++PART;
+      for (let i = 0, n = SEASON === 'spring' ? 420 : 260; i < n; i++) {
+        const x = Math.floor(mr() * WW), y = 123 + Math.floor(Math.pow(mr(), .8) * 50), m = cols[Math.floor(mr() * cols.length)];
+        md.put(x, y, m, 4, part, obj); if (y > 150 && mr() < .5) md.put(x + 1, y, m, 3, part, obj);
+      }
+      out.push(md);
+    }
+    const edge = NL(.24);
+    for (let x = -4; x < WW + 6; x += 5 + Math.floor(r() * 6)) r() < .3 ? oak(edge, x, 123 + r() * 2, 15 + r() * 6, 'oak', r, { k: 6 }) : conifer(edge, x, 123 + r() * 2, 14 + r() * 12, pick(), r);
+    out.push(edge);
+    // trees spread across the strip at four depths, one candidate per slot; a tree never stands right behind one of the same type
+    const placed = [], clash = (x, hw, type) => placed.some(q => q.type === type && Math.abs(q.x - x) < (q.hw + hw) * .75);
+    [[131, .17, 13, 34, 9], [140, .11, 18, 44, 7], [149, .06, 24, 56, 6], [156, .03, 32, 68, 4]].forEach(([y, atm, h0, h1, slots0], bi) => {
+      const L = NL(atm), items = [], slots = Math.round(slots0 * WW / 320);
+      for (let sl = 0; sl < slots; sl++) {
+        if (r() < .18) continue;
+        items.push([(sl + .1 + r() * .8) * WW / slots, y + r() * 4, 'tree']);
+        if (r() < .3) items.push([r() * WW, y + 2 + r() * 4, 'rock']);
+      }
+      items.sort((a, b) => a[1] - b[1]);
+      for (const [x, yy, what] of items) {
+        if (what === 'rock') { rock(L, x, yy, 2 + bi + r() * 2, r() < .4); continue; }
+        const h = h0 + Math.pow(r(), 1.3) * (h1 - h0), roll = r();
+        let type = roll < .4 ? 'oak' : roll < .48 ? 'bush' : pick();
+        if (type === 'bush') { bush(L, x, yy, h * .45, leafOf(r), r); continue; }
+        const hwOf = (t) => t === 'oak' ? h * .85 * .38 : h * KINDS[t].w;
+        for (let tries = 0; tries < 5 && clash(x, hwOf(type), type); tries++) type = type === 'oak' || r() < .6 ? pick() : 'oak';
+        if (clash(x, hwOf(type), type)) continue;
+        placed.push({ x, hw: hwOf(type), type });
+        if (type === 'oak') oak(L, x, yy, h * .85, leafOf(r), r, { k: 8 });
+        else conifer(L, x, yy, h, type, r);
+      }
+      out.push(L);
+    });
+    return out;
+  }
+  // the front: foreground ground cover and the framing trees, sized to the screen; cheap enough to rebuild while resizing
+  function buildFront(seed, plan) {
+    OBJ = 0;
+    const Y = (y) => y + YO, k = clamp(W / 320, .6, 1), ks = Math.sqrt(k);
+    // F mirrors for flipped seeds; LX/RX anchor the framing trees to the screen edges; MX spreads ground cover across the width
+    const F = (x) => plan.flip ? W - x : x, LX = (x) => F(x * k), RX = (x) => F(W - (320 - x) * k), MX = (x) => F(x * W / 320);
+    // every object gets fixed part ids, its own random stream and its own texture origin, so nothing reshuffles as it slides
+    const at = (x, y, id) => { ORX = Math.round(x); ORY = Math.round(y); PART = id; };
+    const fg = new Layer(0, false); at(0, 0, 100); const top = ground(fg, Y(160), 3, 'grass', 4, null, true, -(W >> 1));
+    const ft = new Layer(0);
+    // ground cover by season: wildflowers (many more in spring), fallen leaves in autumn, nothing under the snow
+    if (SEASON !== 'winter') { const [a, b, n] = { spring: [24, 296, 48], summer: [60, 240, 16], autumn: [30, 290, 34] }[SEASON]; at(0, 0, 200); flowers(ft, rng(seed + 2), Math.min(MX(a), MX(b)), Math.max(MX(a), MX(b)), top, n); }
+    const br = rng(seed + 3);
+    [[70, 26], [96, 20], [222, 20], [122, 16], [190, 18]].forEach(([x, w], i) => { at(MX(x), top(MX(x)), 2000 + i * 40); bush(ft, MX(x), top(MX(x)) + 3, w * ks, leafOf(br), br); });
+    if (SEASON !== 'winter') [[84, 10], [150, 8], [206, 9], [244, 11]].forEach(([x, s], i) => { at(MX(x), 0, 3000 + i * 10); fern(ft, MX(x), top(MX(x)) + 1, s, SEASON === 'autumn' ? 'autY' : 'oak'); });
+    [[168, 5, true], [108, 3, false], [140, 2, false], [236, 6, true], [246, 3, false], [200, 2, false], [56, 4, true]].forEach(([x, sz, moss], i) => { at(MX(x), top(MX(x)), 3500 + i * 10); rock(ft, MX(x), top(MX(x)) + 2 + sz * .3, sz, moss); });
+    at(LX(34), Y(186), 4000); oak(ft, LX(34), Y(186), 150 * ks, 'oak', rng(seed + 4), { k: 10, R: .38, sym: true });
+    at(RX(264), Y(178), 5000); conifer(ft, RX(264), Y(178), 100 * ks, plan.small, rng(seed + 5), { lean: 0, tierVar: .08, div: plan.smallDiv });
+    at(RX(302), Y(188), 6000); conifer(ft, RX(302), Y(188), 176 * ks, plan.big, rng(seed + 6), { lean: 0, flare: 3, tierVar: .08, div: plan.bigDiv, ...(plan.big === 'fir' ? { w: .3 } : {}) });
+    ORX = ORY = 0;
+    return [fg, ft];
+  }
+  // winter: snow settles on every upward-facing surface of conifers, rocks, hills and branches, just under the outline
+  function snowify(L) {
+    const w = L.w, h = L.h;
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+      const i = y * w + x, m = L.mat[i]; if (!SNOWY.has(m)) continue;
+      const o = L.obj[i];
+      if (y > 0 && L.mat[i - w] !== null && L.obj[i - w] === o) continue;   // not a top surface
+      const ol = L.outline && !L.thin.has(o), depth = m === 'rock' ? 3 : m === 'bark' ? 1 : 2;
+      if (m === 'bark' && hash(x, y, 61) < .35) continue;                     // patchy on branches
+      if (m === 'bark' && !ol && !(y + 1 < h && L.obj[i + w] === o && L.mat[i + w] === 'bark')) continue; // only on wood thick enough to hold it
+      for (let k = ol ? 1 : 0; k <= depth - (ol ? 0 : 1); k++) {
+        const yy = y + k, j = yy * w + x; if (yy >= h || L.obj[j] !== o || !SNOWY.has(L.mat[j])) break;
+        if (k > 1 && hash(x, yy, 62) < .45) break;                             // ragged lower edge
+        L.mat[j] = 'snow'; L.tone[j] = k <= (ol ? 1 : 0) ? 5 : 4;
+      }
+    }
+  }
+  // keep only the top-most material per pixel; the layer buffers are dropped
+  function flatten(layers, w, h) {
+    const n = w * h, mat = new Array(n).fill(null), tone = new Uint8Array(n), atm = new Float32Array(n);
+    for (const L of layers) { L.finalize(); if (SEASON === 'winter') snowify(L); for (let i = 0; i < n; i++) if (L.mat[i] !== null) { mat[i] = L.mat[i]; tone[i] = L.tone[i]; atm[i] = L.atm; } }
+    return { mat, tone, atm };
+  }
+
+  /* ---------- render ---------- */
+  function grade(c, p, atm) {
+    let n = mix(c, [18, 24, 58], .74);
+    n = mix(n, c, .12);
+    let o = mix(n, c, p.L);
+    o = mix(o, [255, 150, 100], p.Wm * .2);
+    return tint(mix(o, p.hor, atm * (.45 + .55 * p.L)));
+  }
+  // season-wide colour cast: winter muted and cool, autumn warm, spring a touch overcast
+  const grey = (c, k) => { const l = c[0] * .3 + c[1] * .59 + c[2] * .11; return mix(c, [l, l, l], k); };
+  const tint = (c) => SEASON === 'winter' ? mix(grey(c, .32), [150, 170, 200], .06) : SEASON === 'autumn' ? mix(c, [240, 160, 90], .07) : SEASON === 'spring' ? grey(c, .08) : c;
+  const skyTint = (c, v) => SEASON === 'winter' ? mix(grey(c, .5), [205, 212, 225], .14) : SEASON === 'spring' ? mix(grey(c, .42), [175, 180, 190], .1 + .12 * v) : SEASON === 'autumn' ? mix(c, [240, 170, 110], .14 * v * v) : c;
+  // the static parts of a frame for one time of day: sky (with sun, moon, stars) and the land layers on top
+  function prepare(scene, t) {
+    const p = palette(t), d = new Uint8ClampedArray(W * H * 4), Q = 14;
+    for (let y = 0; y < H; y++) {
+      const v = clamp(y / (H * .7), 0, 1), col = skyTint(v < .55 ? mix(p.top, p.mid, v / .55) : mix(p.mid, p.hor, (v - .55) / .45), v);
+      for (let x = 0; x < W; x++) {
+        const th = (BAYER[(y & 3) * 4 + (x & 3)] / 16 - .5) * Q, i = (y * W + x) * 4;
+        for (let k = 0; k < 3; k++) d[i + k] = clamp(Math.round((col[k] + th) / Q) * Q, 0, 255);
+        d[i + 3] = 255;
+      }
+    }
+    const plot = (x, y, c, a = 1) => { x |= 0; y |= 0; if (x < 0 || y < 0 || x >= W || y >= H) return; const i = (y * W + x) * 4; d[i] = lerp(d[i], c[0], a); d[i + 1] = lerp(d[i + 1], c[1], a); d[i + 2] = lerp(d[i + 2], c[2], a); };
+    const dsk = (cx, cy, r, c, a) => { for (let dy = -r; dy <= r; dy++) { const h = Math.floor(Math.sqrt(Math.max(0, r * r - dy * dy + r * .8))); for (let dx = -h; dx <= h; dx++) plot(cx + dx, cy + dy, c, a); } };
+    // stars
+    const sa = Math.pow(1 - p.L, 2);
+    // sun / moon
+    // sun and moon keep the same on-screen size (~35 px radius) whatever the pixel scale; f scales the moon's crescent and halo
+    const R = Math.max(5, Math.round(35 / PX)), f = R / 7, hy = lerp(YO + 112, SKYB - R, clamp((H / W - .75) / .75, 0, 1)), arc = (q) => [Math.round(W * (.12 + .76 * q)), Math.round(hy - Math.sin(Math.PI * clamp(q, 0, 1)) * hy * .78)];
+    const sp = (t - 6.5) / 12.5;
+    if (sp > -.06 && sp < 1.06) { const [x, y] = arc(sp), low = 1 - Math.sin(Math.PI * clamp(sp, 0, 1)), c = mix([255, 244, 196], [255, 150, 80], Math.pow(low, 1.5)); dsk(x, y, R * 3, c, .12); dsk(x, y, R * 2, c, .2); dsk(x, y, R, c, 1); dsk(x - Math.round(2 * f), y - Math.round(2 * f), Math.round(2 * f), [255, 255, 240], .7); }
+    const mp = ((t - 19 + 24) % 24) / 11.5;
+    if (mp <= 1.06) {
+      // crescent tilted ~40° counterclockwise: the shadow disc sits up-right of the moon, so the lit edge faces down-left
+      const [x, y] = arc(mp), ang = 40 * Math.PI / 180, ox = Math.cos(ang), oy = -Math.sin(ang);
+      const inR = (dx, dy, r) => dx * dx + dy * dy <= r * r + r * .8;
+      // halo shaped like the crescent: bigger copies of the moon and its shadow disc, each fainter
+      for (const [gr0, k0, a] of [[16, 9, .05], [12, 6.5, .08], [9.5, 5, .12]]) {
+        const gr = Math.round(gr0 * f), k = k0 * f;
+        for (let dy = -gr; dy <= gr; dy++) for (let dx = -gr; dx <= gr; dx++)
+          if (inR(dx, dy, gr) && !inR(dx - ox * k, dy - oy * k, gr)) plot(x + dx, y + dy, [236, 234, 219], a);
+      }
+      for (let dy = -R; dy <= R; dy++) for (let dx = -R; dx <= R; dx++) {
+        if (!inR(dx, dy, R)) continue;
+        if (inR(dx - ox * 4.2 * f, dy - oy * 4.2 * f, R)) { plot(x + dx, y + dy, [150, 160, 200], .12); continue; }
+        const rim = !inR(dx - ox * (4.2 * f + 1), dy - oy * (4.2 * f + 1), R);
+        plot(x + dx, y + dy, rim ? [248, 246, 232] : [222, 220, 204], 1);
+      }
+    }
+    // layers go into their own buffer so clouds can move between sky and land
+    const sky = d, fg = new Uint8ClampedArray(W * H * 4), cache = new Map();
+    const { world, front } = scene, ox = (WW >> 1) - (W >> 1);
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+      const i = y * W + x; let m = front.mat[i], tn, at;
+      if (m !== null) { tn = front.tone[i]; at = front.atm[i]; }
+      else {
+        const wy = y - YO, wx = x + ox; if (wy < 0 || wy >= WH || wx < 0 || wx >= WW) continue;
+        const j = wy * WW + wx; m = world.mat[j]; if (m === null) continue; tn = world.tone[j]; at = world.atm[j];
+      }
+      m = REMAP[SEASON][m] || m;
+      const key = m + tn + '|' + at;
+      let c = cache.get(key); if (!c) { c = grade(PAL[m][tn], p, at); cache.set(key, c); }
+      fg[i * 4] = c[0]; fg[i * 4 + 1] = c[1]; fg[i * 4 + 2] = c[2]; fg[i * 4 + 3] = 255;
+    }
+    let base = mix([70, 74, 120], [240, 244, 250], p.L), shade = mix([46, 48, 90], mix(p.mid, [255, 255, 255], .32), p.L);
+    base = mix(base, [255, 196, 150], p.Wm * .6); shade = mix(shade, [200, 100, 120], p.Wm * .5);
+    // spring clouds are fuller and greyer, winter's a flat pale grey
+    if (SEASON === 'spring') { base = mix(base, [150, 156, 170], .35 * p.L); shade = mix(shade, [96, 102, 120], .45 * p.L); }
+    if (SEASON === 'winter') { base = grey(base, .4); shade = grey(shade, .4); }
+    const hi = mix(base, [255, 255, 255], .15 + .5 * p.L), wisp = mix(mix(hi, p.top, .15), [255, 170, 150], p.Wm * .7);
+    return { sky, fg, p, sa, COL: [null, base, shade, hi, wisp, wisp] };
+  }
+  const ALPHA = [0, 1, 1, 1, .6, .32];
+  // each star twinkles on its own cycle: a slow 1.5–2.5 s swell and fade, then a quiet gap of 8–80 s (skewed long)
+  let STARS = [], MAX_LIT = 0;
+  // stars across the world strip, up to 420 px above the horizon; each twinkles on its own slow cycle
+  function makeStars() {
+    const r = rng(5);
+    STARS = Array.from({ length: Math.round(260 * WW * 420 / (320 * 108)) }, (_, i) => {
+      const gap = 8 + Math.round(72 * Math.pow(hash(i, 1, 51), .6)), on = .5 * (3 + Math.floor(hash(i, 2, 51) * 3));
+      return { x: r() * WW | 0, d: r() * 420 | 0, b: .3 + r() * .7, on, cycle: gap + on, phase: hash(i, 3, 51) * (gap + on) };
+    });
+  }
+  function draw(canvas, scene, prep, secs) {
+    const g = canvas.getContext('2d'), img = g.createImageData(W, H), d = img.data, { p, COL, fg, sa } = prep;
+    d.set(prep.sky);
+    const blend = (x, y, c, a) => { if (x < 0 || y < 0 || x >= W || y >= H) return; const i = (y * W + x) * 4; d[i] = lerp(d[i], c[0], a); d[i + 1] = lerp(d[i + 1], c[1], a); d[i + 2] = lerp(d[i + 2], c[2], a); };
+    // stars: flare on their own cycles, capped so no more than 5% are lit at once
+    const ox = (WW >> 1) - (W >> 1);
+    if (sa > .02) {
+      const ts = Math.floor(secs * 2) / 2, star = [255, 248, 224];
+      let lit = 0;
+      STARS.forEach((s0) => {
+        const s = { ...s0, x: s0.x - ox, y: YO + 108 - s0.d }; if (s.x < 0 || s.x >= W || s.y < 0) return;
+        const into = (ts + s.phase) % s.cycle;
+        if (lit < MAX_LIT && into < s.on) {
+          // brightness rises then falls across the twinkle (half-second frames: e.g. dim, bright, dim)
+          lit++; const e = Math.sin(Math.PI * (into + .25) / s.on), a = lerp(sa * s.b, Math.min(1, sa * 1.1 + .15), e);
+          blend(s.x, s.y, star, a);
+          if (e > .7) for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) blend(s.x + dx, s.y + dy, star, a * .45 * e);
+        } else blend(s.x, s.y, star, sa * s.b);
+      });
+    }
+    for (const c of scene.clouds || []) {
+      // wrap around the world strip, then window it; y sits at a fixed height above the land
+      const span = WW + c.w + 20, cx = ((c.x + c.w + 10 + Math.floor(secs / c.step)) % span + span) % span - c.w - 10;
+      const cxs = Math.round(cx) - ox, oy = c.y + YO + c.oy;
+      for (let y = 0; y < c.h; y++) {
+        const yy = oy + y; if (yy < 0 || yy >= H) continue;
+        for (let x = 0; x < c.w; x++) {
+          const tn = c.t[y * c.w + x], xx = cxs + x; if (!tn || xx < 0 || xx >= W) continue;
+          const a = c.a * ALPHA[tn] * (tn > 3 ? .6 + .4 * p.L + .3 * p.Wm : 1), col = COL[tn], i = (yy * W + xx) * 4;
+          d[i] = lerp(d[i], col[0], a); d[i + 1] = lerp(d[i + 1], col[1], a); d[i + 2] = lerp(d[i + 2], col[2], a);
+        }
+      }
+    }
+    for (let i = 3; i < fg.length; i += 4) if (fg[i]) { d[i - 3] = fg[i - 3]; d[i - 2] = fg[i - 2]; d[i - 1] = fg[i - 1]; }
+    g.putImageData(img, 0, 0);
+  }
+
+
+  /* ---------- site runtime ---------- */
+  const canvas = document.getElementById('world');
+  // a new forest every visit; #seed-104 in the address pins one
+  // #seed-104 pins a forest, #winter (or #seed-104-winter) pins a season; otherwise the season follows the calendar
+  const mh = /seed-(\d{1,6})/.exec(location.hash);
+  let seed = mh ? +mh[1] : 1 + Math.floor(Math.random() * 99999);
+  const ms = /spring|summer|autumn|winter/.exec(location.hash);
+  SEASON = ms ? ms[0] : seasonOf();
+  // the sky's motion is a pixel every few seconds, gentle enough to keep even with reduced motion on (the card's drop-in still respects it)
+  const t0 = performance.now();
+  let override = null;   // set by the time panel; null = follow the real clock
+  const realHours = () => { const d = new Date(); return d.getHours() + d.getMinutes() / 60; };
+  const hoursNow = () => override ?? realHours();
+  let plan = planFor(seed);
+  const scene = { world: flatten(buildWorld(seed), WW, WH), front: null, clouds: buildClouds(seed) };
+  makeStars();
+  let prep = null, minute = -1;
+  const secs = () => (performance.now() - t0) / 1000;
+  // size the scene to the screen;
+  // only the front is rebuilt when the size changes, so this can run on every resize frame
+  function fit() {
+    const vw = innerWidth, vh = innerHeight;
+    // continuous pixel size: the scene is 180 px tall on wide screens and 200 px wide on tall ones, and the
+    // two meet at the same value, so resizing zooms smoothly with no jumps (min() picks whichever fits)
+    const S = Math.max(1, Math.min(vh / 180, vw / 200));
+    const w = Math.round(vw / S), h = Math.max(180, Math.round(vh / S));
+    if (scene.front && w === W && h === H) return false;
+    W = w; H = h; YO = H - 180; PX = S;
+    canvas.width = W; canvas.height = H;
+    // the card's top edge (layout position, ignoring the drop-in animation)
+    SKYB = Math.max(40, Math.min(YO + 112, Math.floor(document.querySelector('.card-wrap').offsetTop / S) - 6));
+    scene.front = flatten(buildFront(seed, plan), W, H);
+    const ox = (WW >> 1) - (W >> 1);
+    MAX_LIT = Math.max(1, Math.round(STARS.filter(s => s.x - ox >= 0 && s.x - ox < W && YO + 108 - s.d >= 0).length * .05));
+    minute = -1;
+    return true;
+  }
+  function frame() {
+    const t = hoursNow(), mk = Math.floor(t * 60);
+    if (mk !== minute) { minute = mk; prep = prepare(scene, t); }   // sky, sun and moon move once a minute
+    draw(canvas, scene, prep, secs());                              // clouds and stars on their own half-second beats
+  }
+  fit();
+  // redraw on every animation frame while the window is being resized
+  let queued = false;
+  addEventListener('resize', () => { if (queued) return; queued = true; requestAnimationFrame(() => { queued = false; if (fit()) frame(); }); });
+  frame();
+  // a new season: same seed, so the same forest, rebuilt with that season's trees, ground cover and clouds
+  function setSeason(sn) {
+    SEASON = sn;
+    scene.world = flatten(buildWorld(seed), WW, WH); scene.clouds = buildClouds(seed); scene.front = null;
+    fit(); minute = -1; frame();
+  }
+  setInterval(() => { if (!document.hidden) frame(); }, 500);
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) frame(); });
+
+  /* ---------- easter egg: time panel ---------- */
+  {
+    // Jersey 10 digits baked to pixel paths: [advance, path]; each digit is centred in an 8 px cell so the clock never jitters
+    const DIG = {"0":[7,"M1 0h4v1h-4zM0 1h6v1h-6zM0 2h2v1h-2zM4 2h2v1h-2zM0 3h2v1h-2zM4 3h2v1h-2zM0 4h2v1h-2zM4 4h2v1h-2zM0 5h2v1h-2zM4 5h2v1h-2zM0 6h2v1h-2zM4 6h2v1h-2zM0 7h2v1h-2zM4 7h2v1h-2zM0 8h6v1h-6zM1 9h4v1h-4z"],"1":[4,"M0 0h3v1h-3zM0 1h3v1h-3zM1 2h2v1h-2zM1 3h2v1h-2zM1 4h2v1h-2zM1 5h2v1h-2zM1 6h2v1h-2zM1 7h2v1h-2zM1 8h2v1h-2zM1 9h2v1h-2z"],"2":[8,"M1 0h5v1h-5zM0 1h7v1h-7zM0 2h2v1h-2zM5 2h2v1h-2zM4 3h3v1h-3zM3 4h3v1h-3zM2 5h3v1h-3zM1 6h3v1h-3zM0 7h3v1h-3zM0 8h7v1h-7zM0 9h7v1h-7z"],"3":[8,"M1 0h5v1h-5zM0 1h7v1h-7zM0 2h2v1h-2zM5 2h2v1h-2zM5 3h2v1h-2zM2 4h4v1h-4zM2 5h4v1h-4zM5 6h2v1h-2zM0 7h2v1h-2zM5 7h2v1h-2zM0 8h7v1h-7zM1 9h5v1h-5z"],"4":[7,"M4 0h2v1h-2zM3 1h3v1h-3zM2 2h4v1h-4zM1 3h2v1h-2zM4 3h2v1h-2zM0 4h2v1h-2zM4 4h2v1h-2zM0 5h2v1h-2zM4 5h2v1h-2zM0 6h6v1h-6zM0 7h6v1h-6zM4 8h2v1h-2zM4 9h2v1h-2z"],"5":[7,"M0 0h6v1h-6zM0 1h6v1h-6zM0 2h2v1h-2zM0 3h2v1h-2zM0 4h5v1h-5zM1 5h5v1h-5zM4 6h2v1h-2zM0 7h2v1h-2zM4 7h2v1h-2zM0 8h6v1h-6zM1 9h4v1h-4z"],"6":[8,"M1 0h5v1h-5zM0 1h7v1h-7zM0 2h2v1h-2zM5 2h2v1h-2zM0 3h2v1h-2zM0 4h6v1h-6zM0 5h7v1h-7zM0 6h2v1h-2zM5 6h2v1h-2zM0 7h2v1h-2zM5 7h2v1h-2zM0 8h7v1h-7zM1 9h5v1h-5z"],"7":[7,"M0 0h6v1h-6zM0 1h6v1h-6zM4 2h2v1h-2zM4 3h2v1h-2zM3 4h3v1h-3zM2 5h3v1h-3zM2 6h3v1h-3zM2 7h2v1h-2zM2 8h2v1h-2zM2 9h2v1h-2z"],"8":[8,"M1 0h5v1h-5zM0 1h7v1h-7zM0 2h2v1h-2zM5 2h2v1h-2zM0 3h2v1h-2zM5 3h2v1h-2zM1 4h5v1h-5zM0 5h7v1h-7zM0 6h2v1h-2zM5 6h2v1h-2zM0 7h2v1h-2zM5 7h2v1h-2zM0 8h7v1h-7zM1 9h5v1h-5z"],"9":[8,"M1 0h5v1h-5zM0 1h7v1h-7zM0 2h2v1h-2zM5 2h2v1h-2zM0 3h2v1h-2zM5 3h2v1h-2zM0 4h7v1h-7zM1 5h6v1h-6zM5 6h2v1h-2zM0 7h2v1h-2zM5 7h2v1h-2zM0 8h7v1h-7zM1 9h5v1h-5z"],":":[3,"M0 2h2v1h-2zM0 3h2v1h-2zM0 8h2v1h-2zM0 9h2v1h-2z"]}, DH = 10;
+    const panel = document.getElementById('timepanel'), range = document.getElementById('tp-range'), clockSvg = document.getElementById('tp-clock');
+    const pad = (n) => String(n).padStart(2, '0');
+    function showClock(t) {
+      const m = Math.round(t * 60) % 1440, txt = pad(Math.floor(m / 60)) + ':' + pad(m % 60);
+      let x = 0, paths = '';
+      for (const ch of txt) {
+        const [adv, d] = DIG[ch], cell = ch === ':' ? 3 : 8, off = Math.floor((cell - adv) / 2);
+        paths += `<path transform="translate(${x + off} 0)" d="${d}" fill="currentColor"/>`; x += cell + 1;
+      }
+      clockSvg.setAttribute('viewBox', `0 0 ${x - 1} ${DH}`); clockSvg.setAttribute('width', (x - 1) * 1.5);
+      clockSvg.innerHTML = paths; clockSvg.setAttribute('aria-label', txt);
+    }
+    function setTime(t) { override = t; minute = -1; frame(); showClock(t); }
+    let closing = 0;
+    function open() { clearTimeout(closing); panel.classList.remove('closing'); panel.hidden = false; range.value = Math.round(hoursNow() * 60) % 1440; showClock(hoursNow()); }
+    function close() { if (panel.hidden || panel.classList.contains('closing')) return; panel.classList.add('closing'); closing = setTimeout(() => { panel.hidden = true; panel.classList.remove('closing'); }, 250); }
+    for (const el of [document.querySelector('.portrait'), document.querySelector('h1')]) el.addEventListener('click', open);
+    range.addEventListener('input', () => setTime(range.value / 60));
+    // season button: shows the current season's icon and steps to the next one
+    const SICON = {"spring": "M2 0h2v1h-2zM5 0h2v1h-2zM1 1h7v1h-7zM1 2h2v1h-2zM6 2h2v1h-2zM2 3h1v1h-1zM6 3h1v1h-1zM1 4h2v1h-2zM6 4h2v1h-2zM1 5h7v1h-7zM2 6h2v1h-2zM5 6h2v1h-2zM4 7h1v1h-1zM3 8h2v1h-2z", "summer": "M4 0h1v1h-1zM1 1h1v1h-1zM7 1h1v1h-1zM3 2h3v1h-3zM2 3h5v1h-5zM0 4h1v1h-1zM2 4h5v1h-5zM8 4h1v1h-1zM2 5h5v1h-5zM3 6h3v1h-3zM1 7h1v1h-1zM7 7h1v1h-1zM4 8h1v1h-1z", "autumn": "M5 0h4v1h-4zM3 1h6v1h-6zM2 2h4v1h-4zM7 2h2v1h-2zM1 3h4v1h-4zM6 3h3v1h-3zM1 4h3v1h-3zM5 4h4v1h-4zM1 5h2v1h-2zM4 5h4v1h-4zM2 6h1v1h-1zM4 6h3v1h-3zM1 7h1v1h-1zM0 8h1v1h-1z", "winter": "M4 0h1v1h-1zM1 1h1v1h-1zM4 1h1v1h-1zM7 1h1v1h-1zM2 2h1v1h-1zM4 2h1v1h-1zM6 2h1v1h-1zM3 3h3v1h-3zM0 4h9v1h-9zM3 5h3v1h-3zM2 6h1v1h-1zM4 6h1v1h-1zM6 6h1v1h-1zM1 7h1v1h-1zM4 7h1v1h-1zM7 7h1v1h-1zM4 8h1v1h-1z"}, sBtn = document.getElementById('tp-season');
+    const showSeason = () => { sBtn.querySelector('path').setAttribute('d', SICON[SEASON]); sBtn.setAttribute('aria-label', 'Season: ' + SEASON + ' (next: ' + SEASONS[(SEASONS.indexOf(SEASON) + 1) % 4] + ')'); sBtn.title = SEASON; };
+    showSeason();
+    // dice: a brand-new forest (new seed), same season and time
+    document.getElementById('tp-reseed').addEventListener('click', () => { seed = 1 + Math.floor(Math.random() * 99999); plan = planFor(seed); setSeason(SEASON); });
+    sBtn.addEventListener('click', () => { setSeason(SEASONS[(SEASONS.indexOf(SEASON) + 1) % 4]); showSeason(); });
+    document.getElementById('tp-reset').addEventListener('click', () => { override = null; if (SEASON !== seasonOf()) { setSeason(seasonOf()); showSeason(); } minute = -1; frame(); const t = realHours(); range.value = Math.round(t * 60); showClock(t); });
+    document.getElementById('tp-close').addEventListener('click', close);
+    addEventListener('keydown', (e) => { if (e.key === 'Escape' && !panel.hidden) close(); });
+    // keep the clock ticking while the panel shows real time
+    setInterval(() => { if (!panel.hidden && override === null) { const t = realHours(); range.value = Math.round(t * 60); showClock(t); } }, 15000);
+  }
+})();
+</script>
+</body>
+</html>
