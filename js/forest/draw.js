@@ -107,7 +107,8 @@ export function conifer(L, cx, base, h, kind, r, extra = {}) {
 }
 export function oak(L, cx, base, h, mat, r, o = {}) {
   const obj = ++OBJ, tw = Math.max(3, Math.round(h / 11));
-  trunk(L, cx, base - h * .6, base, tw, 'bark', obj, Math.round(tw * .6));
+  // in winter the trunk stops where it splits into its main limbs (see bare())
+  trunk(L, cx, base - h * (SEASON === 'winter' ? BARE_SPLIT + .02 : .6), base, tw, 'bark', obj, Math.round(tw * .6));
   if (SEASON !== 'winter') {
     limb(L, cx, base - h * .42, cx - h * .2, base - h * .64, Math.max(1, tw * .45), 'bark', obj);
     limb(L, cx, base - h * .48, cx + h * .22, base - h * .7, Math.max(1, tw * .45), 'bark', obj);
@@ -138,11 +139,18 @@ export function oak(L, cx, base, h, mat, r, o = {}) {
 // with short side shoots along the way. Wood thins at every fork, wanders a little rather than bending
 // steadily upward, and stops at the summer crown's outline, so the bare tree keeps the same silhouette.
 const BARE = new Map();   // seed-stable shapes, cached so resizing doesn't regrow the tree
+const BARE_SPLIT = .4;    // share of the tree's height at which the trunk splits
 function bareShape(cx, base, h, tw, blobs, key) {
   if (BARE.has(key)) return BARE.get(key);
   const inside = (x, y) => blobs.some(([bx, by, br]) => (x - bx) ** 2 + (y - by) ** 2 <= (br * 1.04) ** 2);
   // distance a branch can travel this way before leaving the crown
-  const room = (x, y, a) => { let t = 0; while (t < 300 && inside(x + Math.cos(a) * t, y + Math.sin(a) * t)) t++; return t; };
+  // (main limbs start below the crown, so for them the count runs across the gap up into it)
+  const room = (x, y, a, gap = false) => {
+    let t = 0;
+    if (gap) while (t < 300 && !inside(x + Math.cos(a) * t, y + Math.sin(a) * t)) t++;
+    while (t < 300 && inside(x + Math.cos(a) * t, y + Math.sin(a) * t)) t++;
+    return t;
+  };
   let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
   for (const [bx, by, br] of blobs) { x0 = Math.min(x0, bx - br); y0 = Math.min(y0, by - br); x1 = Math.max(x1, bx + br); y1 = Math.max(y1, by + br); }
   const R = Math.max(x1 - x0, y1 - y0) / 2;
@@ -170,14 +178,15 @@ function bareShape(cx, base, h, tw, blobs, key) {
     for (let i = 0; i < len; i++) { x += Math.cos(a); y += Math.sin(a); a = limit(a + (rr() - .5) * .5, .5); if (!inside(x, y)) return; pts.push([x - cx, y - base, .5, 0, 0]); }
   };
   function grow(x, y, a, w, len, depth, side) {
-    const space = room(x, y, a);
+    const space = room(x, y, a, depth === 0);
     if (space < 3 || w < .5 || depth > 12) {
       // the end of a run: a few fine twigs fanning every way, sideways and slightly down included
       for (let k = 0, nk = 1 + Math.floor(rr() * 2); k < nk; k++) twig(x, y, a + (rr() - .5) * 1.8, 2 + rr() * Math.min(3, space + 1));
       return;
     }
     // each run is a share of the room ahead, so wood thins and forks well before it reaches the edge
-    const run = clamp(len, 2, space * (.28 + rr() * .14)), curl = (rr() - .5) * .03;
+    // (the main limbs climb further before their first fork)
+    const run = clamp(len, 2, space * (depth === 0 ? .42 + rr() * .12 : .28 + rr() * .14)), curl = (rr() - .5) * .03;
     const wEnd = Math.max(.5, w * .82);
     // short side shoots along longer runs
     const start = pts.length;
@@ -195,14 +204,14 @@ function bareShape(cx, base, h, tw, blobs, key) {
     // now and then a third, small shoot
     if (wEnd > 1.2 && rr() < .22) grow(x, y, limit(a + side * (.9 + rr() * .4), wEnd * .4), wEnd * .4, len * .45, depth + 2, -side);
   }
-  // the trunk splits around half the tree's height into two to four unequal scaffold limbs
-  const sy = base - h * .56, ns = 3 + Math.floor(rr() * 2), w0 = tw * .7;
+  // the trunk splits low, at ~40% of the tree's height, into two or three main limbs nearly as thick as the trunk
+  const sy = base - h * BARE_SPLIT, ns = 2 + (rr() < .45 ? 1 : 0), w0 = tw * .92;
   const order = Array.from({ length: ns }, (_, i) => i).sort(() => rr() - .5);
   for (let i = 0; i < ns; i++) {
     const k = order[i], f = ns === 1 ? 0 : k / (ns - 1) - .5;          // −0.5 … 0.5 across the fan
-    const a = -Math.PI / 2 + f * (1.1 + rr() * .5) + (rr() - .5) * .25;
-    const w = w0 * (i === 0 ? .85 : .55 + rr() * .2);                   // one leader, the rest thinner
-    grow(cx + f * tw * .4, sy, a, w, R * (i === 0 ? .55 : .4 + rr() * .15), 0, f < 0 ? 1 : -1);
+    const a = -Math.PI / 2 + f * (.8 + rr() * .4) + (rr() - .5) * .2;
+    const w = w0 * (i === 0 ? .92 : .78 + rr() * .1);                   // one leader, the others only a little thinner
+    grow(cx + f * tw * .45, sy + tw * .3, a, w, R * (i === 0 ? .6 : .5 + rr() * .12), 0, f < 0 ? 1 : -1);
   }
   BARE.set(key, pts);
   return pts;
