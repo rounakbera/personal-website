@@ -78,7 +78,8 @@ function pine(L, cx, base, h, mat = 'pine', o = {}) {
   const tw = Math.max(2, Math.round(h / 20)), trunkH = Math.round(h * (o.trunk || .16));
   const mw = h * (o.w || .27), crownTop = base - h, crownH = h - trunkH, step = crownH / (n + .6);
   const r = o.r, lean = o.lean || 0;
-  if (h > 20) trunk(L, cx, base - trunkH - step, base, tw, 'bark', obj, o.flare || 0);
+  // o.sink runs the trunk on below the base (behind a phone's toolbar) without moving the tree
+  if (h > 20) trunk(L, cx, base - trunkH - step, base + (o.sink || 0), tw, 'bark', obj, o.flare || 0);
   // tier heights: uniform by default; with tierVar each tier gets its own height, rescaled to fill the crown
   const wts = Array.from({ length: n }, (_, i) => r && o.tierVar && i > 0 ? Math.max(.55, 1 + (r() - .5) * 2 * o.tierVar) : 1);
   const span = step * n / wts.reduce((a, b) => a + b, 0), tops = []; let acc = 0;
@@ -111,7 +112,7 @@ export function conifer(L, cx, base, h, kind, r, extra = {}) {
 export function oak(L, cx, base, h, mat, r, o = {}) {
   const obj = ++OBJ, tw = Math.max(3, Math.round(h / 11));
   // in winter the trunk stops where it splits into its main limbs (see bare())
-  trunk(L, cx, base - h * (SEASON === 'winter' ? BARE_SPLIT + .02 : .6), base, tw, 'bark', obj, Math.round(tw * .6));
+  trunk(L, cx, base - h * (SEASON === 'winter' ? BARE_SPLIT + .02 : .6), base + (o.sink || 0), tw, 'bark', obj, Math.round(tw * .6));
   if (SEASON !== 'winter') {
     limb(L, cx, base - h * .42, cx - h * .2, base - h * .64, Math.max(1, tw * .45), 'bark', obj);
     limb(L, cx, base - h * .48, cx + h * .22, base - h * .7, Math.max(1, tw * .45), 'bark', obj);

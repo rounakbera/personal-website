@@ -1,7 +1,7 @@
 // Scene building: a fixed world strip (built once per seed and season) plus a screen-sized front
 // (rebuilt on resize), each flattened to one material per pixel.
 import { rng, hash, clamp } from '../util.js';
-import { W, YO, WW, WH, SEASON } from './state.js';
+import { W, H, YO, WW, WH, SEASON } from './state.js';
 import { SNOWY } from './palette.js';
 import { Layer, MAT, mid } from './layer.js';
 import { resetIds, at, clearOrigin, meadow, KINDS, KIND_LIST, conifer, oak, bush, fern, rock, flowers, ground, ridge, treeline } from './draw.js';
@@ -9,7 +9,7 @@ import { resetIds, at, clearOrigin, meadow, KINDS, KIND_LIST, conifer, oak, bush
 // foreground plan: which side the big oak stands on and which two conifers frame the other side
 export function planFor(seed) {
   const fr = rng(seed * 7919 + 13), choose = (list) => list[Math.floor(fr() * list.length)];
-  let plan = { flip: false, small: 'column', big: 'fir', smallDiv: 6, bigDiv: 15 };
+  let plan = { flip: false, small: 'column', big: 'fir', smallDiv: 6, bigDiv: 15, oakDX: 0, pairDX: 0 };
   if (seed !== 21) {
     const small = choose(['column', 'column', 'spruce', 'blue', 'fir']);
     // spruce and fir read as the same dark-green tiered tree, so the pair must come from different looks
@@ -18,6 +18,10 @@ export function planFor(seed) {
     // one tree gets tight layers, the other loose ones (layer height in px ≈ div)
     const tight = 6 + fr() * 2, loose = 13 + fr() * 4;
     [plan.smallDiv, plan.bigDiv] = fr() < .5 ? [tight, loose] : [loose, tight];
+    // the framing trees slide a little sideways per forest: the oak on its own, the two conifers together
+    // (own stream, so nothing else in the plan or the layout shifts)
+    const sr = rng(seed * 104729 + 31);
+    plan.oakDX = Math.round((sr() - .5) * 28); plan.pairDX = Math.round((sr() - .5) * 28);
   }
   return plan;
 }
@@ -82,9 +86,13 @@ export function buildFront(seed, plan) {
   [[70, 26], [96, 20], [222, 20], [122, 16], [190, 18]].forEach(([x, w], i) => { at(MX(x), top(MX(x)), 2000 + i * 40); bush(ft, MX(x), top(MX(x)) + 3, w * ks, leafOf(br), br); });
   if (SEASON !== 'winter') [[84, 10], [150, 8], [206, 9], [244, 11]].forEach(([x, s], i) => { at(MX(x), 0, 3000 + i * 10); fern(ft, MX(x), top(MX(x)) + 1, s, SEASON === 'autumn' ? 'autY' : 'oak'); });
   [[168, 5, true], [108, 3, false], [140, 2, false], [236, 6, true], [246, 3, false], [200, 2, false], [56, 4, true]].forEach(([x, sz, moss], i) => { at(MX(x), top(MX(x)), 3500 + i * 10); rock(ft, MX(x), top(MX(x)) + 2 + sz * .3, sz, moss); });
-  at(LX(34), Y(186), 4000); oak(ft, LX(34), Y(186), 150 * ks, 'oak', rng(seed + 4), { k: 10, R: .38, sym: true, inward: plan.flip ? -1 : 1 });
-  at(RX(264), Y(178), 5000); conifer(ft, RX(264), Y(178), 100 * ks, plan.small, rng(seed + 5), { lean: 0, tierVar: .08, div: plan.smallDiv });
-  at(RX(302), Y(188), 6000); conifer(ft, RX(302), Y(188), 176 * ks, plan.big, rng(seed + 6), { lean: 0, flare: 3, tierVar: .08, div: plan.bigDiv, ...(plan.big === 'fir' ? { w: .3 } : {}) });
+  // trunks whose foot is already below the visible bottom run on to the canvas's bottom edge (sink), so where the
+  // canvas reaches behind a phone's toolbar the foot stays hidden there; the trees themselves don't move or grow,
+  // and on screens without a toolbar strip nothing changes
+  const sink = (base) => base > YO + 180 ? Math.max(0, H + 2 - base) : 0, oX = LX(34 + plan.oakDX), sX = RX(264 + plan.pairDX), bX = RX(302 + plan.pairDX);
+  at(oX, Y(186), 4000); oak(ft, oX, Y(186), 150 * ks, 'oak', rng(seed + 4), { k: 10, R: .38, sym: true, inward: plan.flip ? -1 : 1, sink: sink(Y(186)) });
+  at(sX, Y(178), 5000); conifer(ft, sX, Y(178), 100 * ks, plan.small, rng(seed + 5), { lean: 0, tierVar: .08, div: plan.smallDiv, sink: sink(Y(178)) });
+  at(bX, Y(188), 6000); conifer(ft, bX, Y(188), 176 * ks, plan.big, rng(seed + 6), { lean: 0, flare: 3, tierVar: .08, div: plan.bigDiv, sink: sink(Y(188)), ...(plan.big === 'fir' ? { w: .3 } : {}) });
   clearOrigin();
   return [fg, ft];
 }

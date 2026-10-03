@@ -118,6 +118,8 @@ The scripts are native ES modules (`<script type="module">`), so the page has to
 - **World:** mountains, treeline, field, groves and rocks. A fixed 960×180 strip, built once per seed and season, then windowed to the screen width.
 - **Front:** foreground ground, ground cover and the three framing trees (big oak on one side, two different conifers on the other). Sized to the screen and rebuilt on every resize.
   - Every front object gets fixed part ids, its own random stream and its own texture origin, via `at(x, y, id)`. That way nothing reshuffles as it slides.
+  - **Per-forest shift:** the oak slides up to ±14 layout px sideways (`plan.oakDX`), and the two conifers slide together as a pair (`plan.pairDX`). Both come from their own stream in `planFor`. Seed 21 keeps its hand-set positions (0, 0).
+  - **Trunks behind the toolbar:** a framing tree whose foot is already below the visible bottom (the oak at +186, the big conifer at +188) gets `sink`. Its trunk runs on to the canvas's bottom edge, so where the canvas reaches behind a phone's toolbar the foot stays hidden. The trees don't move or grow (owner: proportions are right as they are), and without a toolbar strip nothing changes.
 
 **Rendering pipeline:**
 
@@ -197,14 +199,14 @@ The scripts are native ES modules (`<script type="module">`), so the page has to
 
 ## Time panel (easter egg)
 
-- **Opening:** double-click (or double-tap) the portrait or name. The panel slides down from the top edge into the top-left corner. `card.js` tells single from double clicks (300 ms window) and fires `card:dblclick`, which `timepanel.js` listens for. `touch-action: manipulation` on both stops a double tap from zooming the page.
+- **Opening and hiding:** double-click (or double-tap) the portrait or name to open it, and again to hide it (there's no close button; Escape also hides it). The panel slides down from the top edge into the top-left corner. `card.js` tells single from double clicks (300 ms window) and fires `card:dblclick`, which `timepanel.js` listens for. `touch-action: manipulation` on both stops a double tap from zooming the page.
 - **Controls:**
   - pixel clock (Jersey 10 digits baked to paths);
   - time slider;
   - season button (cycles spring → summer → autumn → winter);
   - dice (new random forest; keeps season and time);
-  - reset (real time and real season);
-  - × to close, which fades it out (Escape also closes).
+  - reset (real time and real season).
+  - Hiding fades it out.
 
 ## Owner's design decisions
 
