@@ -116,3 +116,6 @@ h1 { position: relative; }
 #tp-range::-webkit-slider-thumb { -webkit-appearance: none; width: 8px; height: 14px; margin-top: -5.5px; border: 0; background: var(--parch-hi); box-shadow: 0 0 0 2px var(--ink); }
 #tp-range::-moz-range-thumb { width: 8px; height: 14px; border: 0; border-radius: 0; background: var(--parch-hi); box-shadow: 0 0 0 2px var(--ink); }
 @media (prefers-reduced-motion: reduce) { .card-wrap { animation: none; } .links a { transition: none; } }
+
+/* double taps on the portrait and name open the time panel, so they mustn't zoom the page */
+.portrait, h1 { touch-action: manipulation; }
