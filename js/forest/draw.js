@@ -177,18 +177,20 @@ function bareShape(cx, base, h, tw, blobs, key, inward) {
   const twig = (x, y, a, len) => {
     for (let i = 0; i < len; i++) { x += Math.cos(a); y += Math.sin(a); a = limit(a + (rr() - .5) * .5, .5); if (!inside(x, y)) return; pts.push([x - cx, y - base, .5, 0, 0]); }
   };
-  function grow(x, y, a, w, len, depth, side) {
+  function grow(x, y, a, w, len, depth, side, fixed = 0) {
     // wood that hasn't reached the crown yet (low limbs) may cross the gap up into it
     const space = room(x, y, a, !inside(x, y) && y > (y0 + y1) / 2);
-    if (space < 3 || w < .5 || depth > 12) {
-      // the end of a run: a few fine twigs fanning every way, sideways and slightly down included
+    if (space < 3 || w < .9 || depth > 10) {
+      // the end of a run: wood still thick here tapers off to a point instead of stopping blunt,
+      // then a twig or two fans out, sideways and slightly down included
+      if (w > 1.2) [x, y, a] = walk(x, y, a, w * 2.5, w, .6, (rr() - .5) * .05);
       for (let k = 0, nk = 1 + Math.floor(rr() * 2); k < nk; k++) twig(x, y, a + (rr() - .5) * 1.8, 2 + rr() * Math.min(3, space + 1));
       return;
     }
-    // each run is a share of the room ahead, so wood thins and forks well before it reaches the edge
-    // (the main limbs climb further before their first fork)
-    const run = clamp(len, 2, space * (depth === 0 ? .42 + rr() * .12 : .28 + rr() * .14)), curl = (rr() - .5) * .03;
-    const wEnd = Math.max(.5, w * .82);
+    // each run is a share of the room ahead, so wood thins and forks well before it reaches the edge;
+    // the two main limbs get one shared, fixed length so they come out about equal
+    const run = fixed || clamp(len, 2, space * (.38 + rr() * .16)), curl = (rr() - .5) * .03;
+    const wEnd = Math.max(.5, w * .88);
     // short side shoots along longer runs
     const start = pts.length;
     [x, y, a] = walk(x, y, a, run, w, wEnd, curl);
@@ -197,13 +199,19 @@ function bareShape(cx, base, h, tw, blobs, key, inward) {
       const s2 = rr() < .5 ? -1 : 1;
       twig(p[0] + cx, p[1] + base, a + s2 * (.7 + rr() * .6), 2 + rr() * 4);
     }
+    // long runs of thick wood also put out real side branches, so no limb is a bare arm
+    // (just one, on the main limbs and their first children; more than that turns the crown into a thicket)
+    if (run > 14 && w > 3 && depth <= 1) {
+      const p = pts[start + Math.floor((.35 + .5 * rr()) * (pts.length - start - 1))], s2 = rr() < .5 ? -1 : 1;
+      grow(p[0] + cx, p[1] + base, limit(a + s2 * (.6 + rr() * .5), w * .45), w * .45, len * .45, depth + 3, s2);
+    }
     fork(x, y, a, wEnd, len, depth, side);
   }
   // every split is in two: a leading child nearly parallel to its parent (a slight bend one way) and a
   // thinner side child that swings off the other way, anywhere up to ~80° away; sides alternate down a branch
   function fork(x, y, a, w, len, depth, side) {
     const lead = a + side * (.05 + rr() * .15), off = a - side * (.35 + rr() * 1.05);
-    const wl = w * (.78 + rr() * .08), ws = w * (.5 + rr() * .18);
+    const wl = w * (.84 + rr() * .06), ws = w * (.62 + rr() * .14);
     grow(x, y, limit(lead, wl), wl, len * (.72 + rr() * .16), depth + 1, -side);
     grow(x, y, limit(off, ws), ws, len * (.5 + rr() * .25), depth + 1, side);
   }
@@ -212,12 +220,16 @@ function bareShape(cx, base, h, tw, blobs, key, inward) {
   // the outward limb goes toward `inward` when given (the foreground oak half off-screen reaches into view)
   const flip = rr() < .5 ? -1 : 1, sy = base - h * BARE_SPLIT, s0 = inward ? -inward : flip, up = -Math.PI / 2;
   const la = up + s0 * (.05 + rr() * .15), lx = cx + s0 * tw * .18, ox = cx - s0 * tw * .2, by = sy + tw * .9;
-  let oa = up - s0 * (.4 + rr() * .7);
+  let oa = up - s0 * (.4 + rr() * .5);
   // the outward limb starts below the crown: if it would miss the crown entirely (and so die as a stub),
   // swing it up step by step until it heads into the crown
-  for (let k = 0; k < 10 && room(ox, by, oa, true) < R * .35; k++) oa = lerp(oa, up, .2);
-  grow(lx, by, la, tw * .84, R * .6, 0, -s0);
-  grow(ox, by, oa, tw * (.62 + rr() * .12), R * (.5 + rr() * .12), 0, s0);
+  const gapTo = (x, y, a) => { let t = 0; while (t < R && !inside(x + Math.cos(a) * t, y + Math.sin(a) * t)) t++; return t; };
+  for (let k = 0; k < 10 && room(ox, by, oa, true) - gapTo(ox, by, oa) < R * .5; k++) oa = lerp(oa, up, .2);
+  // both main limbs run the same distance before their first fork: a share of whichever has less room
+  // (long enough that both are well inside the crown when they first fork, so neither ends as a bare arm)
+  const run0 = Math.max(4, Math.min(room(lx, by, la, true), room(ox, by, oa, true)) * (.5 + rr() * .1), gapTo(lx, by, la) + 6, gapTo(ox, by, oa) + 6);
+  grow(lx, by, la, tw * .84, R * .6, 0, -s0, run0);
+  grow(ox, by, oa, tw * (.72 + rr() * .1), R * .6, 0, s0, run0);
   BARE.set(key, pts);
   return pts;
 }

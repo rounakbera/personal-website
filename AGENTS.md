@@ -184,7 +184,9 @@ Keep these unless asked otherwise.
 
 - **Winter oak (`bare()`/`bareShape()` in `js/forest/draw.js`)** — being iterated with the owner. Current approach:
   - In winter the trunk stops at ~40% of the tree's height and splits in two: a leader nearly as thick as the trunk carrying on almost straight up, and a thinner limb swinging out. Both start inside the trunk and the trunk casts no seam line onto them, so they grow out of it smoothly.
-  - Every split is in two (owner's rule): a leading child nearly parallel to its parent (slight bend, ~0.8× width) and a thinner side child (~0.5–0.7×) bending the other way by anything up to ~80°. Sides alternate down a branch. Longer runs also get short side shoots.
+  - The two main limbs are about equal in length (owner's rule): both get one shared first run, long enough to be well inside the crown before they first fork. The outward limb leans at most ~50° off vertical.
+  - Every split is in two (owner's rule): a leading child nearly parallel to its parent (slight bend, ~0.85–0.9× width) and a side child (~0.6–0.75×) bending the other way by anything up to ~80°. Sides alternate down a branch. Wood tapers slowly (owner wanted thicker branches); forking stops below ~1 px and thick ends taper to a point rather than stopping blunt.
+  - Longer runs get short side shoots; long thick runs on the main limbs and their first children also put out one real side branch.
   - Low limbs that haven't reached the summer crown yet may cross the gap up into it.
   - The foreground oak stands half off-screen, so its outward limb always swings toward the screen's middle (`inward` option), and any first-split limb that would miss the crown is swung up until it enters it. Otherwise one of the two first limbs ends up off-screen or as a stub.
   - Each run covers only a share of the room left before the summer crown's edge, so wood keeps dividing and thinning out to 1 px twigs at the outline.
