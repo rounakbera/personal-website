@@ -189,7 +189,9 @@ Keep these unless asked otherwise.
   - Longer runs get short side shoots; long thick runs on the main limbs and their first children also put out one real side branch.
   - Low limbs that haven't reached the summer crown yet may cross the gap up into it.
   - The foreground oak stands half off-screen, so its outward limb always swings toward the screen's middle (`inward` option), and any first-split limb that would miss the crown is swung up until it enters it. Otherwise one of the two first limbs ends up off-screen or as a stub.
-  - Each run covers only a share of the room left before the summer crown's edge, so wood keeps dividing and thinning out to 1 px twigs at the outline.
+  - Each run covers only a share of the room left before the crown's edge, so wood keeps dividing and thinning out to 1 px twigs.
+  - At every fork after the trunk split, the side child starts a few px back inside its parent so it grows out of the parent's flank (owner: it should cover the branch it diverges from), and the leading child carries on from the parent's full width.
+  - The crown edge should be star-like, not a circle (owner): each branch line carries its own reach (0.65–1.45× the summer crown), drifting at every fork, so tips land at uneven distances.
   - Thick wood never points below horizontal; thin twigs may dip slightly. Branches wander a little instead of curving steadily upward.
   - Shapes are cached per crown, so resizing doesn't regrow them.
 - **Résumé link** target.
