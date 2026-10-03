@@ -150,7 +150,7 @@ export function oak(L, cx, base, h, mat, r, o = {}) {
 // Kept for pixel art (owner's rules): limbs (≥ 2 px) never run into other limbs (one that would is cut and tapers),
 // and each branch segment tapers into the next so no width steps down suddenly.
 const BARE = new Map();   // seed-stable shapes, cached so resizing doesn't regrow the tree
-const BARE_SPLIT = .4;    // share of the tree's height where the trunk ends and the ternary crown begins
+const BARE_SPLIT = .28;   // share of the tree's height where the trunk ends and the ternary crown begins (owner: low)
 const DEG = Math.PI / 180;
 // 3-D vector helpers for the turtle
 const v3 = {
@@ -190,7 +190,8 @@ function bareShape(cx, base, h, tw, blobs, key, inward) {
   // A made at step s: its stem F(50) and three branches, each a pitched F(50) ending in the next A
   function A(p, f, s, parent) {
     if (s > n) return;
-    const l = Math.pow(lr, n - s) * (.92 + rr() * .16), w = Math.pow(vr, 1 - s), wn = w / vr;
+    // (the first stem, the top of the trunk, is kept 30% shorter so the tree branches low)
+    const l = Math.pow(lr, n - s) * (.92 + rr() * .16) * (s === 1 ? .7 : 1), w = Math.pow(vr, 1 - s), wn = w / vr;
     genNow = 2 * s - 1;
     const [q, fq, i] = seg(p, roll(pitch(f, jit(3)), jit(8)), l, w, w, parent);
     let fr = fq;
@@ -208,7 +209,9 @@ function bareShape(cx, base, h, tw, blobs, key, inward) {
   // 2. scale the unit-length structure to fill the summer crown
   let mx0 = 0, mx1 = 0, my0 = 0;
   for (const g of segs) { mx0 = Math.min(mx0, g.x1); mx1 = Math.max(mx1, g.x1); my0 = Math.min(my0, g.y1); }
-  const k = Math.min((x1 - x0) / Math.max(1e-6, mx1 - mx0), (sy - y0) / Math.max(1e-6, -my0));
+  // (height decides; the branches may spread a little wider than the leafy crown did, so a low split still
+  // reaches the old crown's top instead of shrinking the whole tree)
+  const k = Math.min(1.35 * (x1 - x0) / Math.max(1e-6, mx1 - mx0), (sy - y0) / Math.max(1e-6, -my0));
   // 3. rasterise oldest first; a limb that would run into another limb is cut there, and so are its children
   const pts = [], occ = new Map(), dead = new Uint8Array(segs.length), kids = new Uint16Array(segs.length);
   for (const g of segs) if (g.parent >= 0) kids[g.parent]++;

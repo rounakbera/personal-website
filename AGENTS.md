@@ -187,7 +187,7 @@ Keep these unless asked otherwise.
   - 2.8a constants: d1 94.74°, d2 132.63°, a 18.95° (+0–6° per tree), lr 1.109, vr 1.732, tropism T straight down with e 0.22 after every F. Small per-tree and per-segment jitter.
   - The turtle runs in true 3-D (H/L/U frame) and is projected onto the picture, so each fork shows one, two or three branches of similar size (owner's observation of the figure).
   - n is 6 in the book; here it's scaled to crown size (2–5; 5 for the foreground oak), because at pixel scale more steps merge into a solid brown mass and turn small background oaks into blobs.
-  - The ternary crown starts at the trunk top (~40% of height), with widths scaled so the first stem matches the trunk. Lengths are scaled so the tree fills the summer crown's bounding box. The foreground oak's first roll is picked so its first branch leans toward the screen's middle (`inward`).
+  - The tree branches low (owner): the plain trunk ends at ~28% of height and the first stem (the top of the trunk) is 30% shorter than the model gives. Widths are scaled so the first stem matches the trunk. Lengths are scaled so the tree reaches the summer crown's top; the branches may spread up to 1.35× the leafy crown's width so a low split doesn't shrink the tree. The foreground oak's first roll is picked so its first branch leans toward the screen's middle (`inward`).
   - Segments are rasterised oldest first. A limb (≥ 2 px) that would run into another limb is cut there and tapers to a point. Each branch segment tapers into the next width, so nothing steps down suddenly.
   - Shapes are cached per crown, so resizing doesn't regrow them.
   - 2.8d constants, if the owner wants to try it: d1 180°, d2 252°, a 36°, lr 1.07, T (−0.61, 0.77, −0.19), e 0.40, n 6.
