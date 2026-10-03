@@ -7,6 +7,7 @@ import { prepare, draw, makeStars, fitStars } from './render.js';
 import { initTimePanel } from './timepanel.js';
 
 const canvas = document.getElementById('world');
+const stacked = matchMedia('(max-width: 660px)');
 
 // a new forest every visit; #seed-104 pins a forest, #winter (or #seed-104-winter) pins a season,
 // otherwise the season follows the calendar
@@ -31,12 +32,15 @@ function fit() {
   const vw = innerWidth, vh = innerHeight;
   // continuous pixel size: the scene is 180 px tall on wide screens and 200 px wide on tall ones, and the
   // two meet at the same value, so resizing zooms smoothly with no jumps (min() picks whichever fits)
-  const S = Math.max(1, Math.min(vh / 180, vw / 200));
+  let S = Math.max(1, Math.min(vh / 180, vw / 200));
+  // stacked layout (narrow screens): zoom in so the land fills about the lower half and the framing trees
+  // reach up to the middle of the screen; the scene gets narrower (at least 110 px) to make room
+  if (stacked.matches) S = Math.max(S, Math.min(vh / 250, vw / 110));
   const w = Math.round(vw / S), h = Math.max(180, Math.round(vh / S));
   if (scene.front && w === W && h === H) return false;
   const yo = h - 180;
   // SKYB: the card's top edge (layout position, ignoring the drop-in animation), so the sun and moon arc above it
-  setView({ W: w, H: h, YO: yo, PX: S, SKYB: Math.max(40, Math.min(yo + 112, Math.floor(document.querySelector('.card-wrap').offsetTop / S) - 6)) });
+  setView({ W: w, H: h, YO: yo, PX: S, STACK: stacked.matches, SKYB: Math.max(14, Math.min(yo + 112, Math.floor(document.querySelector('.card-wrap').offsetTop / S) - 6)) });
   canvas.width = w; canvas.height = h;
   scene.front = flatten(buildFront(seed, plan), W, H);
   fitStars();

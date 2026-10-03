@@ -1,6 +1,6 @@
 // Rendering: the sky (with sun, moon and stars), time-of-day and seasonal grading of the land, and per-frame compositing.
 import { rng, hash, lerp, mix, clamp, BAYER } from '../util.js';
-import { W, H, YO, PX, SKYB, WW, WH, SEASON } from './state.js';
+import { W, H, YO, PX, SKYB, STACK, WW, WH, SEASON } from './state.js';
 import { PAL, REMAP, palette } from './palette.js';
 
 function grade(c, p, atm) {
@@ -31,7 +31,15 @@ export function prepare(scene, t) {
   const sa = Math.pow(1 - p.L, 2);
   // sun / moon
   // sun and moon keep the same on-screen size (~35 px radius) whatever the pixel scale; f scales the moon's crescent and halo
-  const R = Math.max(5, Math.round(35 / PX)), f = R / 7, hy = lerp(YO + 112, SKYB - R, clamp((H / W - .75) / .75, 0, 1)), arc = (q) => [Math.round(W * (.12 + .76 * q)), Math.round(hy - Math.sin(Math.PI * clamp(q, 0, 1)) * hy * .78)];
+  // wide screens: they rise and set at the horizon behind the land (y0) and peak at ap. Tall screens and the stacked
+  // layout, where the card would hide most of that path, blend (by tt) to a path over the card: in from beyond the
+  // left edge just above the card top (SKYB), over it, and out past the right edge, so nothing pops in or out.
+  // On short stacked screens the bodies shrink so they still fit above the card
+  const tt = STACK ? 1 : clamp((H / W - .75) / .75, 0, 1), y0 = YO + 112;
+  const R = Math.max(5, Math.min(Math.round(35 / PX), tt > 0 ? Math.floor((SKYB - 4) / 2) : 99)), f = R / 7;
+  const ye = lerp(y0, SKYB - R - 2, tt), ap = Math.max(R + 2, lerp(y0 * .22, Math.min(y0 * .22, ye * .4), tt));
+  const xa = lerp(W * .12, -3 * R, tt), xb = lerp(W * .88, W + 3 * R, tt);
+  const arc = (q) => [Math.round(xa + (xb - xa) * q), Math.round(ye - Math.sin(Math.PI * clamp(q, 0, 1)) * (ye - ap))];
   const sp = (t - 6.5) / 12.5;
   if (sp > -.06 && sp < 1.06) { const [x, y] = arc(sp), low = 1 - Math.sin(Math.PI * clamp(sp, 0, 1)), c = mix([255, 244, 196], [255, 150, 80], Math.pow(low, 1.5)); dsk(x, y, R * 3, c, .12); dsk(x, y, R * 2, c, .2); dsk(x, y, R, c, 1); dsk(x - Math.round(2 * f), y - Math.round(2 * f), Math.round(2 * f), [255, 255, 240], .7); }
   const mp = ((t - 19 + 24) % 24) / 11.5;

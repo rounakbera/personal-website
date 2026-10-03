@@ -8,6 +8,8 @@ export const WW = 960, WH = 180;
 // top of the card in scene pixels: on tall screens the sun and moon arc over it instead of the horizon
 export let SKYB = 112;
 export let PX = 5; // screen pixels per scene pixel
+// true in the stacked (narrow-screen) card layout
+export let STACK = false;
 
 /* ---------- seasons ---------- */
 // one of four looks, picked by the date; the layout is the same in every season, only colours and details change
@@ -16,5 +18,5 @@ export const seasonOf = (d = new Date()) => SEASONS[Math.floor(((d.getMonth() + 
 export let SEASON = 'summer';
 
 // called by fit() whenever the screen size changes
-export function setView(v) { ({ W, H, YO, PX, SKYB } = { W, H, YO, PX, SKYB, ...v }); }
+export function setView(v) { ({ W, H, YO, PX, SKYB, STACK } = { W, H, YO, PX, SKYB, STACK, ...v }); }
 export function setSeasonState(s) { SEASON = s; }

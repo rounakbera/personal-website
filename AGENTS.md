@@ -93,6 +93,7 @@ The scripts are native ES modules (`<script type="module">`), so the page has to
 
 - One scene pixel is `PX` screen pixels, where `S = max(1, min(vh/180, vw/200))`. S is continuous, so resizing zooms smoothly.
 - The land is a 180 px-tall band. `YO = H − 180` pushes it down on tall screens, showing more sky.
+- In the stacked layout (≤ 660 px) the scene zooms in further, with `S ≥ min(vh/250, vw/110)`, so the land fills about the lower half and the framing trees reach the middle of the screen (owner's request). The view gets narrower to allow this.
 
 **Two parts, built differently:**
 
@@ -133,8 +134,9 @@ The scripts are native ES modules (`<script type="module">`), so the page has to
 
 **Sun and moon:**
 
-- They keep about a 35 px radius on screen at any scale.
-- On tall screens their arc rises smoothly so it passes above the card. `SKYB` is the card's top edge.
+- They keep about a 35 px radius on screen at any scale (shrinking only on short stacked screens, so they fit above the card).
+- On wide screens they rise and set at the horizon, behind the land.
+- On tall screens and in the stacked layout the path blends into one over the card: in from beyond the left edge just above the card's top (`SKYB`), over it, and out past the right edge. Nothing pops in or out mid-sky, and the card never hides them (`STACK` in `state.js` flags the stacked layout).
 - The moon is a crescent tilted ~40° counter-clockwise, with a crescent-shaped halo.
 
 **Time of day:** `KEYS` sets the sky colours. Dawn runs ~3.75–9 h and dusk ~16–22.25 h, deliberately long.
