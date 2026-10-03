@@ -204,7 +204,9 @@ function bareShape(cx, base, h, tw, blobs, key, inward) {
     // each run is a share of the room ahead, so wood thins and forks well before it reaches the edge;
     // the two main limbs get one shared, fixed length so they come out about equal
     const run = fixed || clamp(len, 2, space * (.38 + rr() * .16)), curl = (rr() - .5) * .03;
-    const wEnd = Math.max(.5, w * .88);
+    // the main limbs and their first children hold their thickness longer (owner wanted them thicker)
+    // ...but wood also thins with the room left: near the crown's edge it has to be down to twigs
+    const wEnd = Math.max(.5, Math.min(w * (depth < 2 ? .95 : .88), 1 + (space - run) * .25));
     // short side shoots along longer runs
     const start = pts.length;
     let blocked;
@@ -235,8 +237,10 @@ function bareShape(cx, base, h, tw, blobs, key, inward) {
     const back = Math.min(w * .8, 3), fx = x - Math.cos(a) * back, fy = y - Math.sin(a) * back;
     // the dividing line runs along the parent; the leader bends to the `side` side of it, the side child the other
     const nx = -Math.sin(a) * side, ny = Math.cos(a) * side;
+    // the leader takes a slight bend; the side child swings off the other way by up to ~80°
     const lead = a + side * (.05 + rr() * .15), off = a - side * (.35 + rr() * 1.05);
-    const wl = w * (.84 + rr() * .06), ws = w * (.62 + rr() * .14);
+    // straight after the trunk split both children stay thick; later splits thin faster
+    const wl = w * (depth === 0 ? .92 + rr() * .04 : .84 + rr() * .06), ws = w * (depth === 0 ? .78 + rr() * .1 : .62 + rr() * .14);
     const reach = () => clamp(m * (.8 + rr() * .45), .65, 1.45);
     grow(x, y, limit(lead, wl), wl, len * (.72 + rr() * .16), depth + 1, -side, 0, reach(), w, [...C, [fx, fy, nx, ny]]);
     grow(fx, fy, limit(off, ws), ws, len * (.5 + rr() * .25), depth + 1, side, 0, reach(), ws, [...C, [fx, fy, -nx, -ny]]);
@@ -245,13 +249,16 @@ function bareShape(cx, base, h, tw, blobs, key, inward) {
   // swinging out. Both start a little way inside the trunk so they grow out of it rather than sitting on top.
   // the outward limb goes toward `inward` when given (the foreground oak half off-screen reaches into view)
   const flip = rr() < .5 ? -1 : 1, sy = base - h * BARE_SPLIT, s0 = inward ? -inward : flip, up = -Math.PI / 2;
-  // the two main limbs diverge clearly: the leader leans a little one way, the outward limb well over the other
-  const la = up + s0 * (.15 + rr() * .15), lx = cx + s0 * tw * .18, ox = cx - s0 * tw * .2, by = sy + tw * .9;
-  let oa = up - s0 * (.6 + rr() * .35);
+  // the two main limbs open 60–105° apart: the leader leans a little one way, the outward limb takes the rest
+  const lean0 = .1 + rr() * .15, lx = cx + s0 * tw * .12, ox = cx - s0 * tw * .12, by = sy + tw * .4;
+  // a rounded crotch on top of the trunk, so the wide fork doesn't leave the trunk's flat top showing
+  for (let k = 0; k <= 3; k++) pts.push([0, sy - base + tw * (.6 - k * .25), tw * (1 - k * .06), 1, 0]);
+  let la = up + s0 * lean0, oa = up - s0 * (1.05 + rr() * .78 - lean0);
   // the outward limb starts below the crown: if it would miss the crown entirely (and so die as a stub),
-  // swing it up step by step until it heads into the crown
+  // swing the pair up step by step until it heads into the crown
   const gapTo = (x, y, a) => { let t = 0; while (t < R && !inside(x + Math.cos(a) * t, y + Math.sin(a) * t)) t++; return t; };
-  for (let k = 0; k < 10 && room(ox, by, oa, true) - gapTo(ox, by, oa) < R * .5; k++) oa = lerp(oa, up, .2);
+  // (the pair turns together, so the angle between them is kept)
+  for (let k = 0; k < 10 && room(ox, by, oa, true) - gapTo(ox, by, oa) < R * .5; k++) { la += s0 * .08; oa += s0 * .08; }
   // both main limbs run the same distance before their first fork: a share of whichever has less room
   // (long enough that both are well inside the crown when they first fork, so neither ends as a bare arm)
   const run0 = Math.max(4, Math.min(room(lx, by, la, true), room(ox, by, oa, true)) * (.5 + rr() * .1), gapTo(lx, by, la) + 6, gapTo(ox, by, oa) + 6);
