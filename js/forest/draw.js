@@ -130,7 +130,7 @@ export function oak(L, cx, base, h, mat, r, o = {}) {
   blobs.sort((a, b) => b[1] - a[1]);
   if (SEASON === 'winter') { bare(L, cx, base, h, tw, blobs, obj, o.inward || 0); return obj; }
   for (const b of blobs) blob(L, b[0], b[1], b[2], mat, obj);
-  if (SEASON === 'spring') blossom(L, blobs, obj);
+  if (SEASON === 'spring') blossom(L, blobs, obj, h);
   return obj;
 }
 // Winter oak, after the ternary branching model in Prusinkiewicz & Lindenmayer, "The Algorithmic Beauty of
@@ -280,24 +280,45 @@ function bare(L, cx, base, h, tw, blobs, obj, inward) {
     }
   }
 }
-// spring blossom: separate little flowers scattered over the sunlit part of each leaf clump, drawn like the ones
-// on the ground (a yellow eye with four petals), pink or white per tree; small, distant crowns get single-pixel
-// buds instead, and the smallest none. Each flower takes the part id of the leaves under it, so the clump's
-// shading lines don't cut through it.
-function blossom(L, blobs, obj) {
-  const petal = hash(obj, 5, 77) < .65 ? 'bloom' : 'bloomW';
+// spring blossom: separate little flowers over the leaves, pink or white per tree. Size follows the tree's size so
+// they read right at every distance: the big foreground oak gets full flowers (mostly a yellow eye with four petals,
+// sometimes a 3-pixel bud, a diagonal one or a large one), the nearer background oaks 2–3 pixel sprigs, distant ones
+// single-pixel buds. Placement is spaced out (no two flowers closer than a minimum distance) so they don't clump,
+// and each flower's tone and now and then its shade varies a little. Each flower takes the part id of the leaves
+// under it, so the clump's shading lines don't cut through it.
+function blossom(L, blobs, obj, h) {
+  const tier = h >= 90 ? 2 : h >= 35 ? 1 : 0, minD = [2.6, 3.6, 5.2][tier], dens = [.06, .045, .028][tier];
+  const main = hash(obj, 5, 77) < .65 ? 'bloom' : 'bloomW', alt = main === 'bloom' ? 'bloomW' : 'bloom';
+  const placed = [];
+  const at = (xx, yy) => yy * L.w + xx;
+  const leaf = (xx, yy) => { if (xx < 0 || yy < 0 || xx >= L.w || yy >= L.h) return false; const q = at(xx, yy); return L.obj[q] === obj && L.tone[q] !== 0 && L.mat[q] !== 'bark'; };
+  const put = (xx, yy, m, t) => { if (leaf(xx, yy)) L.put(xx, yy, m, clamp(t, 2, 5), L.part[at(xx, yy)], obj); };
   blobs.forEach(([bx, by, br], k) => {
-    if (br < 3) return;
-    const big = br >= 6, n = Math.round(br * br * (big ? .022 : .05));
-    for (let i = 0; i < n; i++) {
-      const a = hash(k, i, obj + 11) * Math.PI * 2, d = Math.sqrt(hash(i, k, obj + 12)) * (br - (big ? 2.5 : 1.5));
+    if (br < 2.5) return;
+    const want = Math.round(br * br * dens), tries = want * 4;
+    for (let i = 0, got = 0; i < tries && got < want; i++) {
+      const a = hash(k, i, obj + 11) * Math.PI * 2, d = Math.sqrt(hash(i, k, obj + 12)) * (br - 1.5);
       const x = Math.round(bx + Math.cos(a) * d * 1.1), y = Math.round(by + Math.sin(a) * d * .9 - br * .15);
-      if (x < 0 || y < 1 || x >= L.w - 1 || y >= L.h - 1) continue;
-      const at = (xx, yy) => yy * L.w + xx, j = at(x, y);
-      if (L.obj[j] !== obj || L.mat[j] === 'bark' || L.tone[j] === 0) continue;   // only on leaves, never on the outline
-      const put = (xx, yy, m, t) => { const q = at(xx, yy); if (L.obj[q] === obj && L.tone[q] !== 0 && L.mat[q] !== 'bark') L.put(xx, yy, m, t, L.part[q], obj); };
-      if (!big) { put(x, y, petal, 4); continue; }
-      put(x, y - 1, petal, 5); put(x - 1, y, petal, 4); put(x + 1, y, petal, 3); put(x, y + 1, petal, 3); put(x, y, 'fy', 4);
+      if (!leaf(x, y) || placed.some(([px, py]) => (px - x) ** 2 + (py - y) ** 2 < minD * minD)) continue;
+      placed.push([x, y]); got++;
+      const v = hash(x, y, obj + 13), m = v < .15 ? alt : main, t = 4 + (v < .45 ? 1 : v > .8 ? -1 : 0), shape = hash(y, x, obj + 14);
+      if (tier === 0) { put(x, y, m, t); continue; }
+      if (tier === 1) {
+        // a sprig: two or three petals
+        const sprigs = [[[0, 0], [1, 0]], [[0, 0], [0, -1]], [[0, 0], [1, 0], [0, -1]], [[0, 0], [-1, 0], [0, -1]], [[0, 0], [1, -1]]];
+        sprigs[Math.floor(shape * sprigs.length)].forEach(([dx, dy], j) => put(x + dx, y + dy, m, t - (j ? 1 : 0)));
+        continue;
+      }
+      if (shape < .62) {          // the usual flower: four petals round a yellow eye
+        put(x, y - 1, m, t + 1); put(x - 1, y, m, t); put(x + 1, y, m, t - 1); put(x, y + 1, m, t - 1); put(x, y, 'fy', 4);
+      } else if (shape < .8) {    // a bud
+        put(x, y, m, t); put(x + 1, y, m, t - 1); put(x, y - 1, m, t + 1);
+      } else if (shape < .9) {    // turned 45°
+        put(x - 1, y - 1, m, t + 1); put(x + 1, y - 1, m, t); put(x - 1, y + 1, m, t - 1); put(x + 1, y + 1, m, t - 1); put(x, y, 'fy', 4);
+      } else {                    // a large, open one
+        for (const [dx, dy] of [[0, -1], [-1, 0], [1, 0], [0, 1], [-1, -1], [1, -1]]) put(x + dx, y + dy, m, t + (dy < 0 ? 1 : dy > 0 ? -1 : 0));
+        put(x, y - 2, m, t + 1); put(x, y, 'fy', 5);
+      }
     }
   });
 }

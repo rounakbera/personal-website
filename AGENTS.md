@@ -141,7 +141,7 @@ The scripts are native ES modules (`<script type="module">`), so the page has to
   - No flowers or ferns.
   - Muted, cool grading.
 - **Spring:**
-  - Fresh pale greens, with blossom on the oaks only: separate little flowers like the ground ones (yellow eye, four petals), pink or white per tree, scattered over each leaf clump by `blossom()`. Small, distant crowns get single-pixel buds, and the smallest none.
+  - Fresh pale greens, with blossom on the oaks only (`blossom()`), pink or white per tree. Size follows the tree's height: the foreground oak (h ≥ 90) gets full flowers (mostly a 5-px yellow-eyed flower, sometimes a 3-px bud, a diagonal one or a large one). Nearer background oaks (h 35–90) get 2–3 px sprigs; distant ones single-pixel buds. Flowers are spaced apart (minimum distance per tier) so they don't clump, and tone (±1) and occasionally the other shade vary per flower.
   - Many multicoloured wildflowers. The specks scattered across the field (`meadow()`, also autumn's fallen leaves) only appear in the nearer part of the field, thinning toward the middle, since far back they'd be too small to see.
   - 1.7× the clouds, with a greyer sky and greyer clouds.
 
