@@ -12,6 +12,13 @@
 /* one fixed screen: no page scroll, no scrollbars, no rubber-band overscroll */
 html, body { height: 100%; margin: 0; overflow: hidden; overscroll-behavior: none; }
 body { background: var(--night); color: var(--ink); height: 100dvh; }
+/* Safari 26 on iPhone doesn't draw the page behind its status bar and toolbar on an unscrolled page; it tints them
+   from a fixed element touching each edge (≥ 80% wide, ≥ 3 px tall). These strips carry the sky's top colour and
+   the ground's bottom colour (set by main.js as the time of day changes), so the bars continue the scene.
+   Shown only in iOS Safari; elsewhere they'd just be a flat band */
+.edge-tint { position: fixed; left: 0; width: 100%; height: 12px; z-index: 1; pointer-events: none; display: none; }
+.edge-tint.top { top: -8px; } .edge-tint.bot { bottom: -8px; }
+@supports (-webkit-touch-callout: none) and (font: -apple-system-body) { .edge-tint { display: block; } }
 #world { position: fixed; top: 0; left: 0; width: 100%; height: 100%; height: 100lvh; object-fit: cover; object-position: 50% 100%; image-rendering: pixelated; display: block; }
 /* the forest is drawn edge to edge (viewport-fit=cover), but the card keeps clear of notches and rounded corners */
 .stage { position: relative; height: 100%; box-sizing: border-box; display: grid; place-items: center;

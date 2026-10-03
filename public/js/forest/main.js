@@ -53,10 +53,22 @@ function fit() {
   minute = -1;
   return true;
 }
+// Safari's bars take their tint from these (see .edge-tint in site.css): the median colour (so stars and flowers don't skew it) of the canvas's top and
+// bottom rows, refreshed whenever the sky is regraded
+const tints = ['top', 'bot'].map((k) => { const d = document.createElement('div'); d.className = `edge-tint ${k}`; d.setAttribute('aria-hidden', 'true'); document.body.append(d); return d; });
+function retint() {
+  if (getComputedStyle(tints[0]).display === 'none') return;
+  const g = canvas.getContext('2d');
+  [0, H - 1].forEach((y, i) => {
+    const px = g.getImageData(0, y, W, 1).data, med = (c) => { const v = []; for (let j = c; j < px.length; j += 4) v.push(px[j]); v.sort((a, b) => a - b); return v[v.length >> 1]; };
+    tints[i].style.backgroundColor = `rgb(${med(0)},${med(1)},${med(2)})`;
+  });
+}
 function frame() {
-  const t = hoursNow(), mk = Math.floor(t * 60);
-  if (mk !== minute) { minute = mk; prep = prepare(scene, t); }   // sky, sun and moon move once a minute
-  draw(canvas, scene, prep, secs());                              // clouds and stars on their own half-second beats
+  const t = hoursNow(), mk = Math.floor(t * 60), fresh = mk !== minute;
+  if (fresh) { minute = mk; prep = prepare(scene, t); }   // sky, sun and moon move once a minute
+  draw(canvas, scene, prep, secs());                      // clouds and stars on their own half-second beats
+  if (fresh) retint();
 }
 // rebuild everything for the current seed and season (the same seed gives the same layout in every season)
 function rebuild() {
