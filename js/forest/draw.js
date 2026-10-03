@@ -287,7 +287,7 @@ function bare(L, cx, base, h, tw, blobs, obj, inward) {
 // and each flower's tone and now and then its shade varies a little. Each flower takes the part id of the leaves
 // under it, so the clump's shading lines don't cut through it.
 function blossom(L, blobs, obj, h) {
-  const tier = h >= 90 ? 2 : h >= 35 ? 1 : 0, minD = [2.6, 3.6, 5.2][tier], dens = [.06, .045, .028][tier];
+  const tier = h >= 90 ? 2 : h >= 35 ? 1 : 0, minD = [2.6, 3.6, 4][tier], dens = [.06, .045, .014][tier];
   const main = hash(obj, 5, 77) < .65 ? 'bloom' : 'bloomW', alt = main === 'bloom' ? 'bloomW' : 'bloom';
   const placed = [];
   const at = (xx, yy) => yy * L.w + xx;
@@ -299,7 +299,11 @@ function blossom(L, blobs, obj, h) {
     for (let i = 0, got = 0; i < tries && got < want; i++) {
       const a = hash(k, i, obj + 11) * Math.PI * 2, d = Math.sqrt(hash(i, k, obj + 12)) * (br - 1.5);
       const x = Math.round(bx + Math.cos(a) * d * 1.1), y = Math.round(by + Math.sin(a) * d * .9 - br * .15);
-      if (!leaf(x, y) || placed.some(([px, py]) => (px - x) ** 2 + (py - y) ** 2 < minD * minD)) continue;
+      // irregular, not a grid: flowers fall in loose patches (a coarse noise decides where the crown is in bloom),
+      // and each keeps its own random elbow room rather than one even spacing
+      if (!leaf(x, y) || vnoise(x, y, 7, obj + 15) < .42) continue;
+      const room = minD * (.8 + hash(x, y, obj + 16) * 1.4);
+      if (placed.some(([px, py]) => (px - x) ** 2 + (py - y) ** 2 < room * room)) continue;
       placed.push([x, y]); got++;
       const v = hash(x, y, obj + 13), m = v < .15 ? alt : main, t = 4 + (v < .45 ? 1 : v > .8 ? -1 : 0), shape = hash(y, x, obj + 14);
       if (tier === 0) { put(x, y, m, t); continue; }
@@ -359,7 +363,8 @@ export function rock(L, cx, base, r, moss) {
 }
 export function flowers(L, r, x0, x1, yAt, n, mat = 'flower') {
   for (let i = 0; i < n; i++) {
-    const obj = ++OBJ; L.thin.add(obj); const part = ++PART, x = Math.round(x0 + r() * (x1 - x0)), y = yAt(x) + 3 + Math.floor(r() * 7);
+    // anywhere on the ground strip, from just below the grass line down to the bottom edge
+    const obj = ++OBJ; L.thin.add(obj); const part = ++PART, x = Math.round(x0 + r() * (x1 - x0)), y = yAt(x) + 3 + Math.floor(r() * Math.max(7, L.h - yAt(x) - 5));
     if (SEASON === 'autumn') {
       // fallen leaves lying flat in the grass
       const m = ['autO', 'autY', 'autR'][Math.floor(hash(i, 1, 41) * 3)];
