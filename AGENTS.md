@@ -6,39 +6,52 @@ Knowledge for anyone (human or agent) working on this site. Read this before cha
 
 Rounak Bera's one-page personal website. A procedurally generated pixel-art forest fills the screen, its sky follows the visitor's local time, and a parchment card floats on top with a pixel portrait, the name and four link buttons.
 
-- **Static, no frameworks, no build step, no dependencies.** Plain HTML, CSS and vanilla JS. Keep it that way.
+- **Static, no frameworks, no build step, no runtime dependencies.** Plain HTML, CSS and vanilla JS. Keep it that way. The only package is Wrangler, a dev dependency used to preview and deploy.
 - No web fonts are downloaded: every bit of text in the card is pre-rasterised into SVG pixel paths.
-- To deploy, serve the folder as-is. Source lives at `github.com/rounakbera/personal-website`; the site is served on the owner's own domain (DNS on Cloudflare).
+- Source lives at `github.com/rounakbera/personal-website`. The site is served on the owner's own domain (DNS on Cloudflare).
+
+## Deploying (Cloudflare Workers, static assets)
+
+- The site is a **static-assets-only Worker**: `wrangler.jsonc` points `assets.directory` at `public/`, and there is no Worker script. Only `public/` is uploaded; `AGENTS.md`, configs and `node_modules` never are.
+- First time: `npm install`, then `npx wrangler login` (opens a browser to authorise).
+- **Preview:** `npm run dev` (Wrangler's local server, same behaviour as production). **Deploy:** `npm run deploy`, which serves on `personal-website.<account>.workers.dev`.
+- **Domain:** the site is served at `rounakbera.com` (zone on Cloudflare). The owner set it up in the dashboard, and it's also declared in `wrangler.jsonc` under `routes` (`custom_domain: true`), so a deploy keeps it attached.
+- **Deploy on push (optional):** in the Cloudflare dashboard, connect the Worker to this GitHub repo (*Workers Builds*), with deploy command `npx wrangler deploy` and no build command.
+- `public/_headers` sets a few security headers on every response (nosniff, referrer policy, no framing, no camera/mic/location). Unknown paths return a plain 404 (`not_found_handling: "none"`).
 
 ## Files
 
 ```
-index.html            markup only: the canvas, the card, the hidden time panel
-css/site.css          all styles
-js/util.js            shared helpers: seeded rng, coordinate hash, lerp/mix/clamp, dithering, value noise
-js/card.js            the card: link icons, copy-email button, parchment grain, portrait hover effect
-js/forest/
-  main.js             entry point: picks seed and season, fits the scene to the screen, redraw loop
-  state.js            shared view state (W, H, YO, PX, SKYB, WW, WH) and the current SEASON, with setters
-  palette.js          PAL (6 tones per material), REMAP (seasonal swaps), SNOWY, sky KEYS and palette(t)
-  layer.js            Layer pixel buffers (material, tone, part, object) and finalize() outlines/shading
-  draw.js             drawing primitives: blob, trunk, limb, tier, pine/conifer, oak + bare winter oak,
-                      bush, fern, rock, flowers, meadow, ground, ridge, treeline; owns object/part ids
-  clouds.js           cloud shapes and buildClouds(seed)
-  scene.js            planFor, buildWorld, buildFront, snowify, flatten
-  render.js           prepare() (sky, sun, moon, grading) and draw() (stars, clouds, land) per frame
-  timepanel.js        the easter-egg panel; talks to main.js through a small api object
-assets/
-  portrait-pixel.png  48×48 pixel-art portrait (hand-tuned; see Portrait)
-  portrait.jpg        320 px photo the portrait reveals on hover
-AGENTS.md             this file
+public/                 everything served to the browser (the Worker's static assets)
+  index.html            markup only: the canvas, the card, the hidden time panel
+  _headers              response headers for Cloudflare
+  css/site.css          all styles
+  js/util.js            shared helpers: seeded rng, coordinate hash, lerp/mix/clamp, dithering, value noise
+  js/card.js            the card: link icons, copy-email button, parchment grain, portrait hover effect
+  js/forest/
+    main.js             entry point: picks seed and season, fits the scene to the screen, redraw loop
+    state.js            shared view state (W, H, YO, PX, SKYB, WW, WH) and the current SEASON, with setters
+    palette.js          PAL (6 tones per material), REMAP (seasonal swaps), SNOWY, sky KEYS and palette(t)
+    layer.js            Layer pixel buffers (material, tone, part, object) and finalize() outlines/shading
+    draw.js             drawing primitives: blob, trunk, limb, tier, pine/conifer, oak + bare winter oak,
+                        bush, fern, rock, flowers, meadow, ground, ridge, treeline; owns object/part ids
+    clouds.js           cloud shapes and buildClouds(seed)
+    scene.js            planFor, buildWorld, buildFront, snowify, flatten
+    render.js           prepare() (sky, sun, moon, grading) and draw() (stars, clouds, land) per frame
+    timepanel.js        the easter-egg panel; talks to main.js through a small api object
+  assets/
+    portrait-pixel.png  48×48 pixel-art portrait (hand-tuned; see Portrait)
+    portrait.jpg        320 px photo the portrait reveals on hover
+wrangler.jsonc          Cloudflare Workers config (static assets from public/, custom domain rounakbera.com)
+package.json            npm scripts `dev` / `deploy`; Wrangler as the only (dev) dependency
+AGENTS.md               this file
 ```
 
 The scripts are native ES modules (`<script type="module">`), so the page has to be served over HTTP; opening `index.html` straight from disk (`file://`) won't run them. Shared mutable state lives in `state.js` (and the id counters in `draw.js`); other modules read it through live imports and change it only via the exported setters.
 
 ## Running and checking
 
-- **Run:** `python3 -m http.server 8000` and open `http://localhost:8000/` (a server is required: ES modules don't load from `file://`).
+- **Run:** `npm run dev` (Wrangler, matches production), or without Node `python3 -m http.server 8000 -d public` and open `http://localhost:8000/`. A server is required: ES modules don't load from `file://`.
 - **URL hash options:** `#seed-21` pins a forest, `#winter` (also `spring`/`summer`/`autumn`) pins a season, and they combine as `#seed-21-winter`. Seed 21 is the original "favourite" forest and has a hand-set foreground plan.
 - **Visual checks:** take headless screenshots, e.g. with Playwright. Check wide (1280×720), tall/phone (390×844) and a narrow width just under the stacked-layout breakpoint (660 px). Check noon, dawn (~6.5) and night (~22). Drive the time through the hidden time panel: click the name, set `#tp-range` and dispatch `input`.
 - **Always look at the render after a visual change.** Several regressions were only caught by looking.
@@ -195,4 +208,3 @@ Keep these unless asked otherwise.
   - Shapes are cached per crown, so resizing doesn't regrow them.
   - 2.8d constants, if the owner wants to try it: d1 180°, d2 252°, a 36°, lr 1.07, T (−0.61, 0.77, −0.19), e 0.40, n 6.
 - **Résumé link** target.
-- **Hosting:** hook the repo up to the owner's Cloudflare domain (e.g. Cloudflare Pages, no build command, output directory `/`).

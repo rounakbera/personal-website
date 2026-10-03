@@ -1,0 +1,17 @@
+// Cloudflare Workers config: the site is a static-assets-only Worker (no Worker script).
+// Deploy with `npm run deploy` (or `npx wrangler deploy`); preview locally with `npm run dev`.
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "personal-website",
+  "compatibility_date": "2026-10-01",
+  "assets": {
+    // everything the browser needs lives in public/; the rest of the repo (AGENTS.md, this file) is never uploaded
+    "directory": "./public",
+    // a single page: unknown paths get a plain 404 rather than the home page
+    "not_found_handling": "none"
+  },
+  // served on the owner's own domain (zone on Cloudflare); Cloudflare manages the DNS record and certificate
+  "routes": [
+    { "pattern": "rounakbera.com", "custom_domain": true }
+  ]
+}
