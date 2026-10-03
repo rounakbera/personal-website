@@ -183,8 +183,9 @@ Keep these unless asked otherwise.
 ## Open work
 
 - **Winter oak (`bare()`/`bareShape()` in `js/forest/draw.js`)** — being iterated with the owner. Current approach:
-  - In winter the trunk stops at ~40% of the tree's height and splits into 2–3 main limbs almost as thick as the trunk (~0.8–0.9×), one slightly leading. They climb a good way into the crown before their first fork.
-  - Every limb repeatedly forks into a leading child (small bend, ~0.75× width) and a thinner side child (~0.5×, 30–55° off), alternating sides, plus short side shoots along longer runs.
+  - In winter the trunk stops at ~40% of the tree's height and splits in two: a leader nearly as thick as the trunk carrying on almost straight up, and a thinner limb swinging out. Both start inside the trunk and the trunk casts no seam line onto them, so they grow out of it smoothly.
+  - Every split is in two (owner's rule): a leading child nearly parallel to its parent (slight bend, ~0.8× width) and a thinner side child (~0.5–0.7×) bending the other way by anything up to ~80°. Sides alternate down a branch. Longer runs also get short side shoots.
+  - Low limbs that haven't reached the summer crown yet may cross the gap up into it.
   - Each run covers only a share of the room left before the summer crown's edge, so wood keeps dividing and thinning out to 1 px twigs at the outline.
   - Thick wood never points below horizontal; thin twigs may dip slightly. Branches wander a little instead of curving steadily upward.
   - Shapes are cached per crown, so resizing doesn't regrow them.

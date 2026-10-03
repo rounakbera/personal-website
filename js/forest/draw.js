@@ -147,7 +147,7 @@ function bareShape(cx, base, h, tw, blobs, key) {
   // (main limbs start below the crown, so for them the count runs across the gap up into it)
   const room = (x, y, a, gap = false) => {
     let t = 0;
-    if (gap) while (t < 300 && !inside(x + Math.cos(a) * t, y + Math.sin(a) * t)) t++;
+    if (gap) { while (t < R && !inside(x + Math.cos(a) * t, y + Math.sin(a) * t)) t++; if (t >= R) return 0; }
     while (t < 300 && inside(x + Math.cos(a) * t, y + Math.sin(a) * t)) t++;
     return t;
   };
@@ -178,7 +178,8 @@ function bareShape(cx, base, h, tw, blobs, key) {
     for (let i = 0; i < len; i++) { x += Math.cos(a); y += Math.sin(a); a = limit(a + (rr() - .5) * .5, .5); if (!inside(x, y)) return; pts.push([x - cx, y - base, .5, 0, 0]); }
   };
   function grow(x, y, a, w, len, depth, side) {
-    const space = room(x, y, a, depth === 0);
+    // wood that hasn't reached the crown yet (low limbs) may cross the gap up into it
+    const space = room(x, y, a, !inside(x, y) && y > (y0 + y1) / 2);
     if (space < 3 || w < .5 || depth > 12) {
       // the end of a run: a few fine twigs fanning every way, sideways and slightly down included
       for (let k = 0, nk = 1 + Math.floor(rr() * 2); k < nk; k++) twig(x, y, a + (rr() - .5) * 1.8, 2 + rr() * Math.min(3, space + 1));
@@ -196,23 +197,22 @@ function bareShape(cx, base, h, tw, blobs, key) {
       const s2 = rr() < .5 ? -1 : 1;
       twig(p[0] + cx, p[1] + base, a + s2 * (.7 + rr() * .6), 2 + rr() * 4);
     }
-    // fork: a leading child that keeps going and a thinner side child; the side alternates down the branch
-    const lead = a + side * (.08 + rr() * .22), off = a - side * (.5 + rr() * .5);
-    const wl = wEnd * (.72 + rr() * .08), ws = wEnd * (.45 + rr() * .15);
+    fork(x, y, a, wEnd, len, depth, side);
+  }
+  // every split is in two: a leading child nearly parallel to its parent (a slight bend one way) and a
+  // thinner side child that swings off the other way, anywhere up to ~80° away; sides alternate down a branch
+  function fork(x, y, a, w, len, depth, side) {
+    const lead = a + side * (.05 + rr() * .15), off = a - side * (.35 + rr() * 1.05);
+    const wl = w * (.78 + rr() * .08), ws = w * (.5 + rr() * .18);
     grow(x, y, limit(lead, wl), wl, len * (.72 + rr() * .16), depth + 1, -side);
     grow(x, y, limit(off, ws), ws, len * (.5 + rr() * .25), depth + 1, side);
-    // now and then a third, small shoot
-    if (wEnd > 1.2 && rr() < .22) grow(x, y, limit(a + side * (.9 + rr() * .4), wEnd * .4), wEnd * .4, len * .45, depth + 2, -side);
   }
-  // the trunk splits low, at ~40% of the tree's height, into two or three main limbs nearly as thick as the trunk
-  const sy = base - h * BARE_SPLIT, ns = 2 + (rr() < .45 ? 1 : 0), w0 = tw * .92;
-  const order = Array.from({ length: ns }, (_, i) => i).sort(() => rr() - .5);
-  for (let i = 0; i < ns; i++) {
-    const k = order[i], f = ns === 1 ? 0 : k / (ns - 1) - .5;          // −0.5 … 0.5 across the fan
-    const a = -Math.PI / 2 + f * (.8 + rr() * .4) + (rr() - .5) * .2;
-    const w = w0 * (i === 0 ? .92 : .78 + rr() * .1);                   // one leader, the others only a little thinner
-    grow(cx + f * tw * .45, sy + tw * .3, a, w, R * (i === 0 ? .6 : .5 + rr() * .12), 0, f < 0 ? 1 : -1);
-  }
+  // the trunk splits low, at ~40% of the tree's height, in two: a leader carrying on up and a thinner limb
+  // swinging out. Both start a little way inside the trunk so they grow out of it rather than sitting on top.
+  const sy = base - h * BARE_SPLIT, s0 = rr() < .5 ? -1 : 1, up = -Math.PI / 2;
+  const la = up + s0 * (.05 + rr() * .15), oa = up - s0 * (.4 + rr() * .7);
+  grow(cx + s0 * tw * .18, sy + tw * .9, la, tw * .84, R * .6, 0, -s0);
+  grow(cx - s0 * tw * .2, sy + tw * .9, oa, tw * (.62 + rr() * .12), R * (.5 + rr() * .12), 0, s0);
   BARE.set(key, pts);
   return pts;
 }
@@ -221,6 +221,8 @@ function bare(L, cx, base, h, tw, blobs, obj) {
   const pts = bareShape(cx, base, h, tw, blobs, key);
   // fine wood is a separate, unoutlined object so it reads as twigs, not black wire
   const fine = ++OBJ; L.thin.add(fine);
+  // the trunk (the part drawn just before this) and the big limbs blend without a seam line between them
+  L.under.add(PART);
   const pBig = ++PART, pFine = ++PART; L.under.add(pBig); L.under.add(pFine);
   for (const [dx, dy, w, nx, ny] of pts) {
     const x = Math.round(cx + dx), y = Math.round(base + dy);
