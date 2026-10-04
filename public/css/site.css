@@ -42,11 +42,13 @@ html.bleed #world { position: absolute; }
 .portrait canvas { image-rendering: pixelated; }
 /* a quick shimmer sweeps the portrait from top left to bottom right every few seconds: ::before lights the frame (under
    the image), ::after carries the same strip across the image, shown only while it's the pixel art (.art, set by card.js).
-   ::after is hidden with opacity rather than display so its animation keeps running in step with the frame's */
-.portrait::before, .portrait::after { content: ""; position: absolute; inset: 0; pointer-events: none; background: linear-gradient(135deg, transparent 42%, rgba(255, 246, 214, .75) 42% 58%, transparent 58%) 100% 100% / 300% 300%; animation: shimmer 4.5s steps(1) infinite; }
+   ::after is hidden with opacity rather than display so its animation keeps running in step with the frame's.
+   The strip is a 156-cell PNG drawn 3 css px per cell (one art pixel; the 6 px frame is two), so its diagonal edges are
+   stair-stepped on the art's grid; it moves 13 cells per step from off the top left (-312px) to off the bottom right (0) */
+.portrait::before, .portrait::after { content: ""; position: absolute; inset: 0; pointer-events: none; image-rendering: pixelated; background: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAJwAAACcCAMAAAC9ZjJ/AAAABlBMVEUAAAD/9tY2qbz4AAAAAnRSTlMAvy1NYyUAAADKSURBVHja7c5BDYAAEASxW/+mUcCPhHm0Cnr3v70p31a+rXxb+bbybeXbyreVbyvfVr6tfFv5tvJt5dvKt5VvK99Wvq18W/m28m3l28q3lW9zc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc/s2d+HchXMXzl04d+HchXMXzl04d+HchXMXzl04d+HchXMXzl04d+HchXMXzl04d+HchXMXzgVuD+kgG4W5jfIRAAAAAElFTkSuQmCC") -312px -312px / 468px 468px no-repeat; animation: shimmer 6.4s steps(1) infinite; }
 .portrait::after { clip-path: inset(6px); opacity: 0; }
 .portrait.art::after { opacity: .45; }
-@keyframes shimmer { 0% { background-position: 100% 100%; animation-timing-function: steps(7); } 14% { background-position: 0 0; } 100% { background-position: 0 0; } }
+@keyframes shimmer { 0% { background-position: -312px -312px; animation-timing-function: steps(8); } 10% { background-position: 0 0; } 100% { background-position: 0 0; } }
 .ident { min-width: 0; display: grid; gap: 20px; }
 h1 { margin: 0; line-height: 0; color: var(--ink); cursor: pointer; justify-self: start; }
 /* the name is baked from Jersey 10, 15, 20 and 25; all share one cap height, so stepping through them sharpens it */
