@@ -10,6 +10,9 @@
     // a single page: unknown paths get a plain 404 rather than the home page
     "not_found_handling": "none"
   },
+  // PR branches build a Preview (Workers Builds runs `wrangler preview`), which needs this block; empty is fine,
+  // the assets and compatibility settings above carry over
+  "previews": {},
   // served on the owner's own domain (zone on Cloudflare); Cloudflare manages the DNS record and certificate
   "routes": [
     { "pattern": "rounakbera.com", "custom_domain": true }
