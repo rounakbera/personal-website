@@ -61,7 +61,7 @@ The scripts are native ES modules (`<script type="module">`), so the page has to
 
 - **Run:** `npm run dev` (Wrangler, matches production), or without Node `python3 -m http.server 8000 -d public` and open `http://localhost:8000/`. A server is required: ES modules don't load from `file://`.
 - **URL hash options:** `#seed-21` pins a forest, `#winter` (also `spring`/`summer`/`autumn`) pins a season, and they combine as `#seed-21-winter`. Seed 21 is the original "favourite" forest and has a hand-set foreground plan.
-- **Visual checks:** take headless screenshots, e.g. with Playwright. Check wide (1280×720), tall/phone (390×844) and a narrow width just under the stacked-layout breakpoint (660 px). Check noon, dawn (~6.5) and night (~22). Drive the time through the hidden time panel: double-click the name, set `#tp-range` and dispatch `input`.
+- **Visual checks:** take headless screenshots, e.g. with Playwright. Check wide (1280×720), tall/phone (390×844) and a narrow width just under the stacked-layout breakpoint (660 px). Check noon, dawn (~6.5) and night (~22). Drive the time through the hidden time panel: click the gear (`#settings`), set `#tp-range` and dispatch `input`.
 - **Always look at the render after a visual change.** Several regressions were only caught by looking.
 - **Refactors:** freeze time with Playwright's `page.clock`, wait ~1.5 s of real time for the card's CSS drop-in, then compare screenshots before and after pixel for pixel. The background is fully deterministic for a pinned seed and season.
 
@@ -71,6 +71,7 @@ The scripts are native ES modules (`<script type="module">`), so the page has to
 2. **`index.html` markup.**
    - `canvas#world` holds the background.
    - `main > .card-wrap > article`:
+     - `button#settings`, the gear that opens the time panel (absolutely positioned in the top right corner);
      - the portrait (canvas);
      - `h1`, holding a screen-reader name plus four SVG versions of the name (Jersey 10/15/20/25);
      - `ul.links`.
@@ -89,7 +90,7 @@ The scripts are native ES modules (`<script type="module">`), so the page has to
 - **Name:** a bitmap of the Jersey fonts. Glyphs were rasterised from the TTF outlines, at grid units 75/50/38/30 for Jersey 10/15/20/25, into crisp SVG path runs.
 - **Shimmer:** every 8 s a pale diagonal strip sweeps the portrait from top left to bottom right in ~0.64 s (8 CSS steps). The strip is a tiny inline PNG drawn 3 css px per cell (one art pixel; the frame is two cells) with `image-rendering: pixelated`, moving whole cells per step, so its edges are stair-stepped on the art's grid. It crosses the whole portrait while it's pure pixel art (`.portrait.art`, toggled in `paint()`), and only the frame while the photo (or any in-between) shows. `::before` lights the frame under the image, `::after` the image; `::after` hides with opacity, not display, so the two stay in step.
 - **Hover effect:** hovering the portrait or name runs a ~0.45 s de-pixelation. The portrait goes from 48 px art to the photo with linear block size, so the pacing is even. At the same time the name steps through Jersey 10 → 15 → 20 → 25.
-- **Click/tap toggles it** (mouse and touch) and the state sticks after the pointer leaves, until the next click. (With a mouse, hover already shows the photo, so a click while hovering pixelates.) The toggle waits 300 ms in case a second click turns it into a double click, which opens the time panel instead and leaves the pixelation alone.
+- **Click/tap toggles it** (mouse and touch) and the state sticks after the pointer leaves, until the next click. (With a mouse, hover already shows the photo, so a click while hovering pixelates.)
 - **Load:** the markup shows the photo (an `img` under the canvas) and the Jersey 25 name, so that's the no-JS look. Once both images decode, the canvas takes over at the photo and ~0.65 s later pixelates into the art while the name steps down to Jersey 10.
 - **Link icons** (static pixel SVGs in `index.html`):
   - The GitHub and LinkedIn icons were pixelated from the official brand images the owner supplied. Brand guidelines may not allow altering them.
@@ -206,7 +207,7 @@ The scripts are native ES modules (`<script type="module">`), so the page has to
 
 ## Time panel (easter egg)
 
-- **Opening and hiding:** double-click (or double-tap) the portrait or name to open it, and again to hide it (there's no close button; Escape also hides it). The panel slides down from the top edge into the top-left corner. `card.js` tells single from double clicks (300 ms window) and fires `card:dblclick`, which `timepanel.js` listens for. `touch-action: manipulation` on both stops a double tap from zooming the page.
+- **Opening and hiding:** the settings gear (`button#settings`, a pixel SVG in the card's top right corner, inside the inner border) opens it, and clicking it again hides it (Escape also hides it). The gear is faded (opacity .3) and lights up on hover, keyboard focus, and while the panel is open (`aria-expanded`). The panel slides down from the top edge into the top-left corner. `timepanel.js` listens on the gear directly. The portrait and name no longer open it; a double click there just toggles the pixelation twice.
 - **Controls:**
   - pixel clock (Jersey 10 digits baked to paths);
   - time slider;
