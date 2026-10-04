@@ -12,7 +12,7 @@
 # allowed for the name SVGs' --r; images may be data: URLs (shimmer strip, parchment grain). Cloudflare Web Analytics
 # (injected by Cloudflare for browsers) loads its beacon from static.cloudflareinsights.com and reports to /cdn-cgi/rum on this domain (or cloudflareinsights.com).
 /
-  Content-Security-Policy: default-src 'none'; script-src 'self' 'sha256-R8tfhv27VlWkmYtRdbCa/pUlgGVpeRLANZDI02wx19U=' https://static.cloudflareinsights.com; connect-src 'self' https://cloudflareinsights.com; style-src-elem 'self'; style-src-attr 'unsafe-inline'; img-src 'self' data:; base-uri 'none'; form-action 'none'; frame-ancestors 'none'
+  Content-Security-Policy: default-src 'none'; script-src 'self' 'sha256-aQYo25QS+klvlA7VmnmHB/S3S+hZCQyV6qs3beoL/U4=' https://static.cloudflareinsights.com; connect-src 'self' https://cloudflareinsights.com; style-src-elem 'self'; style-src-attr 'unsafe-inline'; img-src 'self' data:; base-uri 'none'; form-action 'none'; frame-ancestors 'none'
 
 # the pixel-art portrait stays out of image search; the photo (assets/portrait.jpg) is the one image meant to be found
 /assets/portrait-pixel.png
