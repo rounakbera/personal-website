@@ -39,6 +39,7 @@ public/                 everything served to the browser (the Worker's static as
     scene.js            planFor, buildWorld, buildFront, snowify, flatten
     render.js           prepare() (sky, sun, moon, grading) and draw() (stars, clouds, land) per frame
     timepanel.js        the easter-egg panel; talks to main.js through a small api object
+  rounakbera_resume.pdf the résumé, linked from the scroll button; X-Robots-Tag noindex
   robots.txt            allow all; points at the sitemap
   sitemap.xml           the one page, with the photo as its image
   favicon.ico           summer icon, for browsers that ask for /favicon.ico
@@ -97,7 +98,8 @@ The scripts are native ES modules (`<script type="module">`), so the page has to
   - Clicking copies an address built at runtime from the screen-reader name in `h1 .sr` (lowercased, letters only) plus `@gmail.com`.
   - The "copied" tag resets on pointer-leave or after 1.5 s.
   - Grep for the address before every commit.
-- **Résumé link:** still `href="#"`; waiting on the owner.
+  - Exception (owner's call): the résumé PDF contains the address, inside its compressed streams (it isn't greppable in the raw file, and the PDF is only fetched on click).
+- **Résumé link:** `rounakbera_resume.pdf` (the owner's PDF, at the site root), opened in a new tab. It's a plain link, so the PDF loads only when clicked, never with the page. It's served with `X-Robots-Tag: noindex` so it doesn't turn up in search. To update it, replace the file under the same name.
 
 ## Forest: how it works
 
@@ -240,4 +242,3 @@ Keep these unless asked otherwise.
   - Thin wood: the last generation is kept short (×0.55), so 1 px wood never runs on for long. Widths render monotonically (1 px below 1.3, 2 px up to 2.4, round stamps above), so a branch never looks thicker than its parent.
   - Shapes are cached per crown, so resizing doesn't regrow them.
   - 2.8d constants, if the owner wants to try it: d1 180°, d2 252°, a 36°, lr 1.07, T (−0.61, 0.77, −0.19), e 0.40, n 6.
-- **Résumé link** target.

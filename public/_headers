@@ -8,3 +8,7 @@
 # the pixel-art portrait stays out of image search; the photo (assets/portrait.jpg) is the one image meant to be found
 /assets/portrait-pixel.png
   X-Robots-Tag: noindex
+
+# the résumé is fetched only when its button is clicked, and stays out of search results (name only, see AGENTS.md)
+/rounakbera_resume.pdf
+  X-Robots-Tag: noindex
