@@ -79,15 +79,7 @@ const mk = (w, h) => { const c = document.createElement('canvas'); c.width = w; 
   }, () => {});   // if an image fails, the plain photo and name simply stay
   // hovering the portrait or the name resolves both (mouse); a click or tap toggles it and keeps it that way
   // after the pointer leaves, until the next click
-  // a single click toggles the pixelation; a double click (or double tap) opens the time panel instead
-  // (timepanel.js listens for 'card:dblclick'), so a click waits a moment to see whether a second one follows
-  const DBL = 300; let pend = 0, lastClick = -1e9;
-  function onClick() {
-    const now = performance.now();
-    if (now - lastClick < DBL) { clearTimeout(pend); lastClick = -1e9; document.dispatchEvent(new CustomEvent('card:dblclick')); return; }
-    lastClick = now;
-    pend = setTimeout(() => { if (!loaded) return; pinned = target ? 0 : 1; go(pinned); }, DBL);
-  }
+  function onClick() { if (!loaded) return; pinned = target ? 0 : 1; go(pinned); }
   for (const el of [cv.parentElement, document.querySelector('h1')]) {
     el.addEventListener('pointerenter', (e) => { if (e.pointerType !== 'mouse') return; hovering = true; if (pinned === null) go(1); });
     el.addEventListener('pointerleave', (e) => { if (e.pointerType !== 'mouse') return; hovering = false; go(pinned ?? 0); if (pinned === 0) pinned = null; });

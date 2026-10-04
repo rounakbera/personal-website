@@ -101,7 +101,12 @@ h1 { position: relative; }
 }
 /* very small phones: a slightly smaller name and tighter padding so the stacked card still fits */
 @media (max-width: 340px) { .ident { --cap: 26px; } .card { padding-inline: 14px; } }
-/* easter egg: click the name or portrait for a little time-of-day panel in the top-left corner */
+/* settings gear in the card's top right corner, inside the inner border: faded until hovered (or while its panel is open) */
+.gear { position: absolute; top: 20px; right: 20px; z-index: 1; display: block; padding: 4px; border: 0; background: none; line-height: 0; cursor: pointer;
+  color: var(--ink); opacity: .3; touch-action: manipulation; }
+.gear:hover, .gear:focus-visible, .gear[aria-expanded="true"] { opacity: 1; }
+.gear:focus-visible { outline: 2px dashed var(--ink); outline-offset: 2px; }
+/* easter egg: the gear opens a little time-of-day panel in the top-left corner */
 .timepanel {
   position: fixed; top: calc(16px + env(safe-area-inset-top, 0px)); left: max(16px, env(safe-area-inset-left)); z-index: 5;
   display: flex; align-items: center; gap: 8px; padding: 6px 8px; box-sizing: border-box; max-width: calc(100% - 32px);
@@ -125,5 +130,5 @@ h1 { position: relative; }
 #tp-range::-webkit-slider-thumb { -webkit-appearance: none; width: 8px; height: 14px; margin-top: -5.5px; border: 0; background: var(--parch-hi); box-shadow: 0 0 0 2px var(--ink); }
 #tp-range::-moz-range-thumb { width: 8px; height: 14px; border: 0; border-radius: 0; background: var(--parch-hi); box-shadow: 0 0 0 2px var(--ink); }
 
-/* double taps on the portrait and name open the time panel, so they mustn't zoom the page */
+/* quick repeated taps on the portrait and name toggle the pixelation, so they mustn't zoom the page */
 .portrait, h1 { touch-action: manipulation; }
