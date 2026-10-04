@@ -37,7 +37,7 @@
   // the first frame's pixel size (the forest starts zoomed in 1.8×, see main.js)
   const vw = innerWidth, vh = innerHeight; let S = Math.max(1, Math.min(vh / 180, vw / 200));
   if (vw <= 660) S = Math.max(S, Math.min(vh / 250, vw / 110));
-  if (!matchMedia('(prefers-reduced-motion: reduce)').matches) S *= 1.8;
+  S *= 1.8;
   // treetops start ~80 scene px above the bottom; grass shows in the bottom ~25
   const pc = (px) => px * S / vh * 100, hz = Math.max(0, 100 - pc(80));
   document.documentElement.style.setProperty('--pre', `linear-gradient(${rgb(top)}, ${rgb(mid)} ${Math.min(38.5, hz * .55)}%, ${rgb(hor)} ${Math.min(70, hz)}%, ${rgb(grade(tree, .3))} ${hz + 2}%, ${rgb(grade(tree, 0))} ${Math.max(hz + 4, 100 - pc(30))}%, ${rgb(grade(grass, 0))} ${Math.max(hz + 6, 100 - pc(18))}%)`);

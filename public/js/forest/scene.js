@@ -1,7 +1,7 @@
 // Scene building: a fixed world strip (built once per seed and season) plus a screen-sized front
 // (rebuilt on resize), each flattened to one material per pixel.
 import { rng, hash, clamp } from '../util.js';
-import { W, H, YO, WW, WH, SEASON } from './state.js';
+import { W, H, YO, WW, WH, SV, SEASON } from './state.js';
 import { SNOWY } from './palette.js';
 import { Layer, MAT, mid } from './layer.js';
 import { resetIds, at, clearOrigin, meadow, KINDS, KIND_LIST, conifer, oak, bush, fern, rock, flowers, ground, ridge, treeline } from './draw.js';
@@ -74,9 +74,12 @@ export function buildWorld(seed, clip = null) {
 // the front: foreground ground cover and the framing trees, sized to the screen; cheap enough to rebuild while resizing
 export function buildFront(seed, plan) {
   resetIds(false);
-  const Y = (y) => y + YO, k = clamp(W / 320, .6, 1), ks = Math.sqrt(k);
+  // sizes and the ground cover's spread follow the settled width (SV.W), so during the load-in zoom nothing is redrawn
+  // at a new size each frame: the ground cover moves with the world (off keeps it centred like the world's window)
+  // and the framing trees keep their shape as they slide with the screen edges
+  const LW = SV.W, Y = (y) => y + YO, k = clamp(LW / 320, .6, 1), ks = Math.sqrt(k), off = (LW >> 1) - (W >> 1);
   // F mirrors for flipped seeds; LX/RX anchor the framing trees to the screen edges; MX spreads ground cover across the width
-  const F = (x) => plan.flip ? W - x : x, LX = (x) => F(x * k), RX = (x) => F(W - (320 - x) * k), MX = (x) => F(x * W / 320);
+  const F = (x) => plan.flip ? W - x : x, LX = (x) => F(x * k), RX = (x) => F(W - (320 - x) * k), MX = (x) => (plan.flip ? LW - x * LW / 320 : x * LW / 320) - off;
   // every object gets fixed part ids (via at()), its own random stream and its own texture origin, so nothing reshuffles as it slides
   const fg = new Layer(0, false); at(0, 0, 100); const top = ground(fg, Y(160), 3, 'grass', 4, null, true, -(W >> 1));
   const ft = new Layer(0);

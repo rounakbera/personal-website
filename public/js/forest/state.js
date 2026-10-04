@@ -12,6 +12,9 @@ export let PX = 5; // screen pixels per scene pixel
 export let STACK = false;
 // first visible row: > 0 when the canvas reaches up behind a browser's status bar (Safari 26 on iPhone)
 export let VT = 0;
+// the view the load-in zoom settles on ({ W, H, YO, PX, SKYB, VT }; the current view once it has): the front and the
+// sun and moon are laid out for it while zooming, so they aren't redrawn a little differently every frame
+export let SV = { W, H, YO, PX, SKYB, VT };
 
 /* ---------- seasons ---------- */
 // one of four looks, picked by the date; the layout is the same in every season, only colours and details change
@@ -20,5 +23,5 @@ export const seasonOf = (d = new Date()) => SEASONS[Math.floor(((d.getMonth() + 
 export let SEASON = 'summer';
 
 // called by fit() whenever the screen size changes
-export function setView(v) { ({ W, H, YO, PX, SKYB, STACK, VT } = { W, H, YO, PX, SKYB, STACK, VT, ...v }); }
+export function setView(v) { ({ W, H, YO, PX, SKYB, STACK, VT, SV } = { W, H, YO, PX, SKYB, STACK, VT, SV, ...v }); }
 export function setSeasonState(s) { SEASON = s; }

@@ -75,21 +75,25 @@ function baseScale(vw, vh) {
   const S = Math.max(1, Math.min(vh / 180, vw / 200));
   return stacked.matches ? Math.max(S, Math.min(vh / 250, vw / 110)) : S;
 }
+// the scene's size and rows for pixel scale S: width, height, first visible row (top), land offset (yo), card top (skyb)
+function view(S, vw, vh, full) {
+  const top = BLEED ? Math.ceil(TB / S) : 0, below = BLEED ? Math.ceil(BB / S) : Math.max(0, Math.round((full - vh) / S));
+  const w = Math.round(vw / S), hv = Math.max(180, Math.round(vh / S)), yo = top + hv - 180;
+  // skyb: the card's top edge (layout position, ignoring the drop-in animation), so the sun and moon arc above it
+  const skyb = Math.max(top + 14, Math.min(yo + 112, top + Math.floor(document.querySelector('.card-wrap').offsetTop / S) - 6));
+  return { W: w, H: top + hv + below, YO: yo, PX: S, SKYB: skyb, VT: top };
+}
 function fit() {
   const vw = innerWidth;
   const vh = BLEED ? stage.clientHeight : Math.min(innerHeight, svh.offsetHeight || innerHeight);
   const full = BLEED ? vh : Math.max(vh, innerHeight, lvh.offsetHeight || 0);
-  const S = baseScale(vw, vh) * zoom;   // zoom > 1 only during the load-in
-  const top = BLEED ? Math.ceil(TB / S) : 0, below = BLEED ? Math.ceil(BB / S) : Math.max(0, Math.round((full - vh) / S));
-  const w = Math.round(vw / S), hv = Math.max(180, Math.round(vh / S)), h = top + hv + below;
+  const S0 = baseScale(vw, vh), v = view(S0 * zoom, vw, vh, full), { W: w, H: h, PX: S, VT: top } = v;   // zoom > 1 only during the load-in
   if (scene.front && w === W && h === H) return false;
   // first fit: build the visible middle of the world; later, a window wider than that (a resize before the idle
   // build) gets the whole strip at once
   if (!scene.world) buildWorldFor(vw, vh);
   else if (scene.clip && (WW >> 1) - (w >> 1) < scene.clip[0] + 2) ensureWorld(false);
-  const yo = top + hv - 180;
-  // SKYB: the card's top edge (layout position, ignoring the drop-in animation), so the sun and moon arc above it
-  setView({ W: w, H: h, YO: yo, PX: S, VT: top, STACK: stacked.matches, SKYB: Math.max(top + 14, Math.min(yo + 112, top + Math.floor(document.querySelector('.card-wrap').offsetTop / S) - 6)) });
+  setView({ ...v, STACK: stacked.matches, SV: zoom > 1 ? view(S0, vw, vh, full) : v });
   canvas.width = w; canvas.height = h;
   if (BLEED) { canvas.style.top = `${OFF - top * S}px`; canvas.style.height = `${h * S}px`; }
   scene.front = flatten(buildFront(seed, plan), W, H);
@@ -110,8 +114,8 @@ function rebuild() {
 
 // load-in: the forest starts zoomed in ~1.8× on its bottom middle and eases out to its real size, in step with
 // the card's drop-in. The front is rebuilt for each size on the way (the same path a window resize takes), so the
-// scene resolves smoothly rather than as a scaled picture. Skipped with reduced motion
-let zoom = matchMedia('(prefers-reduced-motion: reduce)').matches ? 1 : 1.8;
+// scene resolves smoothly rather than as a scaled picture. Plays even with reduced motion on (owner's choice)
+let zoom = 1.8;
 const Z0 = zoom, ZDUR = 1600, zStart = performance.now();
 fit();
 frame();
@@ -125,7 +129,6 @@ if (zoom > 1) requestAnimationFrame(function zstep(now) {
 let queued = false;
 addEventListener('resize', () => { if (queued) return; queued = true; requestAnimationFrame(() => { queued = false; if (fit()) frame(); }); });
 // the sky's motion is a pixel every few seconds, gentle enough to keep even with reduced motion on
-// (the card's drop-in still respects it)
 setInterval(() => { if (!document.hidden) frame(); }, 500);
 document.addEventListener('visibilitychange', () => { if (!document.hidden) frame(); });
 
