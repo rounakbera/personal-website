@@ -103,13 +103,10 @@ h1 { position: relative; }
 @media (max-width: 340px) { .ident { --cap: 26px; } .card { padding-inline: 14px; } }
 /* settings gear in the card's top right corner, inside the inner border: faded until hovered (or while its panel is open).
    The fade sits on the icon, not the button, so the tag below it stays solid */
-.gear { position: absolute; top: 20px; right: 20px; z-index: 1; display: block; padding: 4px; border: 0; background: none; line-height: 0; cursor: pointer;
+.gear { position: absolute; top: 18px; right: 18px; z-index: 1; display: block; padding: 4px; border: 0; background: none; line-height: 0; cursor: pointer;
   color: var(--ink); touch-action: manipulation; }
 .gear .cog { display: block; opacity: .3; }
 .gear:hover .cog, .gear:focus-visible .cog, .gear[aria-expanded="true"] .cog { opacity: 1; }
-/* hiding the panel fades the gear back out in step with the panel's slide (kept until the pointer leaves, see timepanel.js) */
-.gear.fading .cog { animation: cog-fade .35s steps(7) both; }
-@keyframes cog-fade { from { opacity: 1; } to { opacity: .3; } }
 .gear:focus-visible { outline: 2px dashed var(--ink); outline-offset: 2px; }
 /* its tag is the links' tag in a smaller cut of the same font, beside the gear on its left and typed right to left,
    so it grows away from the gear */
