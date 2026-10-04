@@ -42,7 +42,7 @@ const mk = (w, h) => { const c = document.createElement('canvas'); c.width = w; 
   // instead of jumping sharp at the start; the art fades out over the first 40%, the smooth photo fades in at the end,
   // and the name steps Jersey 10 → 15 → 20 → 25 alongside it
   const names = [...document.querySelectorAll('h1 .name')], DUR = 450;
-  let p = 0, target = 0, raf = 0, last = 0, loaded = false, pinned = null, hovering = false;
+  let p = 0, target = 0, raf = 0, last = 0, loaded = false, rest = 0, hovering = false;
   const ease = (x) => x * x * (3 - 2 * x);
   function paint() {
     // the name swaps crisply at even points along the way (blending two pixel grids just looks muddy)
@@ -75,14 +75,15 @@ const mk = (w, h) => { const c = document.createElement('canvas'); c.width = w; 
   // takes over at p = 1 and, a beat later, pixelates into the art while the name steps back to Jersey 10
   Promise.all([art.decode(), photo.decode()]).then(() => {
     loaded = true; p = target = 1; paint();
-    setTimeout(() => { if (pinned === null && !hovering) go(0); }, 650);
+    setTimeout(() => { if (!hovering) go(rest); }, 650);
   }, () => {});   // if an image fails, the plain photo and name simply stay
-  // hovering the portrait or the name resolves both (mouse); a click or tap toggles it and keeps it that way
-  // after the pointer leaves, until the next click
-  function onClick() { if (!loaded) return; pinned = target ? 0 : 1; go(pinned); }
+  // `rest` is the state shown without a pointer over it (0 = art, 1 = photo). Hovering the portrait or the name
+  // (mouse) heads for the other state; a click while hovering keeps whatever it's heading for as the new rest state,
+  // so leaving changes nothing and only the next hover flips it again. A tap (no hover) simply toggles the rest state.
+  function onClick() { if (!loaded) return; rest = hovering ? target : 1 - rest; go(rest); }
   for (const el of [cv.parentElement, document.querySelector('h1')]) {
-    el.addEventListener('pointerenter', (e) => { if (e.pointerType !== 'mouse') return; hovering = true; if (pinned === null) go(1); });
-    el.addEventListener('pointerleave', (e) => { if (e.pointerType !== 'mouse') return; hovering = false; go(pinned ?? 0); if (pinned === 0) pinned = null; });
+    el.addEventListener('pointerenter', (e) => { if (e.pointerType !== 'mouse') return; hovering = true; if (loaded) go(1 - rest); });
+    el.addEventListener('pointerleave', (e) => { if (e.pointerType !== 'mouse') return; hovering = false; if (loaded) go(rest); });
     el.addEventListener('click', onClick);
   }
 }
