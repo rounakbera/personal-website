@@ -16,7 +16,7 @@ export function initTimePanel(api) {
       paths += `<path transform="translate(${x + off} 0)" d="${d}" fill="currentColor"/>`; x += cell + 1;
     }
     clockSvg.setAttribute('viewBox', `0 0 ${x - 1} ${DH}`); clockSvg.setAttribute('width', (x - 1) * 1.5);
-    clockSvg.innerHTML = paths; clockSvg.setAttribute('aria-label', txt);
+    clockSvg.innerHTML = paths; range.setAttribute('aria-valuetext', txt);
   }
   let overridden = false;
   function setTime(t) { overridden = true; api.setTime(t); showClock(t); }
@@ -29,7 +29,8 @@ export function initTimePanel(api) {
   function spin(dir) { clearInterval(spinning); let k = 12; spinning = setInterval(() => { turn = (turn + dir + 6) % 6; cog.setAttribute('d', GEAR[turn]); if (--k <= 0 && turn === 0) clearInterval(spinning); }, 350 / 12); }
   let closing = 0;
   function open() { clearTimeout(closing); spin(1); gear.setAttribute('aria-expanded', 'true'); panel.classList.remove('closing'); panel.hidden = false; range.value = Math.round(api.hoursNow() * 60) % 1440; showClock(api.hoursNow()); }
-  function close() { if (panel.hidden || panel.classList.contains('closing')) return; spin(-1); panel.classList.add('closing'); gear.setAttribute('aria-expanded', 'false'); closing = setTimeout(() => { panel.hidden = true; panel.classList.remove('closing'); }, 350); }
+  // if focus is inside the panel as it hides, hand it back to the gear rather than strand it
+  function close() { if (panel.hidden || panel.classList.contains('closing')) return; spin(-1); if (panel.contains(document.activeElement)) gear.focus(); panel.classList.add('closing'); gear.setAttribute('aria-expanded', 'false'); closing = setTimeout(() => { panel.hidden = true; panel.classList.remove('closing'); }, 350); }
   // the gear on the card opens it, and another click hides it
   gear.addEventListener('click', () => (panel.hidden || panel.classList.contains('closing') ? open() : close()));
   range.addEventListener('input', () => setTime(range.value / 60));
@@ -37,9 +38,11 @@ export function initTimePanel(api) {
   const SICON = {"spring": "M2 0h2v1h-2zM5 0h2v1h-2zM1 1h7v1h-7zM1 2h2v1h-2zM6 2h2v1h-2zM2 3h1v1h-1zM6 3h1v1h-1zM1 4h2v1h-2zM6 4h2v1h-2zM1 5h7v1h-7zM2 6h2v1h-2zM5 6h2v1h-2zM4 7h1v1h-1zM3 8h2v1h-2z", "summer": "M4 0h1v1h-1zM1 1h1v1h-1zM7 1h1v1h-1zM3 2h3v1h-3zM2 3h5v1h-5zM0 4h1v1h-1zM2 4h5v1h-5zM8 4h1v1h-1zM2 5h5v1h-5zM3 6h3v1h-3zM1 7h1v1h-1zM7 7h1v1h-1zM4 8h1v1h-1z", "autumn": "M5 0h4v1h-4zM3 1h6v1h-6zM2 2h4v1h-4zM7 2h2v1h-2zM1 3h4v1h-4zM6 3h3v1h-3zM1 4h3v1h-3zM5 4h4v1h-4zM1 5h2v1h-2zM4 5h4v1h-4zM2 6h1v1h-1zM4 6h3v1h-3zM1 7h1v1h-1zM0 8h1v1h-1z", "winter": "M4 0h1v1h-1zM1 1h1v1h-1zM4 1h1v1h-1zM7 1h1v1h-1zM2 2h1v1h-1zM4 2h1v1h-1zM6 2h1v1h-1zM3 3h3v1h-3zM0 4h9v1h-9zM3 5h3v1h-3zM2 6h1v1h-1zM4 6h1v1h-1zM6 6h1v1h-1zM1 7h1v1h-1zM4 7h1v1h-1zM7 7h1v1h-1zM4 8h1v1h-1z"}, sBtn = document.getElementById('tp-season');
   const showSeason = () => { sBtn.querySelector('path').setAttribute('d', SICON[SEASON]); sBtn.setAttribute('aria-label', 'Season: ' + SEASON + ' (next: ' + SEASONS[(SEASONS.indexOf(SEASON) + 1) % 4] + ')'); };
   showSeason();
+  // the season and dice buttons change things silently for a screen reader, so they say what happened in the status region
+  const say = (msg) => { const s = document.getElementById('status'); s.textContent = ''; setTimeout(() => { s.textContent = msg; }, 50); };
   // dice: a brand-new forest (new seed), same season and time
-  document.getElementById('tp-reseed').addEventListener('click', () => api.reseed());
-  sBtn.addEventListener('click', () => { api.setSeason(SEASONS[(SEASONS.indexOf(SEASON) + 1) % 4]); showSeason(); });
+  document.getElementById('tp-reseed').addEventListener('click', () => { api.reseed(); say('New forest'); });
+  sBtn.addEventListener('click', () => { api.setSeason(SEASONS[(SEASONS.indexOf(SEASON) + 1) % 4]); showSeason(); say(SEASON[0].toUpperCase() + SEASON.slice(1)); });
   document.getElementById('tp-reset').addEventListener('click', () => { if (SEASON !== seasonOf()) { api.setSeason(seasonOf()); showSeason(); } overridden = false; api.setTime(null); const t = api.realHours(); range.value = Math.round(t * 60); showClock(t); });
   addEventListener('keydown', (e) => { if (e.key === 'Escape' && !panel.hidden) close(); });
   // keep the clock ticking while the panel shows real time

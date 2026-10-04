@@ -9,18 +9,22 @@ const mk = (w, h) => { const c = document.createElement('canvas'); c.width = w; 
 /* ---------- email: never written out in the page; built from the name and copied on click ---------- */
 {
   const a = document.querySelector('[data-copy-email]'), hint = a.querySelector('[data-state="hint"]'), done = a.querySelector('[data-state="copied"]');
+  const status = document.getElementById('status');
   let t = 0;
   a.addEventListener('click', async (e) => {
     e.preventDefault();
     const addr = document.querySelector('h1 .sr').textContent.toLowerCase().replace(/[^a-z]/g, '') + '@' + 'gmail.com';
     try { await navigator.clipboard.writeText(addr); }
-    catch { const ta = document.createElement('textarea'); ta.value = addr; ta.style.position = 'fixed'; ta.style.opacity = '0'; document.body.append(ta); ta.select(); try { document.execCommand('copy'); } catch {} ta.remove(); }
+    catch { const ta = document.createElement('textarea'); ta.value = addr; ta.style.position = 'fixed'; ta.style.opacity = '0'; document.body.append(ta); ta.select(); try { document.execCommand('copy'); } catch {} ta.remove(); a.focus(); }
     hint.hidden = true; done.hidden = false; a.classList.add('copied');
+    // the "copied" tag is drawn (and hidden from screen readers), so say it in the status region too
+    status.textContent = ''; setTimeout(() => { status.textContent = 'Email address copied'; }, 50);
     clearTimeout(t); t = setTimeout(reset, 1500);
   });
   // "copied!" goes away as soon as the pointer leaves the button (e.g. onto another link)
   function reset() { clearTimeout(t); hint.hidden = false; done.hidden = true; a.classList.remove('copied'); }
   a.parentElement.addEventListener('pointerleave', reset);
+  a.addEventListener('blur', reset);
 }
 
 /* ---------- parchment grain ---------- */
@@ -80,7 +84,8 @@ const mk = (w, h) => { const c = document.createElement('canvas'); c.width = w; 
   // `rest` is the state shown without a pointer over it (0 = art, 1 = photo). Hovering the portrait or the name
   // (mouse) heads for the other state; a click while hovering keeps whatever it's heading for as the new rest state,
   // so leaving changes nothing and only the next hover flips it again. A tap (no hover) simply toggles the rest state.
-  function onClick() { if (!loaded) return; rest = hovering ? target : 1 - rest; go(rest); }
+  // The portrait is a toggle button ("Show photo", pressed while the photo is the rest state), so Enter and Space work too
+  function onClick() { if (!loaded) return; rest = hovering ? target : 1 - rest; cv.parentElement.setAttribute('aria-pressed', String(rest === 1)); go(rest); }
   for (const el of [cv.parentElement, document.querySelector('h1')]) {
     el.addEventListener('pointerenter', (e) => { if (e.pointerType !== 'mouse') return; hovering = true; if (loaded) go(1 - rest); });
     el.addEventListener('pointerleave', (e) => { if (e.pointerType !== 'mouse') return; hovering = false; if (loaded) go(rest); });
