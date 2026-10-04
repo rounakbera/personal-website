@@ -13,6 +13,9 @@
   // PR branches build a Preview (Workers Builds runs `wrangler preview`), which needs this block; empty is fine,
   // the assets and compatibility settings above carry over
   "previews": {},
+  // give each Preview a workers.dev URL (<branch>-personal-website.<subdomain>.workers.dev); Cloudflare adds
+  // X-Robots-Tag: noindex to those, so they stay out of search. Takes effect on the next production deploy
+  "preview_urls": true,
   // served on the owner's own domain (zone on Cloudflare); Cloudflare manages the DNS record and certificate
   "routes": [
     { "pattern": "rounakbera.com", "custom_domain": true }
