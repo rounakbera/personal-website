@@ -49,6 +49,7 @@ const mk = (w, h) => { const c = document.createElement('canvas'); c.width = w; 
     const e = ease(p), step = Math.min(3, Math.floor(e * 4));
     names.forEach((n, k) => { n.style.opacity = k === step ? 1 : 0; });
     g.imageSmoothingEnabled = false; g.globalAlpha = 1;
+    cv.parentElement.classList.toggle('art', loaded && e <= 0);   // the shimmer crosses the image only while it's pure pixel art
     if (!loaded) return;
     if (e <= 0) { g.drawImage(art, 0, 0, N, N); return; }
     const b = Math.round(N / lerp(N / 48, 1, e));

@@ -40,6 +40,13 @@ html.bleed #world { position: absolute; }
 .portrait { position: relative; box-sizing: content-box; }
 .portrait img, .portrait canvas { position: absolute; inset: 6px; width: calc(100% - 12px); height: calc(100% - 12px); display: block; }
 .portrait canvas { image-rendering: pixelated; }
+/* a quick shimmer sweeps the portrait from top left to bottom right every few seconds: ::before lights the frame (under
+   the image), ::after carries the same strip across the image, shown only while it's the pixel art (.art, set by card.js).
+   ::after is hidden with opacity rather than display so its animation keeps running in step with the frame's */
+.portrait::before, .portrait::after { content: ""; position: absolute; inset: 0; pointer-events: none; background: linear-gradient(135deg, transparent 42%, rgba(255, 246, 214, .75) 42% 58%, transparent 58%) 100% 100% / 300% 300%; animation: shimmer 4.5s steps(1) infinite; }
+.portrait::after { clip-path: inset(6px); opacity: 0; }
+.portrait.art::after { opacity: .45; }
+@keyframes shimmer { 0% { background-position: 100% 100%; animation-timing-function: steps(7); } 14% { background-position: 0 0; } 100% { background-position: 0 0; } }
 .ident { min-width: 0; display: grid; gap: 20px; }
 h1 { margin: 0; line-height: 0; color: var(--ink); cursor: pointer; justify-self: start; }
 /* the name is baked from Jersey 10, 15, 20 and 25; all share one cap height, so stepping through them sharpens it */
