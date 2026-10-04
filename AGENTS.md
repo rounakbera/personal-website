@@ -207,7 +207,9 @@ The scripts are native ES modules (`<script type="module">`), so the page has to
 
 ## Time panel (easter egg)
 
-- **Opening and hiding:** the settings gear (`button#settings`, a pixel SVG in the card's top right corner, inside the inner border) opens it, and clicking it again hides it (Escape also hides it). The gear is faded (opacity .3) and lights up on hover, keyboard focus, and while the panel is open (`aria-expanded`). The panel slides down from the top edge into the top-left corner. `timepanel.js` listens on the gear directly. The portrait and name no longer open it; a double click there just toggles the pixelation twice.
+- **Opening and hiding:** the settings gear (`button#settings`, a pixel SVG in the card's top right corner, inside the inner border) opens it, and clicking it again hides it (Escape also hides it). The gear is faded (opacity .3, on the icon only) and lights up on hover, keyboard focus, and while the panel is open (`aria-expanded`).
+- **The gear:** 29×29 pixel art drawn one css px per pixel (finer than the 2× icons, so a tilted tooth really slants instead of reading as an upright block; owner), six slightly tapered teeth on a round body (a heavier taper read as a star or snowflake), in six frames 10° apart (`GEAR` in `timepanel.js`; a tooth repeats every 60°). Each frame is 180°-symmetric, so it doesn't wobble. Opening turns it a third of a turn clockwise and hiding a third counter-clockwise, twelve frames over the panel's 0.35 s slide, and it always comes to rest on the first frame. It doesn't fade out on hiding (owner); it just goes back to the faded resting look once it's no longer hovered.
+- **No hover text** on the gear or the panel's buttons (owner): no tag and no browser `title` tooltip; they keep their `aria-label`s.
 - **Controls:**
   - pixel clock (Jersey 10 digits baked to paths);
   - time slider;
