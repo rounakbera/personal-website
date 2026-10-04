@@ -20,12 +20,12 @@ export function initTimePanel(api) {
   }
   let overridden = false;
   function setTime(t) { overridden = true; api.setTime(t); showClock(t); }
-  // the gear: 8 spiky teeth in three frames 15° apart (a tooth repeats every 45°); opening turns it a quarter clockwise
-  // and hiding a quarter back, in six steps over the panel's 0.35 s slide
-  const GEAR = ["M4 1h1v1h-1zM8 1h1v1h-1zM4 2h2v1h-2zM7 2h2v1h-2zM4 3h5v1h-5zM1 4h11v1h-11zM2 5h3v1h-3zM8 5h3v1h-3zM3 6h2v1h-2zM8 6h2v1h-2zM2 7h3v1h-3zM8 7h3v1h-3zM1 8h11v1h-11zM4 9h5v1h-5zM4 10h2v1h-2zM7 10h2v1h-2zM4 11h1v1h-1zM8 11h1v1h-1z", "M5 1h2v1h-2zM5 2h2v1h-2zM8 2h2v1h-2zM2 3h8v1h-8zM2 4h8v1h-8zM3 5h2v1h-2zM8 5h4v1h-4zM1 6h4v1h-4zM8 6h4v1h-4zM1 7h4v1h-4zM8 7h2v1h-2zM3 8h8v1h-8zM3 9h8v1h-8zM3 10h2v1h-2zM6 10h2v1h-2zM6 11h2v1h-2z", "M6 1h2v1h-2zM3 2h2v1h-2zM6 2h2v1h-2zM3 3h8v1h-8zM3 4h8v1h-8zM1 5h4v1h-4zM8 5h2v1h-2zM1 6h4v1h-4zM8 6h4v1h-4zM3 7h2v1h-2zM8 7h4v1h-4zM2 8h8v1h-8zM2 9h8v1h-8zM5 10h2v1h-2zM8 10h2v1h-2zM5 11h2v1h-2z"];
+  // the gear: six square teeth on a round body, in four frames 15° apart (a tooth repeats every 60°; the body never moves, only the teeth);
+  // opening turns it a third of a turn clockwise and hiding a third back, in eight steps over the panel's 0.35 s slide
+  const GEAR = ["M5 0h3v1h-3zM5 1h3v1h-3zM1 2h2v1h-2zM5 2h3v1h-3zM10 2h2v1h-2zM1 3h11v1h-11zM0 4h13v1h-13zM2 5h3v1h-3zM8 5h3v1h-3zM2 6h3v1h-3zM8 6h3v1h-3zM2 7h3v1h-3zM8 7h3v1h-3zM0 8h13v1h-13zM1 9h11v1h-11zM1 10h2v1h-2zM5 10h3v1h-3zM10 10h2v1h-2zM5 11h3v1h-3zM5 12h3v1h-3z", "M7 0h2v1h-2zM2 1h2v1h-2zM6 1h3v1h-3zM1 2h8v1h-8zM1 3h9v1h-9zM2 4h11v1h-11zM2 5h3v1h-3zM8 5h5v1h-5zM1 6h4v1h-4zM8 6h4v1h-4zM0 7h5v1h-5zM8 7h3v1h-3zM0 8h11v1h-11zM3 9h9v1h-9zM4 10h8v1h-8zM4 11h3v1h-3zM9 11h2v1h-2zM4 12h2v1h-2z", "M4 0h1v1h-1zM8 0h1v1h-1zM2 1h3v1h-3zM8 1h3v1h-3zM2 2h9v1h-9zM3 3h7v1h-7zM3 4h7v1h-7zM0 5h5v1h-5zM8 5h5v1h-5zM0 6h5v1h-5zM8 6h5v1h-5zM0 7h5v1h-5zM8 7h5v1h-5zM3 8h7v1h-7zM3 9h7v1h-7zM2 10h9v1h-9zM2 11h3v1h-3zM8 11h3v1h-3zM4 12h1v1h-1zM8 12h1v1h-1z", "M4 0h2v1h-2zM4 1h3v1h-3zM9 1h2v1h-2zM4 2h8v1h-8zM3 3h9v1h-9zM0 4h11v1h-11zM0 5h5v1h-5zM8 5h3v1h-3zM1 6h4v1h-4zM8 6h4v1h-4zM2 7h3v1h-3zM8 7h5v1h-5zM2 8h11v1h-11zM1 9h9v1h-9zM1 10h8v1h-8zM2 11h2v1h-2zM6 11h3v1h-3zM7 12h2v1h-2z"];
   const cog = gear.querySelector('.cog path');
   let turn = 0, spinning = 0;
-  function spin(dir) { clearInterval(spinning); let k = 6; spinning = setInterval(() => { turn = (turn + dir + 3) % 3; cog.setAttribute('d', GEAR[turn]); if (--k === 0) clearInterval(spinning); }, 350 / 6); }
+  function spin(dir) { clearInterval(spinning); let k = 8; spinning = setInterval(() => { turn = (turn + dir + 4) % 4; cog.setAttribute('d', GEAR[turn]); if (--k <= 0 && turn === 0) clearInterval(spinning); }, 350 / 8); }
   // after hiding, the gear stays faded until the pointer leaves it (or it loses focus), so hovering doesn't light it straight back up;
   // a finger "leaves" the moment it lifts while touch hover sticks, so touch waits for blur instead
   const unfade = () => gear.classList.remove('fading');

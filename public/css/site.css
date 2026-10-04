@@ -111,9 +111,9 @@ h1 { position: relative; }
 .gear.fading .cog { animation: cog-fade .35s steps(7) both; }
 @keyframes cog-fade { from { opacity: 1; } to { opacity: .3; } }
 .gear:focus-visible { outline: 2px dashed var(--ink); outline-offset: 2px; }
-/* its tag is the links' tag in a smaller cut of the same font, hanging from the gear's right edge and typed right to left
-   so it stays inside the card */
-.gear .tip { top: calc(100% + 4px); left: auto; right: 1px; }
+/* its tag is the links' tag in a smaller cut of the same font, beside the gear on its left and typed right to left,
+   so it grows away from the gear */
+.gear .tip { top: 50%; left: auto; right: calc(100% + 2px); transform: translateY(-50%); }
 .gear .clip { display: flex; justify-content: flex-end; }
 .gear .tip svg { flex: none; }
 .gear:hover .tip, .gear:focus-visible .tip { visibility: visible; }
