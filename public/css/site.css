@@ -22,9 +22,11 @@ html.bleed .stage { height: 100dvh; margin-top: var(--off); }
 html.bleed #world { position: absolute; }
 #world { position: fixed; top: 0; left: 0; width: 100%; height: 100%; height: 100lvh; object-fit: cover; object-position: 50% 100%; image-rendering: pixelated; display: block; }
 /* the forest is drawn edge to edge (viewport-fit=cover), but the card keeps clear of notches and rounded corners */
-.stage { position: relative; height: 100%; box-sizing: border-box; display: grid; place-items: center;
+/* if the card doesn't fit (e.g. zoomed to 400%) the stage scrolls, so nothing is cut off; margin: auto centres
+   the card without pushing it past the top edge as place-items would */
+.stage { position: relative; height: 100%; box-sizing: border-box; display: grid; place-items: center; overflow: auto; overscroll-behavior: none;
   padding: max(16px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) max(16px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left)); }
-.card-wrap { width: 100%; max-width: 620px; filter: drop-shadow(8px 8px 0 rgba(8, 6, 28, .45)); animation: drop .5s steps(5) both; }
+.card-wrap { width: 100%; max-width: 620px; margin: auto; filter: drop-shadow(8px 8px 0 rgba(8, 6, 28, .45)); animation: drop .5s steps(5) both; }
 @keyframes drop { from { transform: translateY(-28px); } to { transform: none; } }
 .card {
   position: relative; box-sizing: border-box; display: flex; align-items: center; gap: 28px; padding: 30px 34px;
@@ -37,7 +39,9 @@ html.bleed #world { position: absolute; }
 .portrait { flex: none; width: 144px; height: 144px; padding: 6px; cursor: pointer; background: var(--parch-lo); box-shadow: 0 calc(-1 * var(--px)) 0 0 var(--ink), 0 var(--px) 0 0 var(--ink), calc(-1 * var(--px)) 0 0 0 var(--ink), var(--px) 0 0 0 var(--ink); }
 /* the photo sits underneath (what shows without JS); the canvas on top starts transparent and, once the
    images load, takes over from the photo and pixelates it into the art */
-.portrait { position: relative; box-sizing: content-box; }
+.portrait { position: relative; box-sizing: content-box; display: block; margin: 0; border: 0; }
+/* the portrait is a toggle button (photo / pixel art), so it's reachable and switchable from the keyboard */
+.portrait:focus-visible { outline: 3px dashed var(--ink); outline-offset: 8px; }
 .portrait img, .portrait canvas { position: absolute; inset: 6px; width: calc(100% - 12px); height: calc(100% - 12px); display: block; }
 .portrait canvas { image-rendering: pixelated; }
 /* a quick shimmer sweeps the portrait from top left to bottom right every few seconds: ::before lights the frame (under
@@ -62,21 +66,23 @@ h1 { position: relative; }
 .name:last-of-type { opacity: 1; }
 .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 .links { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: nowrap; gap: 14px; }
-.links a {
+.links :is(a, button) {
   position: relative; display: grid; place-items: center; width: 44px; height: 44px; color: var(--ink); background: var(--parch-hi);
   box-shadow: 0 -3px 0 0 var(--ink), 0 3px 0 0 var(--ink), -3px 0 0 0 var(--ink), 3px 0 0 0 var(--ink), inset 0 -3px 0 0 var(--parch-lo);
   transition: transform .12s steps(2);
 }
+/* the email button is a real <button> (it copies, it doesn't navigate), drawn exactly like the links */
+.links button { border: 0; padding: 0; margin: 0; font: inherit; cursor: pointer; }
 /* hover is tracked on the list slot, which never moves, so the lifted button can't slide out from under the pointer */
 .links li { display: block; }
-.links li:hover > a, .links a:focus-visible { transform: translateY(-4px); color: var(--ink-soft); }
-.links a:focus-visible { outline: 3px dashed var(--ink); outline-offset: 6px; }
-.links li:hover > a:active, .links a:active { transform: translateY(0); }
+.links li:hover > :is(a, button), .links :is(a, button):focus-visible { transform: translateY(-4px); color: var(--ink-soft); }
+.links :is(a, button):focus-visible { outline: 3px dashed var(--ink); outline-offset: 6px; }
+.links li:hover > :is(a, button):active, .links :is(a, button):active { transform: translateY(0); }
 /* the link's clickable area covers its drawn ink border and reaches 4 px further down,
    so the strip a lifted button leaves behind still counts as the button */
-.links a::after { content: ""; position: absolute; inset: -3px -3px -7px -3px; }
+.links :is(a, button)::after { content: ""; position: absolute; inset: -3px -3px -7px -3px; }
 .tip { position: absolute; top: calc(100% + 8px); left: -3px; line-height: 0; color: var(--parch-hi); background: var(--ink); padding: 3px 4px; pointer-events: none; visibility: hidden; }
-.links li:hover > a .tip, .links a:focus-visible .tip, .links a.copied .tip { visibility: visible; }
+.links li:hover > :is(a, button) .tip, .links :is(a, button):focus-visible .tip, .links .copied .tip { visibility: visible; }
 .tip .clip { display: block; overflow: hidden; width: var(--w); }
 .tip .clip[hidden] { display: none; }
 .tip svg { display: block; }
@@ -88,7 +94,7 @@ h1 { position: relative; }
 .links li:last-child .clip { display: flex; justify-content: flex-end; }
 .links li:last-child .clip[hidden] { display: none; }
 .links li:last-child .tip svg { flex: none; }
-.links li:hover > a .clip, .links a:focus-visible .clip, .links a.copied .clip { animation: type calc(var(--n) * 22ms) steps(var(--n), end) both; }
+.links li:hover > :is(a, button) .clip, .links :is(a, button):focus-visible .clip, .links .copied .clip { animation: type calc(var(--n) * 22ms) steps(var(--n), end) both; }
 
 /* stack once the side-by-side card no longer fits on one line (portrait + name + padding + page gutters) */
 @media (max-width: 660px) {

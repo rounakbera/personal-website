@@ -71,13 +71,24 @@ The scripts are native ES modules (`<script type="module">`), so the page has to
 2. **`index.html` markup.**
    - `canvas#world` holds the background.
    - `main > .card-wrap > article`:
-     - `button#settings`, the gear that opens the time panel (absolutely positioned in the top right corner);
-     - the portrait (canvas);
+     - the portrait, a toggle `button` (photo `img` under the art canvas);
      - `h1`, holding a screen-reader name plus four SVG versions of the name (Jersey 10/15/20/25);
-     - `ul.links`.
+     - `ul.links`;
+     - `button#settings`, the gear that opens the time panel (absolutely positioned in the top right corner, but last in the markup so it's read and tabbed after the links, right before its panel).
+   - `#status`, a visually hidden live region for things that only change visually (email copied, season, new forest).
    - `#timepanel` is the hidden easter-egg dialog.
 3. **`js/card.js`.** Copy-email button, parchment grain, portrait pixelation effect. (The link icons are static SVG in `index.html`, so they show without JS.)
 4. **`js/forest/`.** Everything about the background and the time panel (see Files).
+
+## Accessibility
+
+- **No hover text** (owner): no `title` attributes anywhere. Names come from `aria-label` and the `.sr` heading text, which browsers never show as a tooltip.
+- **Keyboard:** Tab order is portrait → GitHub → LinkedIn → résumé → email → gear → (when open) the time panel's slider and buttons. Every control is a native `a`, `button` or `input`, with a dashed `:focus-visible` outline. Focus on a link also shows its typed tooltip.
+- **Portrait:** a `button` named "Show photo" with `aria-pressed` (true while the photo is the resting state); Enter/Space toggle it like a tap. Focus alone doesn't flip it. The `h1` click is a mouse extra.
+- **Email:** a `button` (it copies, it doesn't navigate), styled with the links via `.links :is(a, button)`. "Copied" is announced through `#status`; the drawn tag resets on blur too.
+- **Time panel:** a non-modal `role="group"` that follows the gear in tab order, so no focus trapping. The slider has `aria-valuetext` (the clock's "hh:mm"; the drawn clock is `aria-hidden`). If the panel hides while focus is inside it, focus goes back to the gear.
+- **Zoom/reflow:** `.stage` scrolls if the card doesn't fit (e.g. 400% zoom); the card is centred with `margin: auto` so it never overflows past the top. At normal sizes nothing scrolls.
+- Everything decorative (forest canvas, art canvas, every pixel SVG) is `aria-hidden`.
 
 ## Search and favicon (owner's rules)
 
