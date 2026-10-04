@@ -20,9 +20,19 @@ export function initTimePanel(api) {
   }
   let overridden = false;
   function setTime(t) { overridden = true; api.setTime(t); showClock(t); }
+  // the gear: 8 spiky teeth in three frames 15° apart (a tooth repeats every 45°); opening turns it a quarter clockwise
+  // and hiding a quarter back, in six steps over the panel's 0.35 s slide
+  const GEAR = ["M4 1h1v1h-1zM8 1h1v1h-1zM4 2h2v1h-2zM7 2h2v1h-2zM4 3h5v1h-5zM1 4h11v1h-11zM2 5h3v1h-3zM8 5h3v1h-3zM3 6h2v1h-2zM8 6h2v1h-2zM2 7h3v1h-3zM8 7h3v1h-3zM1 8h11v1h-11zM4 9h5v1h-5zM4 10h2v1h-2zM7 10h2v1h-2zM4 11h1v1h-1zM8 11h1v1h-1z", "M5 1h2v1h-2zM5 2h2v1h-2zM8 2h2v1h-2zM2 3h8v1h-8zM2 4h8v1h-8zM3 5h2v1h-2zM8 5h4v1h-4zM1 6h4v1h-4zM8 6h4v1h-4zM1 7h4v1h-4zM8 7h2v1h-2zM3 8h8v1h-8zM3 9h8v1h-8zM3 10h2v1h-2zM6 10h2v1h-2zM6 11h2v1h-2z", "M6 1h2v1h-2zM3 2h2v1h-2zM6 2h2v1h-2zM3 3h8v1h-8zM3 4h8v1h-8zM1 5h4v1h-4zM8 5h2v1h-2zM1 6h4v1h-4zM8 6h4v1h-4zM3 7h2v1h-2zM8 7h4v1h-4zM2 8h8v1h-8zM2 9h8v1h-8zM5 10h2v1h-2zM8 10h2v1h-2zM5 11h2v1h-2z"];
+  const cog = gear.querySelector('.cog path');
+  let turn = 0, spinning = 0;
+  function spin(dir) { clearInterval(spinning); let k = 6; spinning = setInterval(() => { turn = (turn + dir + 3) % 3; cog.setAttribute('d', GEAR[turn]); if (--k === 0) clearInterval(spinning); }, 350 / 6); }
+  // after hiding, the gear stays faded until the pointer leaves it (or it loses focus), so hovering doesn't light it straight back up;
+  // a finger "leaves" the moment it lifts while touch hover sticks, so touch waits for blur instead
+  const unfade = () => gear.classList.remove('fading');
+  gear.addEventListener('pointerleave', (e) => { if (e.pointerType !== 'touch') unfade(); }); gear.addEventListener('blur', unfade);
   let closing = 0;
-  function open() { clearTimeout(closing); gear.setAttribute('aria-expanded', 'true'); panel.classList.remove('closing'); panel.hidden = false; range.value = Math.round(api.hoursNow() * 60) % 1440; showClock(api.hoursNow()); }
-  function close() { if (panel.hidden || panel.classList.contains('closing')) return; panel.classList.add('closing'); gear.setAttribute('aria-expanded', 'false'); closing = setTimeout(() => { panel.hidden = true; panel.classList.remove('closing'); }, 350); }
+  function open() { clearTimeout(closing); unfade(); spin(1); gear.setAttribute('aria-expanded', 'true'); panel.classList.remove('closing'); panel.hidden = false; range.value = Math.round(api.hoursNow() * 60) % 1440; showClock(api.hoursNow()); }
+  function close() { if (panel.hidden || panel.classList.contains('closing')) return; spin(-1); gear.classList.add('fading'); panel.classList.add('closing'); gear.setAttribute('aria-expanded', 'false'); closing = setTimeout(() => { panel.hidden = true; panel.classList.remove('closing'); }, 350); }
   // the gear on the card opens it, and another click hides it
   gear.addEventListener('click', () => (panel.hidden || panel.classList.contains('closing') ? open() : close()));
   range.addEventListener('input', () => setTime(range.value / 60));

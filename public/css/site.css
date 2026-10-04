@@ -101,11 +101,23 @@ h1 { position: relative; }
 }
 /* very small phones: a slightly smaller name and tighter padding so the stacked card still fits */
 @media (max-width: 340px) { .ident { --cap: 26px; } .card { padding-inline: 14px; } }
-/* settings gear in the card's top right corner, inside the inner border: faded until hovered (or while its panel is open) */
+/* settings gear in the card's top right corner, inside the inner border: faded until hovered (or while its panel is open).
+   The fade sits on the icon, not the button, so the tag below it stays solid */
 .gear { position: absolute; top: 20px; right: 20px; z-index: 1; display: block; padding: 4px; border: 0; background: none; line-height: 0; cursor: pointer;
-  color: var(--ink); opacity: .3; touch-action: manipulation; }
-.gear:hover, .gear:focus-visible, .gear[aria-expanded="true"] { opacity: 1; }
+  color: var(--ink); touch-action: manipulation; }
+.gear .cog { display: block; opacity: .3; }
+.gear:hover .cog, .gear:focus-visible .cog, .gear[aria-expanded="true"] .cog { opacity: 1; }
+/* hiding the panel fades the gear back out in step with the panel's slide (kept until the pointer leaves, see timepanel.js) */
+.gear.fading .cog { animation: cog-fade .35s steps(7) both; }
+@keyframes cog-fade { from { opacity: 1; } to { opacity: .3; } }
 .gear:focus-visible { outline: 2px dashed var(--ink); outline-offset: 2px; }
+/* its tag is the links' tag in a smaller cut of the same font, hanging from the gear's right edge and typed right to left
+   so it stays inside the card */
+.gear .tip { top: calc(100% + 4px); left: auto; right: 1px; }
+.gear .clip { display: flex; justify-content: flex-end; }
+.gear .tip svg { flex: none; }
+.gear:hover .tip, .gear:focus-visible .tip { visibility: visible; }
+.gear:hover .clip, .gear:focus-visible .clip { animation: type calc(var(--n) * 22ms) steps(var(--n), end) both; }
 /* easter egg: the gear opens a little time-of-day panel in the top-left corner */
 .timepanel {
   position: fixed; top: calc(16px + env(safe-area-inset-top, 0px)); left: max(16px, env(safe-area-inset-left)); z-index: 5;
