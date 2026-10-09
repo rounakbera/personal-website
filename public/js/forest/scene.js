@@ -1,7 +1,7 @@
 // Scene building: a fixed world strip (built once per seed and season) plus a screen-sized front
 // (rebuilt on resize), each flattened to one material per pixel.
 import { rng, hash, clamp } from '../util.js';
-import { W, H, YO, PX, WW, WH, SV, SEASON } from './state.js';
+import { W, H, YO, PX, WW, WH, SV, Z0, SEASON } from './state.js';
 import { SNOWY } from './palette.js';
 import { Layer, MAT, mid, hid } from './layer.js';
 import { resetIds, at, clearOrigin, ids, setIds, meadow, KINDS, KIND_LIST, conifer, oak, bush, fern, rock, flowers, ground, groundTop, ridge, treeline } from './draw.js';
@@ -113,7 +113,7 @@ function memo(L, key, sx, sy, draw) {
 // the load-in zoom as a dolly: the camera pulls back and each framing tree stands at its own depth, given as nearness
 // to the camera relative to the world (1 = as far as the world, more = nearer). Nearer trees sweep in from further out
 // and move faster, so the back conifer moves less than the front one and they slide past each other.
-const NEAR = { small: 1.1, oak: 1.15, big: 1.2 };
+const NEAR = { small: 1.2, oak: 1.3, big: 1.4 };
 // the front: foreground ground cover and the framing trees, sized to the screen; cheap enough to rebuild while resizing
 export function buildFront(seed, plan) {
   resetIds(false);
@@ -149,7 +149,10 @@ export function buildFront(seed, plan) {
   // world zooms by z about the bottom middle, as if the camera stood back by d·(1 − 1/z) from a world at depth d; a tree
   // at depth d / n then shows magnified by m = 1 / (1 − n·(1 − 1/z)), so its offset from the middle grows by m on
   // screen, or by m / z in scene pixels (n = 1 moves with the world). Settled, z = m = 1 and the shift is 0.
-  const z = PX / SV.PX;
+  // The trees' sliding against the world can only step whole scene pixels (several screen pixels on desktop), which
+  // stutters where it's slow, so the dolly runs on a front-loaded z (cubed toward 1): the sliding happens while the
+  // zoom is fast, and the slow tail rides with the world, which glides as the pixel grid itself scales.
+  const z = 1 + (PX / SV.PX - 1) ** 3 / (Z0 - 1) ** 2;
   const tree = (name, x, base, draw) => {
     const xs = x(set), sink = set.sink(set.Y(base)), m = 1 / (1 - NEAR[name] * (1 - 1 / z));
     memo(ft, `${name}|${xs}|${SV.YO}|${k}|${sink}`, Math.round((W >> 1) + m / z * (xs - (SV.W >> 1)) - xs), sy, (L) => draw(L, xs, set.Y(base), sink));

@@ -1,6 +1,6 @@
 // Entry point for the background: picks the forest and season, sizes the scene to the screen,
 // and runs the redraw loop. Loaded from index.html as a module.
-import { W, H, WW, setView, setSeasonState, seasonOf } from './state.js';
+import { W, H, WW, Z0, setView, setSeasonState, seasonOf } from './state.js';
 import { buildClouds } from './clouds.js';
 import { planFor, buildWorld, buildFront, flatten } from './scene.js';
 import { prepare, draw, makeStars, fitStars } from './render.js';
@@ -115,8 +115,8 @@ function rebuild() {
 // load-in: the forest starts zoomed in ~1.8× on its bottom middle and eases out to its real size, in step with
 // the card's drop-in. The front is rebuilt for each size on the way (the same path a window resize takes), so the
 // scene resolves smoothly rather than as a scaled picture. Plays even with reduced motion on (owner's choice)
-let zoom = 1.8;
-const Z0 = zoom, ZDUR = 1600, zStart = performance.now();
+let zoom = Z0;
+const ZDUR = 1600, zStart = performance.now();
 fit();
 frame();
 if (zoom > 1) requestAnimationFrame(function zstep(now) {

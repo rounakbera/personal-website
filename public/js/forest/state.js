@@ -12,6 +12,8 @@ export let PX = 5; // screen pixels per scene pixel
 export let STACK = false;
 // first visible row: > 0 when the canvas reaches up behind a browser's status bar (Safari 26 on iPhone)
 export let VT = 0;
+// the load-in zoom's starting magnification (main.js eases it to 1)
+export const Z0 = 1.8;
 // the view the load-in zoom settles on ({ W, H, YO, PX, SKYB, VT }; the current view once it has): the front and the
 // sun and moon are laid out for it while zooming, so they aren't redrawn a little differently every frame
 export let SV = { W, H, YO, PX, SKYB, VT };
