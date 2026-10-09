@@ -110,15 +110,16 @@ function memo(L, key, sx, sy, draw) {
   }
   L.replay(e.rec, sx, sy); for (const t of e.thin) L.thin.add(t); for (const u of e.under) L.under.add(u); setIds(...e.ids);
 }
-// parallax for the back conifer during the load-in zoom: it stands further in from its screen edge by this fraction
-// of its edge distance per unit of extra zoom, so it starts further off and moves faster than the front conifer
-const PAR = .25;
+// the load-in zoom as a dolly: the camera pulls back and each framing tree stands at its own depth, given as nearness
+// to the camera relative to the world (1 = as far as the world, more = nearer). Nearer trees sweep in from further out
+// and move faster, so the back conifer moves less than the front one and they slide past each other.
+const NEAR = { small: 1.1, oak: 1.15, big: 1.2 };
 // the front: foreground ground cover and the framing trees, sized to the screen; cheap enough to rebuild while resizing
 export function buildFront(seed, plan) {
   resetIds(false);
   // sizes and the ground cover's spread follow the settled width (SV.W), so during the load-in zoom nothing is redrawn
   // at a new size each frame: the ground cover moves with the world (off keeps it centred like the world's window)
-  // and the framing trees keep their shape as they slide with the screen edges
+  // and the framing trees keep their shape and only slide (dolly, below)
   const LW = SV.W, k = clamp(LW / 320, .6, 1), ks = Math.sqrt(k);
   // the layout for a view w × h with the land at yo (off: how far the ground cover's window is shifted)
   // F mirrors for flipped seeds; LX/RX anchor the framing trees to the screen edges; MX spreads ground cover across the width
@@ -144,16 +145,17 @@ export function buildFront(seed, plan) {
     if (SEASON !== 'winter') [[84, 10], [150, 8], [206, 9], [244, 11]].forEach(([x, s], i) => { at(MX(x), 0, 3000 + i * 10); fern(L, MX(x), top(MX(x)) + 1, s, SEASON === 'autumn' ? 'autY' : 'oak'); });
     [[168, 5, true], [108, 3, false], [140, 2, false], [236, 6, true], [246, 3, false], [200, 2, false], [56, 4, true]].forEach(([x, sz, moss], i) => { at(MX(x), top(MX(x)), 3500 + i * 10); rock(L, MX(x), top(MX(x)) + 2 + sz * .3, sz, moss); });
   });
-  // each tree is drawn where it stands in the settled view and shifted to where it stands in this one. par (only for
-  // trees anchored with RX) adds parallax: an extra shift toward the middle, proportional to the tree's distance from
-  // its edge and to the extra zoom (PX / SV.PX − 1), so it's 0 once settled and the same on either side of a flip
-  const tree = (name, x, base, draw, par = 0) => {
-    const xs = x(set), sink = set.sink(set.Y(base));
-    const p = par * (PX / SV.PX - 1) * (plan.flip ? xs : SV.W - xs) * (plan.flip ? 1 : -1);
-    memo(ft, `${name}|${xs}|${SV.YO}|${k}|${sink}`, Math.round(x(cur) - xs + p), sy, (L) => draw(L, xs, set.Y(base), sink));
+  // each tree is drawn where it stands in the settled view and shifted to where a dolly puts it in this one. The
+  // world zooms by z about the bottom middle, as if the camera stood back by d·(1 − 1/z) from a world at depth d; a tree
+  // at depth d / n then shows magnified by m = 1 / (1 − n·(1 − 1/z)), so its offset from the middle grows by m on
+  // screen, or by m / z in scene pixels (n = 1 moves with the world). Settled, z = m = 1 and the shift is 0.
+  const z = PX / SV.PX;
+  const tree = (name, x, base, draw) => {
+    const xs = x(set), sink = set.sink(set.Y(base)), m = 1 / (1 - NEAR[name] * (1 - 1 / z));
+    memo(ft, `${name}|${xs}|${SV.YO}|${k}|${sink}`, Math.round((W >> 1) + m / z * (xs - (SV.W >> 1)) - xs), sy, (L) => draw(L, xs, set.Y(base), sink));
   };
   // the back conifer goes in before the oak, so the oak covers it should they meet (while zooming on narrow screens)
-  tree('small', (g) => g.RX(264 + plan.pairDX), 178, (L, x, y, sink) => { at(x, y, 5000); conifer(L, x, y, 100 * ks, plan.small, rng(seed + 5), { lean: 0, tierVar: .08, div: plan.smallDiv, sink }); }, PAR);
+  tree('small', (g) => g.RX(264 + plan.pairDX), 178, (L, x, y, sink) => { at(x, y, 5000); conifer(L, x, y, 100 * ks, plan.small, rng(seed + 5), { lean: 0, tierVar: .08, div: plan.smallDiv, sink }); });
   tree('oak', (g) => g.LX(34 + plan.oakDX), 186, (L, x, y, sink) => { at(x, y, 4000); oak(L, x, y, 150 * ks, 'oak', rng(seed + 4), { k: 10, R: .38, sym: true, inward: plan.flip ? -1 : 1, sink }); });
   tree('big', (g) => g.RX(302 + plan.pairDX), 188, (L, x, y, sink) => { at(x, y, 6000); conifer(L, x, y, 176 * ks, plan.big, rng(seed + 6), { lean: 0, flare: 3, tierVar: .08, div: plan.bigDiv, sink, ...(plan.big === 'fir' ? { w: .3 } : {}) }); });
   clearOrigin();
