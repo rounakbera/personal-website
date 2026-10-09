@@ -214,6 +214,7 @@ The scripts are native ES modules (`<script type="module">`), so the page has to
 
 - **Load-in:** the forest starts zoomed in 1.8× on its bottom middle and eases out (cubic, 1.6 s) to its real size. `zoom` multiplies `S` in `fit()`, and the front is rebuilt for each size, as on resize.
   - While zooming, the front and the sun/moon are laid out for the view the zoom settles on (`SV` in `state.js`). The ground cover is spread over the settled width and shifted like the world's window, the framing trees keep their settled size and only slide with the screen edges, and the sun/moon path and radius come from `SV` and are shifted into the current view. Otherwise each frame redraws them at a slightly different size and they visibly shake (owner noticed on the moon and bushes). Once settled, `SV` is the current view, so the final frame is pixel-identical to the plain layout.
+  - **Parallax on the conifer pair:** the back (smaller) conifer's slide is scaled by `PAR` (1.35, `scene.js`), so it starts further in from the edge and moves faster than the front conifer, which reads as depth (owner). The scale only touches the shift, so the settled frame is unchanged.
 
 - Nothing respects `prefers-reduced-motion` (owner's choice): the load-in zoom, the card's drop-in, the button lifts and the sky all run regardless. (On Windows, turning off *Animation effects* sets it, which hid the entry animations.)
 - Animation pauses while the tab is hidden.
