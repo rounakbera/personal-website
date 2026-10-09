@@ -114,12 +114,14 @@ export function buildFront(seed, plan) {
   const LW = SV.W, Y = (y) => y + YO, k = clamp(LW / 320, .6, 1), ks = Math.sqrt(k), off = (LW >> 1) - (W >> 1);
   // F mirrors for flipped seeds; LX/RX anchor the framing trees to the screen edges; MX spreads ground cover across the width
   const F = (x) => plan.flip ? W - x : x, LX = (x) => F(x * k), RX = (x) => F(W - (320 - x) * k), MX = (x) => (plan.flip ? LW - x * LW / 320 : x * LW / 320) - off;
-  const fk = [seed, JSON.stringify(plan), LW, SEASON, H - YO].join('|'); if (fk !== frontKey) { FRONT.clear(); frontKey = fk; }
+  // (the cover's layout follows the settled width; the trees' only their scale k, which stops changing on screens wider
+  // than 16:9, so resizing those replays them too)
+  const fk = [seed, JSON.stringify(plan), SEASON].join('|'); if (fk !== frontKey || FRONT.size > 64) { FRONT.clear(); frontKey = fk; }
   // every object gets fixed part ids (via at()), its own random stream and its own texture origin, so nothing reshuffles as it slides
   const fg = new Layer(0, false); at(0, 0, 100); const top = ground(fg, Y(160), 3, 'grass', 4, null, true, -(W >> 1));
   const ft = new Layer(0);
   // ground cover by season: wildflowers (many more in spring), fallen leaves in autumn, nothing under the snow
-  memo(ft, 'cover', -off, YO, () => {
+  memo(ft, `cover|${LW}`, -off, YO, () => {
     if (SEASON !== 'winter') { const [a, b, n] = { spring: [16, 304, 90], summer: [60, 240, 16], autumn: [30, 290, 34] }[SEASON]; at(0, 0, 200); flowers(ft, rng(seed + 2), Math.min(MX(a), MX(b)), Math.max(MX(a), MX(b)), top, n); }
     const br = rng(seed + 3);
     [[70, 26], [96, 20], [222, 20], [122, 16], [190, 18]].forEach(([x, w], i) => { at(MX(x), top(MX(x)), 2000 + i * 40); bush(ft, MX(x), top(MX(x)) + 3, w * ks, leafOf(br), br); });
@@ -131,10 +133,10 @@ export function buildFront(seed, plan) {
   // edge; the trees themselves don't move or grow, and without a toolbar strip nothing changes
   const sink = (base) => base > YO + 180 && H > YO + 180 ? Math.min(10, H - base) : 0, oX = LX(34 + plan.oakDX), sX = RX(264 + plan.pairDX), bX = RX(302 + plan.pairDX);
   // each tree is replayed shifted by whole pixels, so its key carries the sub-pixel part of its position
-  const tree = (name, x, draw) => { const dx = Math.floor(x); memo(ft, `${name}|${(x - dx).toFixed(6)}`, dx, YO, draw); };
-  tree('oak', oX, () => { at(oX, Y(186), 4000); oak(ft, oX, Y(186), 150 * ks, 'oak', rng(seed + 4), { k: 10, R: .38, sym: true, inward: plan.flip ? -1 : 1, sink: sink(Y(186)) }); });
-  tree('small', sX, () => { at(sX, Y(178), 5000); conifer(ft, sX, Y(178), 100 * ks, plan.small, rng(seed + 5), { lean: 0, tierVar: .08, div: plan.smallDiv, sink: sink(Y(178)) }); });
-  tree('big', bX, () => { at(bX, Y(188), 6000); conifer(ft, bX, Y(188), 176 * ks, plan.big, rng(seed + 6), { lean: 0, flare: 3, tierVar: .08, div: plan.bigDiv, sink: sink(Y(188)), ...(plan.big === 'fir' ? { w: .3 } : {}) }); });
+  const tree = (name, x, base, draw) => { const dx = Math.floor(x); memo(ft, `${name}|${k}|${(x - dx).toFixed(6)}|${sink(Y(base))}`, dx, YO, draw); };
+  tree('oak', oX, 186, () => { at(oX, Y(186), 4000); oak(ft, oX, Y(186), 150 * ks, 'oak', rng(seed + 4), { k: 10, R: .38, sym: true, inward: plan.flip ? -1 : 1, sink: sink(Y(186)) }); });
+  tree('small', sX, 178, () => { at(sX, Y(178), 5000); conifer(ft, sX, Y(178), 100 * ks, plan.small, rng(seed + 5), { lean: 0, tierVar: .08, div: plan.smallDiv, sink: sink(Y(178)) }); });
+  tree('big', bX, 188, () => { at(bX, Y(188), 6000); conifer(ft, bX, Y(188), 176 * ks, plan.big, rng(seed + 6), { lean: 0, flare: 3, tierVar: .08, div: plan.bigDiv, sink: sink(Y(188)), ...(plan.big === 'fir' ? { w: .3 } : {}) }); });
   clearOrigin();
   return [fg, ft];
 }
