@@ -14,6 +14,9 @@ export function resetIds(all = true) { OBJ = 0; if (all) { PART = 0; ORX = 0; OR
 // pin the next object's texture origin and part numbering, so it looks the same wherever it slides
 export function at(x, y, id) { ORX = Math.round(x); ORY = Math.round(y); PART = id; }
 export function clearOrigin() { ORX = ORY = 0; }
+// the running ids, so a replayed object (see memo() in scene.js) can leave them as drawing it would have
+export const ids = () => [OBJ, PART];
+export function setIds(o, p) { OBJ = o; PART = p; }
 
 const BARK = mid('bark');
 function blob(L, cx, cy, r, mat, obj, sx = 1, sy = 1, o = {}) {
@@ -369,11 +372,11 @@ export function rock(L, cx, base, r, moss) {
   blob(L, cx, base, r, 'rock', obj, 1.4, .8, .15);
   if (moss) blob(L, cx - r * .4, base - r * .55, r * .45, 'moss', obj, 1.6, .5);
 }
-export function flowers(L, r, x0, x1, yAt, n, mat = 'flower') {
+export function flowers(L, r, x0, x1, yAt, n, mat = 'flower', bottom = YO + 180) {
   for (let i = 0; i < n; i++) {
     // anywhere on the ground strip, from just below the grass line down to the bottom of the visible screen
-    // (YO + 180; the canvas may run on under a browser toolbar)
-    const obj = ++OBJ; L.thin.add(obj); const part = ++PART, x = Math.round(x0 + r() * (x1 - x0)), y = yAt(x) + 3 + Math.floor(r() * Math.max(7, YO + 180 - yAt(x) - 5));
+    // (YO + 180 unless given; the canvas may run on under a browser toolbar)
+    const obj = ++OBJ; L.thin.add(obj); const part = ++PART, x = Math.round(x0 + r() * (x1 - x0)), y = yAt(x) + 3 + Math.floor(r() * Math.max(7, bottom - yAt(x) - 5));
     if (SEASON === 'autumn') {
       // fallen leaves lying flat in the grass
       const m = ['autO', 'autY', 'autR'][Math.floor(hash(i, 1, 41) * 3)];
@@ -386,10 +389,13 @@ export function flowers(L, r, x0, x1, yAt, n, mat = 'flower') {
   }
 }
 // ox converts this layer's x to world x, so the ground's waves and tufts stay put when the screen width changes
+// the ground line's height at each x (what ground() draws along, without drawing it)
+export const groundTop = (y0, amp, seed, ox = 0) => (x) => Math.round(y0 + Math.sin((x + ox) * .035 + seed) * amp + Math.sin((x + ox) * .11 + seed * 2) * amp * .4);
 export function ground(L, y0, amp, mat, seed, r, tufts = true, ox = 0) {
   const obj = ++OBJ; L.thin.add(obj); const part = ++PART;
-  const top = (x) => Math.round(y0 + Math.sin((x + ox) * .035 + seed) * amp + Math.sin((x + ox) * .11 + seed * 2) * amp * .4);
-  for (let x = 0; x < L.w; x++) {
+  const top = groundTop(y0, amp, seed, ox);
+  const [xa, xb] = L.cols();   // (a clipped world only needs its drawn columns)
+  for (let x = xa; x < xb; x++) {
     const t0 = top(x), wx = x + ox;
     for (let y = t0; y < L.h; y++) {
       const d = y - t0;
@@ -403,11 +409,16 @@ export function ground(L, y0, amp, mat, seed, r, tufts = true, ox = 0) {
   return top;
 }
 export function ridge(L, y0, amp, seed) {
-  const obj = ++OBJ, part = ++PART; let prev = null;
-  for (let x = 0; x < L.w; x++) {
+  const obj = ++OBJ, part = ++PART;
+  const top = (x) => {
     const u = (x - L.w / 2) / 320 * Math.PI * 2;
     const n = Math.sin(u * 1.3 + seed) * .5 + Math.sin(u * 3.1 + seed * 1.7) * .3 + Math.sin(u * 7 + seed * 2.3) * .12;
-    const y = Math.round(y0 - (n * .5 + .5) * amp);
+    return Math.round(y0 - (n * .5 + .5) * amp);
+  };
+  // (a clipped world only needs its drawn columns)
+  const [xa, xb] = L.cols(); let prev = xa > 0 ? top(xa - 1) : null;
+  for (let x = xa; x < xb; x++) {
+    const y = top(x);
     for (let yy = y; yy < L.h; yy++) L.put(x, yy, 'mount', prev !== null && y <= prev && yy - y < 5 ? 4 : 3, part, obj);
     prev = y;
   }

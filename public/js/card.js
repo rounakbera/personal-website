@@ -36,6 +36,14 @@ const mk = (w, h) => { const c = document.createElement('canvas'); c.width = w; 
   document.querySelector('.card').style.setProperty('--grain', `url(${c.toDataURL()})`);
 }
 
+/* ---------- portrait shimmer: one sweep every 8 s (see .timed in site.css) ---------- */
+{
+  const pt = document.querySelector('.portrait');
+  let k = 0;
+  const sweep = () => { pt.classList.remove('sweep-a', 'sweep-b'); pt.classList.add((k ^= 1) ? 'sweep-a' : 'sweep-b'); };
+  pt.classList.add('timed'); sweep(); setInterval(sweep, 8000);
+}
+
 /* ---------- portrait: pixel art that resolves into the photo on hover or click ---------- */
 {
   const cv = document.getElementById('avatar'), g = cv.getContext('2d'), N = cv.width;

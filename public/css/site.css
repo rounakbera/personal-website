@@ -53,6 +53,14 @@ html.bleed #world { position: absolute; }
 .portrait::after { clip-path: inset(6px); opacity: 0; }
 .portrait.art::after { opacity: .45; }
 @keyframes shimmer { 0% { background-position: -312px -312px; animation-timing-function: steps(8); } 8% { background-position: 0 0; } 100% { background-position: 0 0; } }
+/* with JS (card.js adds .timed) each 0.64 s sweep is started on its own every 8 s instead, holding at the end between
+   sweeps as the loop does: a running infinite animation restyles and repaints every frame, even while it holds still.
+   Two identical keyframes, alternated, so each sweep restarts */
+.portrait.timed::before, .portrait.timed::after { animation: none; }
+.portrait.sweep-a::before, .portrait.sweep-a::after { animation: sweep-a .64s steps(8) both; }
+.portrait.sweep-b::before, .portrait.sweep-b::after { animation: sweep-b .64s steps(8) both; }
+@keyframes sweep-a { from { background-position: -312px -312px; } to { background-position: 0 0; } }
+@keyframes sweep-b { from { background-position: -312px -312px; } to { background-position: 0 0; } }
 .ident { min-width: 0; display: grid; gap: 20px; }
 h1 { margin: 0; line-height: 0; color: var(--ink); cursor: pointer; justify-self: start; }
 /* the name is baked from Jersey 10, 15, 20 and 25; all share one cap height, so stepping through them sharpens it */

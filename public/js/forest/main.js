@@ -1,6 +1,6 @@
 // Entry point for the background: picks the forest and season, sizes the scene to the screen,
 // and runs the redraw loop. Loaded from index.html as a module.
-import { W, H, WW, WH, setView, setSeasonState, seasonOf } from './state.js';
+import { W, H, WW, setView, setSeasonState, seasonOf } from './state.js';
 import { buildClouds } from './clouds.js';
 import { planFor, buildWorld, buildFront, flatten } from './scene.js';
 import { prepare, draw, makeStars, fitStars } from './render.js';
@@ -30,14 +30,14 @@ let fullTimer = 0;
 function buildWorldFor(vw, vh) {
   const half = (Math.round(vw / baseScale(vw, vh)) >> 1) + 10;
   scene.clip = [(WW >> 1) - half, (WW >> 1) + half]; scene.full = false;
-  scene.world = flatten(buildWorld(seed, scene.clip), WW, WH);
+  scene.world = buildWorld(seed, scene.clip);
   clearTimeout(fullTimer);
   // after the load-in zoom has settled, so the extra work doesn't stutter it
   fullTimer = setTimeout(() => (window.requestIdleCallback || setTimeout)(ensureWorld), 2200);
 }
 function ensureWorld(redraw = true) {
   if (scene.full) return;
-  scene.world = flatten(buildWorld(seed), WW, WH); scene.full = true; scene.clip = null;
+  scene.world = buildWorld(seed); scene.full = true; scene.clip = null;
   if (redraw) { minute = -1; frame(); }
 }
 makeStars();
