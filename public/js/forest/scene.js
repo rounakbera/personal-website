@@ -112,7 +112,7 @@ function memo(L, key, sx, sy, draw) {
 }
 // parallax for the back conifer during the load-in zoom: it stands further in from its screen edge by this fraction
 // of its edge distance per unit of extra zoom, so it starts further off and moves faster than the front conifer
-const PAR = .5;
+const PAR = .25;
 // the front: foreground ground cover and the framing trees, sized to the screen; cheap enough to rebuild while resizing
 export function buildFront(seed, plan) {
   resetIds(false);
