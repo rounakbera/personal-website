@@ -92,7 +92,7 @@ The scripts are native ES modules (`<script type="module">`), so the page has to
 
 ## Search and favicon (owner's rules)
 
-- **Search results show only the name.** The `<title>` is "Rounak Bera". There's no meta description, and `robots` is `nosnippet` so no page text is used as a snippet either. Open Graph and Twitter tags carry the title and the photo, with no description.
+- **Search results show the name and a one-liner.** The `<title>` is "Rounak Bera". The meta description (and `og:description`) is "senior software engineer · new york city": lowercase, a tag line rather than a sentence, no employer (owner). `robots` no longer has `nosnippet` (it would hide the description too); with almost no visible text on the page, search engines use the description. Open Graph and Twitter tags carry the title, the description and the photo.
 - **The only image meant for search is the photo** (`assets/portrait.jpg`). It's the `img` under the portrait canvas (alt "Portrait of Rounak Bera"), `og:image`, the `image` of the Person JSON-LD, and the image in `sitemap.xml`. The pixel portrait is served with `X-Robots-Tag: noindex` (`_headers`). Everything else is drawn (canvas or inline SVG), so there's nothing else to index. Favicons stay crawlable, since search engines need them for the icon next to the result.
 - **Seasonal favicon:** pixel trees in the site's palette, drawn on a 16×16 grid: a green oak (summer), the oak in pink blossom (spring), an orange oak (autumn) and a snow-capped conifer (winter). The static links point at summer. The inline head script swaps them to the current (or `#season`) season, and the time panel's season button swaps them too.
 
