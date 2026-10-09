@@ -82,28 +82,31 @@ export function buildWorld(seed, clip = null) {
   return flat;
 }
 // The front's objects only ever slide by whole pixels while the screen size changes but the settled view (SV) doesn't
-// (the load-in zoom): the ground cover with the world's window, the framing trees with the screen edges. So each
-// group's pixels are recorded once, relative to its offset (dx, dy), and replayed shifted on the next build, which is
-// pixel for pixel what drawing it again would give. Spring blossom is the exception: it goes only on leaves already
-// in the layer and hashes screen coordinates, so a group with blossom replays only in place, with the same edges.
+// (the load-in zoom), or while only its width changes on a wide screen: the ground cover with the world's window, the
+// framing trees with the screen edges. So each group's pixels are recorded once, relative to its offset (dx, dy), and
+// replayed shifted on the next build, which is pixel for pixel what drawing it again would give. A group's pixels are
+// the ones left holding its objects' ids (ids only grow), found in the box it drew in. A group that ran off the layer
+// replays only while the edges cut it the same way. Spring blossom goes only on leaves already in the layer and hashes
+// screen coordinates, so a group with blossom replays only in place.
 const FRONT = new Map(); let frontKey = '';
 function memo(L, key, dx, dy, draw) {
   const [o0, p0] = ids(); key += `|${o0}|${p0}`;
   const clip = (b) => [Math.max(b[0], -dx), Math.max(b[1], -dy), Math.min(b[2], L.w - 1 - dx), Math.min(b[3], L.h - 1 - dy)].join();
   const e = FRONT.get(key);
-  if (e && (!e.reads || (e.dx === dx && e.dy === dy && clip(e.box) === e.clip))) {
+  if (e && (!e.cut || clip(e.box) === e.clip) && (!e.reads || (e.dx === dx && e.dy === dy))) {
     L.replay(e.rec, dx, dy); for (const t of e.thin) L.thin.add(t); for (const u of e.under) L.under.add(u); setIds(...e.ids);
     return;
   }
   const thin0 = new Set(L.thin), under0 = new Set(L.under);
-  L.rec = []; L.reads = false; draw();
-  const raw = L.rec, rec = new Int32Array(raw.length), box = [Infinity, Infinity, -Infinity, -Infinity]; L.rec = null;
-  for (let k = 0; k < raw.length; k += 6) {
-    const x = rec[k] = raw[k] - dx, y = rec[k + 1] = raw[k + 1] - dy;
-    rec[k + 2] = raw[k + 2]; rec[k + 3] = raw[k + 3]; rec[k + 4] = raw[k + 4]; rec[k + 5] = raw[k + 5];
-    if (x < box[0]) box[0] = x; if (y < box[1]) box[1] = y; if (x > box[2]) box[2] = x; if (y > box[3]) box[3] = y;
+  const r = L.rec = { x0: Infinity, y0: Infinity, x1: -Infinity, y1: -Infinity, cut: false }; L.reads = false;
+  draw();
+  L.rec = null;
+  const [o1] = ids(), { w, mat, tone, part, obj } = L, out = [];
+  for (let y = Math.max(0, r.y0); y <= Math.min(L.h - 1, r.y1); y++) for (let x = Math.max(0, r.x0), i = y * w + x; x <= Math.min(w - 1, r.x1); x++, i++) {
+    const o = obj[i]; if (mat[i] && o > o0 && o <= o1) out.push(x - dx, y - dy, mat[i], tone[i], part[i], o);
   }
-  FRONT.set(key, { rec, box, dx, dy, clip: clip(box), reads: L.reads, ids: ids(), thin: [...L.thin].filter(t => !thin0.has(t)), under: [...L.under].filter(u => !under0.has(u)) });
+  const box = [r.x0 - dx, r.y0 - dy, r.x1 - dx, r.y1 - dy];
+  FRONT.set(key, { rec: Int32Array.from(out), box, clip: clip(box), cut: r.cut, reads: L.reads, dx, dy, ids: ids(), thin: [...L.thin].filter(t => !thin0.has(t)), under: [...L.under].filter(u => !under0.has(u)) });
 }
 // the front: foreground ground cover and the framing trees, sized to the screen; cheap enough to rebuild while resizing
 export function buildFront(seed, plan) {

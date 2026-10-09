@@ -21,6 +21,8 @@ export class Layer {
     this.under = new Set(); // underlayer parts that never cast the tier/clump shadow line
     // columns worth drawing: the costly primitives skip anything wholly outside [x0, x1] (see buildWorld)
     this.x0 = -Infinity; this.x1 = Infinity;
+    this.rec = null;      // set while memo() (scene.js) records a group for replay
+    this.reads = false;   // set when drawing read the layer back (spring blossom)
   }
   // true when the columns xa..xb lie wholly outside the drawn range
   off(xa, xb) { return xb < this.x0 || xa > this.x1; }
@@ -29,8 +31,10 @@ export class Layer {
   put(x, y, mat, tone, part, obj) {
     x = Math.round(x); y = Math.round(y);
     const m = MID[mat] ?? mid(mat);
-    if (this.rec) this.rec.push(x, y, m, tone, part, obj);   // recording for replay (see memo() in scene.js)
-    if (x < 0 || y < 0 || x >= this.w || y >= this.h) return;
+    // while memo() (scene.js) records a group: the box it draws in, and whether any of it fell off the layer
+    const r = this.rec;
+    if (r) { if (x < r.x0) r.x0 = x; if (x > r.x1) r.x1 = x; if (y < r.y0) r.y0 = y; if (y > r.y1) r.y1 = y; }
+    if (x < 0 || y < 0 || x >= this.w || y >= this.h) { if (r) r.cut = true; return; }
     const i = y * this.w + x; this.mat[i] = m; this.tone[i] = tone; this.part[i] = part; this.obj[i] = obj;
   }
   // replay recorded puts (x, y, material id, tone, part, object; six numbers each), shifted by dx, dy
