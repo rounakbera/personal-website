@@ -1,7 +1,7 @@
 // Scene building: a fixed world strip (built once per seed and season) plus a screen-sized front
 // (rebuilt on resize), each flattened to one material per pixel.
 import { rng, hash, clamp } from '../util.js';
-import { W, H, YO, PX, WW, WH, SV, Z0, SEASON } from './state.js';
+import { W, H, YO, PX, WW, WH, SV, SEASON } from './state.js';
 import { SNOWY } from './palette.js';
 import { Layer, MAT, mid, hid } from './layer.js';
 import { resetIds, at, clearOrigin, ids, setIds, meadow, KINDS, KIND_LIST, conifer, oak, bush, fern, rock, flowers, ground, groundTop, ridge, treeline } from './draw.js';
@@ -114,7 +114,8 @@ function memo(L, key, sx, sy, draw) {
 // to the camera relative to the world (1 = as far as the world, more = nearer). Nearer trees sweep in from further out
 // and move faster, so the back conifer moves less than the front one and they slide past each other.
 const NEAR = { small: 1.2, oak: 1.3, big: 1.4 };
-// the front: foreground ground cover and the framing trees, sized to the screen; cheap enough to rebuild while resizing
+// the front: foreground ground cover and the framing trees, sized to the screen; cheap enough to rebuild while resizing.
+// Returns its layers, plus the framing trees on layers of their own while the load-in zoom runs (see tree() below)
 export function buildFront(seed, plan) {
   resetIds(false);
   // sizes and the ground cover's spread follow the settled width (SV.W), so during the load-in zoom nothing is redrawn
@@ -149,20 +150,22 @@ export function buildFront(seed, plan) {
   // world zooms by z about the bottom middle, as if the camera stood back by d·(1 − 1/z) from a world at depth d; a tree
   // at depth d / n then shows magnified by m = 1 / (1 − n·(1 − 1/z)), so its offset from the middle grows by m on
   // screen, or by m / z in scene pixels (n = 1 moves with the world). Settled, z = m = 1 and the shift is 0.
-  // The trees' sliding against the world can only step whole scene pixels (several screen pixels on desktop), which
-  // stutters where it's slow, so the dolly runs on a front-loaded z (cubed toward 1): the sliding happens while the
-  // zoom is fast, and the slow tail rides with the world, which glides as the pixel grid itself scales.
-  const z = 1 + (PX / SV.PX - 1) ** 3 / (Z0 - 1) ** 2;
+  // Sliding against the world in whole scene pixels would step (a block is several screen pixels on desktop, and the
+  // slide is slow near the end), so while zooming each tree goes on a layer of its own, drawn on an overlay canvas
+  // that CSS shifts by the leftover fraction of a pixel (frac); settled, the trees go in with the rest as usual.
+  const z = PX / SV.PX, zooming = z !== 1, trees = [];
   const tree = (name, x, base, draw) => {
     const xs = x(set), sink = set.sink(set.Y(base)), m = 1 / (1 - NEAR[name] * (1 - 1 / z));
-    memo(ft, `${name}|${xs}|${SV.YO}|${k}|${sink}`, Math.round((W >> 1) + m / z * (xs - (SV.W >> 1)) - xs), sy, (L) => draw(L, xs, set.Y(base), sink));
+    const dx = (W >> 1) + m / z * (xs - (SV.W >> 1)) - xs, sx = Math.round(dx), L = zooming ? new Layer(0) : ft;
+    memo(L, `${name}|${xs}|${SV.YO}|${k}|${sink}`, sx, sy, (L) => draw(L, xs, set.Y(base), sink));
+    if (zooming) trees.push({ L, frac: dx - sx });
   };
   // the back conifer goes in before the oak, so the oak covers it should they meet (while zooming on narrow screens)
   tree('small', (g) => g.RX(264 + plan.pairDX), 178, (L, x, y, sink) => { at(x, y, 5000); conifer(L, x, y, 100 * ks, plan.small, rng(seed + 5), { lean: 0, tierVar: .08, div: plan.smallDiv, sink }); });
   tree('oak', (g) => g.LX(34 + plan.oakDX), 186, (L, x, y, sink) => { at(x, y, 4000); oak(L, x, y, 150 * ks, 'oak', rng(seed + 4), { k: 10, R: .38, sym: true, inward: plan.flip ? -1 : 1, sink }); });
   tree('big', (g) => g.RX(302 + plan.pairDX), 188, (L, x, y, sink) => { at(x, y, 6000); conifer(L, x, y, 176 * ks, plan.big, rng(seed + 6), { lean: 0, flare: 3, tierVar: .08, div: plan.bigDiv, sink, ...(plan.big === 'fir' ? { w: .3 } : {}) }); });
   clearOrigin();
-  return [fg, ft];
+  return { layers: [fg, ft], trees };
 }
 // winter: snow settles on every upward-facing surface of conifers, rocks, hills and branches, just under the outline
 const BARK = mid('bark'), SNOW = mid('snow');

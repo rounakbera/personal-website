@@ -90,13 +90,19 @@ export function prepare(scene, t) {
     }
     fg32[i] = LUT[key] || colour(key);
   }
+  // the framing trees on their own while the load-in zoom runs (scene.trees), each for its overlay canvas
+  const trees = (scene.trees || []).map(({ flat }) => {
+    const a = new Uint32Array(W * H);
+    for (let i = 0; i < a.length; i++) if (flat.mat[i]) { const key = (flat.haze[i] << 11) | (flat.mat[i] << 3) | flat.tone[i]; a[i] = LUT[key] || colour(key); }
+    return a;
+  });
   let base = mix([70, 74, 120], [240, 244, 250], p.L), shade = mix([46, 48, 90], mix(p.mid, [255, 255, 255], .32), p.L);
   base = mix(base, [255, 196, 150], p.Wm * .6); shade = mix(shade, [200, 100, 120], p.Wm * .5);
   // spring clouds are fuller and greyer, winter's a flat pale grey
   if (SEASON === 'spring') { base = mix(base, [150, 156, 170], .35 * p.L); shade = mix(shade, [96, 102, 120], .45 * p.L); }
   if (SEASON === 'winter') { base = grey(base, .4); shade = grey(shade, .4); }
   const hi = mix(base, [255, 255, 255], .15 + .5 * p.L), wisp = mix(mix(hi, p.top, .15), [255, 170, 150], p.Wm * .7);
-  return { sky, fg, fg32, p, sa, COL: [null, base, shade, hi, wisp, wisp] };
+  return { sky, fg, fg32, trees, p, sa, COL: [null, base, shade, hi, wisp, wisp] };
 }
 const ALPHA = [0, 1, 1, 1, .6, .32];
 // each star twinkles on its own cycle: a slow 1.5–2.5 s swell and fade, then a quiet gap of 8–80 s (skewed long)
