@@ -301,7 +301,6 @@ function blossom(L, blobs, obj, h) {
   const main = hash(obj, 5, 77) < .65 ? 'bloom' : 'bloomW', alt = main === 'bloom' ? 'bloomW' : 'bloom';
   if (L.off(Math.min(...blobs.map(([bx, , br]) => bx - br)) - 4, Math.max(...blobs.map(([bx, , br]) => bx + br)) + 4)) return;
   const placed = [];
-  L.reads = true;   // where flowers go depends on what's already in the layer (and on its edges)
   const at = (xx, yy) => yy * L.w + xx;
   const leaf = (xx, yy) => { if (xx < 0 || yy < 0 || xx >= L.w || yy >= L.h) return false; const q = at(xx, yy); return L.obj[q] === obj && L.tone[q] !== 0 && L.mat[q] !== BARK; };
   const put = (xx, yy, m, t) => { if (leaf(xx, yy)) L.put(xx, yy, m, clamp(t, 2, 5), L.part[at(xx, yy)], obj); };
@@ -373,11 +372,11 @@ export function rock(L, cx, base, r, moss) {
   blob(L, cx, base, r, 'rock', obj, 1.4, .8, .15);
   if (moss) blob(L, cx - r * .4, base - r * .55, r * .45, 'moss', obj, 1.6, .5);
 }
-export function flowers(L, r, x0, x1, yAt, n, mat = 'flower') {
+export function flowers(L, r, x0, x1, yAt, n, mat = 'flower', bottom = YO + 180) {
   for (let i = 0; i < n; i++) {
     // anywhere on the ground strip, from just below the grass line down to the bottom of the visible screen
-    // (YO + 180; the canvas may run on under a browser toolbar)
-    const obj = ++OBJ; L.thin.add(obj); const part = ++PART, x = Math.round(x0 + r() * (x1 - x0)), y = yAt(x) + 3 + Math.floor(r() * Math.max(7, YO + 180 - yAt(x) - 5));
+    // (YO + 180 unless given; the canvas may run on under a browser toolbar)
+    const obj = ++OBJ; L.thin.add(obj); const part = ++PART, x = Math.round(x0 + r() * (x1 - x0)), y = yAt(x) + 3 + Math.floor(r() * Math.max(7, bottom - yAt(x) - 5));
     if (SEASON === 'autumn') {
       // fallen leaves lying flat in the grass
       const m = ['autO', 'autY', 'autR'][Math.floor(hash(i, 1, 41) * 3)];
@@ -390,9 +389,11 @@ export function flowers(L, r, x0, x1, yAt, n, mat = 'flower') {
   }
 }
 // ox converts this layer's x to world x, so the ground's waves and tufts stay put when the screen width changes
+// the ground line's height at each x (what ground() draws along, without drawing it)
+export const groundTop = (y0, amp, seed, ox = 0) => (x) => Math.round(y0 + Math.sin((x + ox) * .035 + seed) * amp + Math.sin((x + ox) * .11 + seed * 2) * amp * .4);
 export function ground(L, y0, amp, mat, seed, r, tufts = true, ox = 0) {
   const obj = ++OBJ; L.thin.add(obj); const part = ++PART;
-  const top = (x) => Math.round(y0 + Math.sin((x + ox) * .035 + seed) * amp + Math.sin((x + ox) * .11 + seed * 2) * amp * .4);
+  const top = groundTop(y0, amp, seed, ox);
   const [xa, xb] = L.cols();   // (a clipped world only needs its drawn columns)
   for (let x = xa; x < xb; x++) {
     const t0 = top(x), wx = x + ox;

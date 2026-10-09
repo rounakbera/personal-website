@@ -22,7 +22,6 @@ export class Layer {
     // columns worth drawing: the costly primitives skip anything wholly outside [x0, x1] (see buildWorld)
     this.x0 = -Infinity; this.x1 = Infinity;
     this.rec = null;      // set while memo() (scene.js) records a group for replay
-    this.reads = false;   // set when drawing read the layer back (spring blossom)
   }
   // true when the columns xa..xb lie wholly outside the drawn range
   off(xa, xb) { return xb < this.x0 || xa > this.x1; }
