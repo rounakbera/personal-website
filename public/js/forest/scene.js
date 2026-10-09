@@ -152,8 +152,9 @@ export function buildFront(seed, plan) {
     const p = par * (PX / SV.PX - 1) * (plan.flip ? xs : SV.W - xs) * (plan.flip ? 1 : -1);
     memo(ft, `${name}|${xs}|${SV.YO}|${k}|${sink}`, Math.round(x(cur) - xs + p), sy, (L) => draw(L, xs, set.Y(base), sink));
   };
-  tree('oak', (g) => g.LX(34 + plan.oakDX), 186, (L, x, y, sink) => { at(x, y, 4000); oak(L, x, y, 150 * ks, 'oak', rng(seed + 4), { k: 10, R: .38, sym: true, inward: plan.flip ? -1 : 1, sink }); });
+  // the back conifer goes in before the oak, so the oak covers it should they meet (while zooming on narrow screens)
   tree('small', (g) => g.RX(264 + plan.pairDX), 178, (L, x, y, sink) => { at(x, y, 5000); conifer(L, x, y, 100 * ks, plan.small, rng(seed + 5), { lean: 0, tierVar: .08, div: plan.smallDiv, sink }); }, PAR);
+  tree('oak', (g) => g.LX(34 + plan.oakDX), 186, (L, x, y, sink) => { at(x, y, 4000); oak(L, x, y, 150 * ks, 'oak', rng(seed + 4), { k: 10, R: .38, sym: true, inward: plan.flip ? -1 : 1, sink }); });
   tree('big', (g) => g.RX(302 + plan.pairDX), 188, (L, x, y, sink) => { at(x, y, 6000); conifer(L, x, y, 176 * ks, plan.big, rng(seed + 6), { lean: 0, flare: 3, tierVar: .08, div: plan.bigDiv, sink, ...(plan.big === 'fir' ? { w: .3 } : {}) }); });
   clearOrigin();
   return [fg, ft];
