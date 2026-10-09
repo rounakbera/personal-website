@@ -14,6 +14,9 @@ export function resetIds(all = true) { OBJ = 0; if (all) { PART = 0; ORX = 0; OR
 // pin the next object's texture origin and part numbering, so it looks the same wherever it slides
 export function at(x, y, id) { ORX = Math.round(x); ORY = Math.round(y); PART = id; }
 export function clearOrigin() { ORX = ORY = 0; }
+// the running ids, so a replayed object (see memo() in scene.js) can leave them as drawing it would have
+export const ids = () => [OBJ, PART];
+export function setIds(o, p) { OBJ = o; PART = p; }
 
 const BARK = mid('bark');
 function blob(L, cx, cy, r, mat, obj, sx = 1, sy = 1, o = {}) {
@@ -298,6 +301,7 @@ function blossom(L, blobs, obj, h) {
   const main = hash(obj, 5, 77) < .65 ? 'bloom' : 'bloomW', alt = main === 'bloom' ? 'bloomW' : 'bloom';
   if (L.off(Math.min(...blobs.map(([bx, , br]) => bx - br)) - 4, Math.max(...blobs.map(([bx, , br]) => bx + br)) + 4)) return;
   const placed = [];
+  L.reads = true;   // where flowers go depends on what's already in the layer (and on its edges)
   const at = (xx, yy) => yy * L.w + xx;
   const leaf = (xx, yy) => { if (xx < 0 || yy < 0 || xx >= L.w || yy >= L.h) return false; const q = at(xx, yy); return L.obj[q] === obj && L.tone[q] !== 0 && L.mat[q] !== BARK; };
   const put = (xx, yy, m, t) => { if (leaf(xx, yy)) L.put(xx, yy, m, clamp(t, 2, 5), L.part[at(xx, yy)], obj); };

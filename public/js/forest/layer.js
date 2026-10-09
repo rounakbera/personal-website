@@ -22,8 +22,18 @@ export class Layer {
   off(xa, xb) { return xb < this.x0 || xa > this.x1; }
   put(x, y, mat, tone, part, obj) {
     x = Math.round(x); y = Math.round(y);
+    const m = MID[mat] ?? mid(mat);
+    if (this.rec) this.rec.push(x, y, m, tone, part, obj);   // recording for replay (see memo() in scene.js)
     if (x < 0 || y < 0 || x >= this.w || y >= this.h) return;
-    const i = y * this.w + x; this.mat[i] = MID[mat] ?? mid(mat); this.tone[i] = tone; this.part[i] = part; this.obj[i] = obj;
+    const i = y * this.w + x; this.mat[i] = m; this.tone[i] = tone; this.part[i] = part; this.obj[i] = obj;
+  }
+  // replay recorded puts (x, y, material id, tone, part, object; six numbers each), shifted by dx, dy
+  replay(rec, dx, dy) {
+    const { w, h, mat, tone, part, obj } = this;
+    for (let k = 0; k < rec.length; k += 6) {
+      const x = rec[k] + dx, y = rec[k + 1] + dy; if (x < 0 || y < 0 || x >= w || y >= h) continue;
+      const i = y * w + x; mat[i] = rec[k + 2]; tone[i] = rec[k + 3]; part[i] = rec[k + 4]; obj[i] = rec[k + 5];
+    }
   }
   finalize() {
     const t = this.tone.slice(), { mat, obj, part, tone, thin, under } = this;
