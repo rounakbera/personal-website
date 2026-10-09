@@ -8,7 +8,13 @@ function puffs(circles, flat = null, sc = 0) {
   for (const [cx, cy, r] of circles) { x0 = Math.min(x0, cx - r - 1); y0 = Math.min(y0, cy - r - 1); x1 = Math.max(x1, cx + r + 1); y1 = Math.max(y1, cy + r + 1); }
   if (flat !== null) y1 = Math.min(y1, flat);
   x0 = Math.floor(x0); y0 = Math.floor(y0); x1 = Math.ceil(x1); y1 = Math.ceil(y1);
-  const w = x1 - x0 + 1, h = y1 - y0 + 1, t = new Uint8Array(w * h);
+  const w = x1 - x0 + 1, h = y1 - y0 + 1;
+  // the pixels are worked out the first time the cloud is drawn on screen (most start out of view on the 960 px strip);
+  // the shape is fixed by now, so when that happens changes nothing
+  return { ox: x0, oy: y0, w, h, get t() { const t = raster(circles, flat, sc, x0, y0, x1, y1, w, h); Object.defineProperty(this, 't', { value: t }); return t; } };
+}
+function raster(circles, flat, sc, x0, y0, x1, y1, w, h) {
+  const t = new Uint8Array(w * h);
   // sc > 0 gives each puff a wavy (lumpy) edge instead of a clean circle
   const owner = (x, y) => {
     if (flat !== null && y > flat) return -1;
@@ -31,7 +37,7 @@ function puffs(circles, flat = null, sc = 0) {
     if (tone === 1) { const l = -(nx * .5 + ny * .9) + dith(x, y) * .1; tone = l > .6 ? 3 : l < -.15 ? 2 : 1; }
     t[(y - y0) * w + (x - x0)] = tone;
   }
-  return { ox: x0, oy: y0, w, h, t };
+  return t;
 }
 const CLOUDS = {
   cumulus(cr, s) {
@@ -44,13 +50,13 @@ const CLOUDS = {
       domes.push([cx, cy, r]);
       for (let k = 0; k < 2 + Math.floor(cr() * 2); k++) { const a = -Math.PI / 2 + (cr() - .5) * 1.9; tufts.push([cx + Math.cos(a) * r * .72, cy + Math.sin(a) * r * .72, r * (.32 + cr() * .22)]); }
     }
-    return { ...puffs([...tufts, ...domes, ...base], 0, .11), a: .95 };
+    return Object.assign(puffs([...tufts, ...domes, ...base], 0, .11), { a: .95 });
   },
   stratus(cr, s) {
     // a long, low, lumpy sheet
     const len = s * (80 + cr() * 70), c = []; let x = 0;
     while (x < len) { const r = s * (2.5 + cr() * 2.5) * (.55 + .45 * Math.sin(Math.PI * x / len)); c.push([x + r, -r * .35, r]); x += r * (1 + cr() * .6); }
-    return { ...puffs(c, 0), a: .85 };
+    return Object.assign(puffs(c, 0), { a: .85 });
   },
   cirrus(cr, s) {
     const w = Math.round((55 + cr() * 60) * s), h = 26, t = new Uint8Array(w * h);

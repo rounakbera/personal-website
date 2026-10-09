@@ -24,6 +24,8 @@ export class Layer {
   }
   // true when the columns xa..xb lie wholly outside the drawn range
   off(xa, xb) { return xb < this.x0 || xa > this.x1; }
+  // the columns [a, b) worth sweeping: the drawn range plus a small margin, or all of them
+  cols() { return [Math.max(0, Math.floor(this.x0) - 2), Math.min(this.w, Math.ceil(this.x1) + 3)]; }
   put(x, y, mat, tone, part, obj) {
     x = Math.round(x); y = Math.round(y);
     const m = MID[mat] ?? mid(mat);
@@ -41,7 +43,7 @@ export class Layer {
   }
   finalize() {
     const t = this.tone.slice(), { mat, obj, part, tone, thin, under } = this;
-    const W = this.w, H = this.h, xa = Math.max(0, Math.floor(this.x0) - 2), xb = Math.min(W, Math.ceil(this.x1) + 3);
+    const W = this.w, H = this.h, [xa, xb] = this.cols();
     for (let y = 0; y < H; y++) for (let x = xa; x < xb; x++) {
       const i = y * W + x; if (!mat[i]) continue;
       const o = obj[i];

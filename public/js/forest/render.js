@@ -136,10 +136,12 @@ export function draw(canvas, scene, prep, secs) {
     // wrap around the world strip, then window it; y sits at a fixed height above the land
     const span = WW + c.w + 20, cx = ((c.x + c.w + 10 + Math.floor(secs / c.step)) % span + span) % span - c.w - 10;
     const cxs = Math.round(cx) - ox, oy = c.y + YO + c.oy;
+    if (cxs >= W || cxs + c.w <= 0 || oy >= H || oy + c.h <= 0) continue;   // out of view (its pixels may not exist yet)
+    const t = c.t;
     for (let y = 0; y < c.h; y++) {
       const yy = oy + y; if (yy < 0 || yy >= H) continue;
       for (let x = 0; x < c.w; x++) {
-        const tn = c.t[y * c.w + x], xx = cxs + x; if (!tn || xx < 0 || xx >= W) continue;
+        const tn = t[y * c.w + x], xx = cxs + x; if (!tn || xx < 0 || xx >= W) continue;
         const a = c.a * ALPHA[tn] * (tn > 3 ? .6 + .4 * p.L + .3 * p.Wm : 1), col = COL[tn], i = (yy * W + xx) * 4;
         d[i] = lerp(d[i], col[0], a); d[i + 1] = lerp(d[i + 1], col[1], a); d[i + 2] = lerp(d[i + 2], col[2], a);
       }

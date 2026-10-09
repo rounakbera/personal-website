@@ -30,9 +30,19 @@ const leafOf = (r) => ['oak', 'oak2', 'oak3'][Math.floor(r() * 3)];
 // clip = [x0, x1]: draw only what touches those columns (the slow trees and clumps skip the rest). The layout,
 // ids and textures are unchanged, so a clipped world matches the full one inside the clip; main.js builds the
 // visible middle first for a fast first frame and the whole strip once the page is idle
+// Returns the world already flattened: each layer is merged as soon as it's drawn, and its buffers are cleared and
+// reused for the next, so the ten layers don't each need their own full-strip buffers
 export function buildWorld(seed, clip = null) {
   resetIds();
-  const r = rng(seed), out = [], pick = () => KIND_LIST[Math.floor(r() * KIND_LIST.length)], NL = (atm, ol = true) => { const L = new Layer(atm, ol, WW, WH); if (clip) [L.x0, L.x1] = clip; return L; };
+  const flat = blank(WW * WH), out = { push: (L) => merge(flat, L) };
+  let L0 = null;
+  const NL = (atm, ol = true) => {
+    if (!L0) L0 = new Layer(atm, ol, WW, WH);
+    else { L0.atm = atm; L0.outline = ol; L0.mat.fill(0); L0.thin.clear(); L0.under.clear(); }
+    if (clip) [L0.x0, L0.x1] = clip;
+    return L0;
+  };
+  const r = rng(seed), pick = () => KIND_LIST[Math.floor(r() * KIND_LIST.length)];
   const m = NL(.55, false); ridge(m, 100, 30, 1.2); out.push(m);
   const f = NL(.4, false); treeline(f, 110, r, 8, 14, 3, 6); out.push(f);
   const mg = NL(.2, false); ground(mg, 119, 2, 'grass', 2, r, false, -WW / 2); out.push(mg);
@@ -69,7 +79,7 @@ export function buildWorld(seed, clip = null) {
     }
     out.push(L);
   });
-  return out;
+  return flat;
 }
 // The front's objects only ever slide by whole pixels while the screen size changes but the settled view (SV) doesn't
 // (the load-in zoom): the ground cover with the world's window, the framing trees with the screen edges. So each
@@ -130,10 +140,8 @@ export function buildFront(seed, plan) {
 }
 // winter: snow settles on every upward-facing surface of conifers, rocks, hills and branches, just under the outline
 const BARK = mid('bark'), SNOW = mid('snow');
-// column range a layer was drawn over (all of it unless the world was built clipped)
-const span = (L) => [Math.max(0, Math.floor(L.x0) - 2), Math.min(L.w, Math.ceil(L.x1) + 3)];
 function snowify(L) {
-  const w = L.w, h = L.h, [xa, xb] = span(L);
+  const w = L.w, h = L.h, [xa, xb] = L.cols();
   for (let y = 0; y < h; y++) for (let x = xa; x < xb; x++) {
     const i = y * w + x, m = MAT[L.mat[i]]; if (!SNOWY.has(m)) continue;
     const o = L.obj[i];
@@ -149,12 +157,14 @@ function snowify(L) {
   }
 }
 // keep only the top-most material per pixel (with its layer's haze id); the layer buffers are dropped
+const blank = (n) => ({ mat: new Uint8Array(n), tone: new Uint8Array(n), haze: new Uint8Array(n) });
+function merge(flat, L) {
+  L.finalize(); if (SEASON === 'winter') snowify(L);
+  const { mat, tone, haze } = flat, w = L.w, [xa, xb] = L.cols(), hz = hid(L.atm);
+  for (let y = 0; y < L.h; y++) for (let i = y * w + xa, e = y * w + xb; i < e; i++) if (L.mat[i]) { mat[i] = L.mat[i]; tone[i] = L.tone[i]; haze[i] = hz; }
+}
 export function flatten(layers, w, h) {
-  const n = w * h, mat = new Uint8Array(n), tone = new Uint8Array(n), haze = new Uint8Array(n);
-  for (const L of layers) {
-    L.finalize(); if (SEASON === 'winter') snowify(L);
-    const [xa, xb] = span(L), hz = hid(L.atm);
-    for (let y = 0; y < h; y++) for (let i = y * w + xa, e = y * w + xb; i < e; i++) if (L.mat[i]) { mat[i] = L.mat[i]; tone[i] = L.tone[i]; haze[i] = hz; }
-  }
-  return { mat, tone, haze };
+  const flat = blank(w * h);
+  for (const L of layers) merge(flat, L);
+  return flat;
 }

@@ -393,7 +393,8 @@ export function flowers(L, r, x0, x1, yAt, n, mat = 'flower') {
 export function ground(L, y0, amp, mat, seed, r, tufts = true, ox = 0) {
   const obj = ++OBJ; L.thin.add(obj); const part = ++PART;
   const top = (x) => Math.round(y0 + Math.sin((x + ox) * .035 + seed) * amp + Math.sin((x + ox) * .11 + seed * 2) * amp * .4);
-  for (let x = 0; x < L.w; x++) {
+  const [xa, xb] = L.cols();   // (a clipped world only needs its drawn columns)
+  for (let x = xa; x < xb; x++) {
     const t0 = top(x), wx = x + ox;
     for (let y = t0; y < L.h; y++) {
       const d = y - t0;
@@ -407,11 +408,16 @@ export function ground(L, y0, amp, mat, seed, r, tufts = true, ox = 0) {
   return top;
 }
 export function ridge(L, y0, amp, seed) {
-  const obj = ++OBJ, part = ++PART; let prev = null;
-  for (let x = 0; x < L.w; x++) {
+  const obj = ++OBJ, part = ++PART;
+  const top = (x) => {
     const u = (x - L.w / 2) / 320 * Math.PI * 2;
     const n = Math.sin(u * 1.3 + seed) * .5 + Math.sin(u * 3.1 + seed * 1.7) * .3 + Math.sin(u * 7 + seed * 2.3) * .12;
-    const y = Math.round(y0 - (n * .5 + .5) * amp);
+    return Math.round(y0 - (n * .5 + .5) * amp);
+  };
+  // (a clipped world only needs its drawn columns)
+  const [xa, xb] = L.cols(); let prev = xa > 0 ? top(xa - 1) : null;
+  for (let x = xa; x < xb; x++) {
+    const y = top(x);
     for (let yy = y; yy < L.h; yy++) L.put(x, yy, 'mount', prev !== null && y <= prev && yy - y < 5 ? 4 : 3, part, obj);
     prev = y;
   }
