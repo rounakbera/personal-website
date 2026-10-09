@@ -7,8 +7,8 @@ import { prepare, draw, makeStars, fitStars } from './render.js';
 import { initTimePanel } from './timepanel.js';
 
 const canvas = document.getElementById('world');
-// while the load-in zoom runs, the three framing trees are drawn on overlays of their own, laid out like the canvas
-// and shifted by CSS by a fraction of a scene pixel, so they slide smoothly against the world (see buildFront)
+// while the load-in zoom runs, the three framing trees are drawn on overlays of their own, each the size of its tree
+// and placed by CSS at a fractional scene pixel, so they slide smoothly against the world (see buildFront)
 const overlays = [0, 1, 2].map(() => { const c = document.createElement('canvas'); c.className = 'trees'; c.setAttribute('aria-hidden', 'true'); c.style.display = 'none'; return c; });
 canvas.after(...overlays);
 const stacked = matchMedia('(max-width: 660px)');
@@ -99,10 +99,10 @@ function fit(force = false) {
   else if (scene.clip && (WW >> 1) - (w >> 1) < scene.clip[0] + 2) ensureWorld(false);
   setView({ ...v, STACK: stacked.matches, SV: zoom > 1 ? view(S0, vw, vh, full) : v });
   canvas.width = w; canvas.height = h;
-  if (BLEED) for (const c of [canvas, ...overlays]) { c.style.top = `${OFF - top * S}px`; c.style.height = `${h * S}px`; }
+  if (BLEED) { canvas.style.top = `${OFF - top * S}px`; canvas.style.height = `${h * S}px`; for (const c of overlays) c.style.top = canvas.style.top; }
   const f = buildFront(seed, plan);
   scene.front = flatten(f.layers, W, H);
-  scene.trees = f.trees.map(({ L, frac }) => ({ flat: flatten([L], W, H), frac }));
+  scene.trees = f.trees.map(({ L, x, y }) => ({ flat: flatten([L], L.w, L.h), w: L.w, h: L.h, x, y }));
   fitStars();
   minute = -1;
   return true;
@@ -112,15 +112,16 @@ function frame() {
   if (fresh) { minute = mk; prep = prepare(scene, t); paintOverlays(); }   // sky, sun and moon move once a minute
   draw(canvas, scene, prep, secs());                                       // clouds and stars on their own half-second beats
 }
-// the framing trees' overlays (only while zooming): their pixels, shifted by the leftover fraction of a scene pixel
-// (the canvas is scaled to cover the screen, so one scene pixel is s screen pixels)
+// the framing trees' overlays (only while zooming): each tree's pixels, placed on the canvas's pixel grid at its
+// fractional position. The canvas covers its box (object-fit: cover, anchored bottom centre), so one scene pixel is
+// s screen pixels and the picture's top left sits at (bx, by) in the box
 function paintOverlays() {
-  const s = Math.max(canvas.clientWidth / W, canvas.clientHeight / H);
+  const cw = canvas.clientWidth, ch = canvas.clientHeight, s = Math.max(cw / W, ch / H), bx = (cw - W * s) / 2, by = ch - H * s;
   overlays.forEach((c, k) => {
     const t = scene.trees[k]; if (!t) { c.style.display = 'none'; return; }
-    if (c.width !== W) c.width = W; if (c.height !== H) c.height = H;
-    c.getContext('2d').putImageData(new ImageData(new Uint8ClampedArray(prep.trees[k].buffer), W, H), 0, 0);
-    c.style.transform = `translateX(${t.frac * s}px)`; c.style.display = '';
+    c.width = t.w; c.height = t.h;
+    c.getContext('2d').putImageData(new ImageData(new Uint8ClampedArray(prep.trees[k].buffer), t.w, t.h), 0, 0);
+    Object.assign(c.style, { width: `${t.w * s}px`, height: `${t.h * s}px`, transform: `translate(${bx + t.x * s}px, ${by + t.y * s}px)`, display: '' });
   });
 }
 // rebuild everything for the current seed and season (the same seed gives the same layout in every season)

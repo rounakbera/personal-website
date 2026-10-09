@@ -92,7 +92,7 @@ export function prepare(scene, t) {
   }
   // the framing trees on their own while the load-in zoom runs (scene.trees), each for its overlay canvas
   const trees = (scene.trees || []).map(({ flat }) => {
-    const a = new Uint32Array(W * H);
+    const a = new Uint32Array(flat.mat.length);
     for (let i = 0; i < a.length; i++) if (flat.mat[i]) { const key = (flat.haze[i] << 11) | (flat.mat[i] << 3) | flat.tone[i]; a[i] = LUT[key] || colour(key); }
     return a;
   });

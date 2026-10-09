@@ -90,25 +90,30 @@ export function buildWorld(seed, clip = null) {
 // the ones left holding its objects' ids (ids only grow), found in the box it drew in; one that ran off its layer's
 // edges replays only where the recording covers.
 const FRONT = new Map(); let frontKey = '';
-function memo(L, key, sx, sy, draw) {
-  const [o0, p0] = ids(); key += `|${o0}|${p0}`;
+function memo(L, key, sx, sy, draw, pad = 0) {
+  const [o0, p0] = ids(); key += `|${o0}|${p0}|${pad}`;
   let e = FRONT.get(key);
   if (e && e.cut) {
-    // the part of the box the current layer shows must lie inside the part the recording's layer showed
-    const b = e.box, x0 = Math.max(b[0], -sx), y0 = Math.max(b[1], -sy), x1 = Math.min(b[2], L.w - 1 - sx), y1 = Math.min(b[3], L.h - 1 - sy);
-    if (x0 <= x1 && y0 <= y1 && (x0 < Math.max(b[0], 0) || y0 < Math.max(b[1], 0) || x1 > Math.min(b[2], e.w - 1) || y1 > Math.min(b[3], e.h - 1))) e = null;
+    // the part of the box the screen shows must lie inside the part the recording's layer showed
+    const b = e.box, x0 = Math.max(b[0], -sx), y0 = Math.max(b[1], -sy), x1 = Math.min(b[2], W - 1 - sx), y1 = Math.min(b[3], H - 1 - sy);
+    if (x0 <= x1 && y0 <= y1 && (x0 < Math.max(b[0], -pad) || y0 < Math.max(b[1], 0) || x1 > Math.min(b[2], e.w - 1) || y1 > Math.min(b[3], e.h - 1))) e = null;
   }
   if (!e) {
-    const Ls = new Layer(0, true, SV.W, SV.H), r = Ls.rec = { x0: Infinity, y0: Infinity, x1: -Infinity, y1: -Infinity, cut: false };
-    draw(Ls);
+    // pad: columns recorded beyond each side of the settled view (drawn shifted by pad, then shifted back)
+    const Ls = new Layer(0, true, SV.W + 2 * pad, SV.H), r = Ls.rec = { x0: Infinity, y0: Infinity, x1: -Infinity, y1: -Infinity, cut: false };
+    draw(Ls, pad);
     Ls.rec = null;
     const [o1] = ids(), { w, mat, tone, part, obj } = Ls, out = [];
     for (let y = Math.max(0, r.y0); y <= Math.min(Ls.h - 1, r.y1); y++) for (let x = Math.max(0, r.x0), i = y * w + x; x <= Math.min(w - 1, r.x1); x++, i++) {
-      const o = obj[i]; if (mat[i] && o > o0 && o <= o1) out.push(x, y, mat[i], tone[i], part[i], o);
+      const o = obj[i]; if (mat[i] && o > o0 && o <= o1) out.push(x - pad, y, mat[i], tone[i], part[i], o);
     }
-    FRONT.set(key, e = { rec: Int32Array.from(out), box: [r.x0, r.y0, r.x1, r.y1], cut: r.cut, w: Ls.w, h: Ls.h, ids: ids(), thin: [...Ls.thin], under: [...Ls.under] });
+    FRONT.set(key, e = { rec: Int32Array.from(out), box: [r.x0 - pad, r.y0, r.x1 - pad, r.y1], cut: r.cut, w: SV.W + pad, h: Ls.h, ids: ids(), thin: [...Ls.thin], under: [...Ls.under] });
   }
-  L.replay(e.rec, sx, sy); for (const t of e.thin) L.thin.add(t); for (const u of e.under) L.under.add(u); setIds(...e.ids);
+  // L may be a function of the box the group lands in (in this view), giving the layer for it and that layer's origin
+  let ox = 0, oy = 0;
+  if (typeof L === 'function') { const b = e.box; [L, ox, oy] = L(b[0] + sx, b[1] + sy, b[2] + sx, b[3] + sy); }
+  L.replay(e.rec, sx - ox, sy - oy); for (const t of e.thin) L.thin.add(t); for (const u of e.under) L.under.add(u); setIds(...e.ids);
+  return [L, ox, oy];
 }
 // the load-in zoom as a dolly: the camera pulls back and each framing tree stands at its own depth, given as nearness
 // to the camera relative to the world (1 = as far as the world, more = nearer). Nearer trees sweep in from further out
@@ -152,13 +157,21 @@ export function buildFront(seed, plan) {
   // screen, or by m / z in scene pixels (n = 1 moves with the world). Settled, z = m = 1 and the shift is 0.
   // Sliding against the world in whole scene pixels would step (a block is several screen pixels on desktop, and the
   // slide is slow near the end), so while zooming each tree goes on a layer of its own, drawn on an overlay canvas
-  // that CSS shifts by the leftover fraction of a pixel (frac); settled, the trees go in with the rest as usual.
+  // placed by CSS at its exact, fractional position (x, y: its top left in scene pixels); settled, the trees go in
+  // with the rest as usual.
   const z = PX / SV.PX, zooming = z !== 1, trees = [];
   const tree = (name, x, base, draw) => {
     const xs = x(set), sink = set.sink(set.Y(base)), m = 1 / (1 - NEAR[name] * (1 - 1 / z));
-    const dx = (W >> 1) + m / z * (xs - (SV.W >> 1)) - xs, sx = Math.round(dx), L = zooming ? new Layer(0) : ft;
-    memo(L, `${name}|${xs}|${SV.YO}|${k}|${sink}`, sx, sy, (L) => draw(L, xs, set.Y(base), sink));
-    if (zooming) trees.push({ L, frac: dx - sx });
+    const dx = (W >> 1) + m / z * (xs - (SV.W >> 1)) - xs, sx = Math.round(dx), key = `${name}|${xs}|${SV.YO}|${k}|${sink}`;
+    if (!zooming) { memo(ft, key, sx, sy, (L) => draw(L, xs, set.Y(base), sink)); return; }
+    // while zooming: a layer just the size of the tree's box on screen, plus a column past each screen edge (and
+    // recorded 2 columns past the settled view's), so the fractional shift never shows a cut edge
+    const box = (x0, y0, x1, y1) => {
+      x0 = Math.max(-1, x0); x1 = Math.min(W, x1); y0 = Math.max(0, y0); y1 = Math.min(H - 1, y1);
+      return [new Layer(0, true, Math.max(1, x1 - x0 + 1), Math.max(1, y1 - y0 + 1)), x0, y0];
+    };
+    const [L, ox, oy] = memo(box, key, sx, sy, (L, pad) => draw(L, xs + pad, set.Y(base), sink), 2);
+    trees.push({ L, x: ox + dx - sx, y: oy });
   };
   // the back conifer goes in before the oak, so the oak covers it should they meet (while zooming on narrow screens)
   tree('small', (g) => g.RX(264 + plan.pairDX), 178, (L, x, y, sink) => { at(x, y, 5000); conifer(L, x, y, 100 * ks, plan.small, rng(seed + 5), { lean: 0, tierVar: .08, div: plan.smallDiv, sink }); });
