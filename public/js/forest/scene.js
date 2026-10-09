@@ -1,7 +1,7 @@
 // Scene building: a fixed world strip (built once per seed and season) plus a screen-sized front
 // (rebuilt on resize), each flattened to one material per pixel.
 import { rng, hash, clamp } from '../util.js';
-import { W, H, YO, WW, WH, SV, SEASON } from './state.js';
+import { W, H, YO, PX, WW, WH, SV, SEASON } from './state.js';
 import { SNOWY } from './palette.js';
 import { Layer, MAT, mid, hid } from './layer.js';
 import { resetIds, at, clearOrigin, ids, setIds, meadow, KINDS, KIND_LIST, conifer, oak, bush, fern, rock, flowers, ground, groundTop, ridge, treeline } from './draw.js';
@@ -110,8 +110,9 @@ function memo(L, key, sx, sy, draw) {
   }
   L.replay(e.rec, sx, sy); for (const t of e.thin) L.thin.add(t); for (const u of e.under) L.under.add(u); setIds(...e.ids);
 }
-// how much faster the back conifer slides than the rest of the front during the load-in zoom
-const PAR = 1.35;
+// parallax for the back conifer during the load-in zoom: it stands further in from its screen edge by this fraction
+// of its edge distance per unit of extra zoom, so it starts further off and moves faster than the front conifer
+const PAR = .5;
 // the front: foreground ground cover and the framing trees, sized to the screen; cheap enough to rebuild while resizing
 export function buildFront(seed, plan) {
   resetIds(false);
@@ -143,12 +144,13 @@ export function buildFront(seed, plan) {
     if (SEASON !== 'winter') [[84, 10], [150, 8], [206, 9], [244, 11]].forEach(([x, s], i) => { at(MX(x), 0, 3000 + i * 10); fern(L, MX(x), top(MX(x)) + 1, s, SEASON === 'autumn' ? 'autY' : 'oak'); });
     [[168, 5, true], [108, 3, false], [140, 2, false], [236, 6, true], [246, 3, false], [200, 2, false], [56, 4, true]].forEach(([x, sz, moss], i) => { at(MX(x), top(MX(x)), 3500 + i * 10); rock(L, MX(x), top(MX(x)) + 2 + sz * .3, sz, moss); });
   });
-  // each tree is drawn where it stands in the settled view and shifted to where it stands in this one; par scales that
-  // slide, so during the load-in zoom the back conifer of the pair starts further off and moves faster than the front
-  // one, which reads as depth (settled, the shift is 0 whatever par is)
-  const tree = (name, x, base, draw, par = 1) => {
+  // each tree is drawn where it stands in the settled view and shifted to where it stands in this one. par (only for
+  // trees anchored with RX) adds parallax: an extra shift toward the middle, proportional to the tree's distance from
+  // its edge and to the extra zoom (PX / SV.PX − 1), so it's 0 once settled and the same on either side of a flip
+  const tree = (name, x, base, draw, par = 0) => {
     const xs = x(set), sink = set.sink(set.Y(base));
-    memo(ft, `${name}|${xs}|${SV.YO}|${k}|${sink}`, Math.round((x(cur) - xs) * par), sy, (L) => draw(L, xs, set.Y(base), sink));
+    const p = par * (PX / SV.PX - 1) * (plan.flip ? xs : SV.W - xs) * (plan.flip ? 1 : -1);
+    memo(ft, `${name}|${xs}|${SV.YO}|${k}|${sink}`, Math.round(x(cur) - xs + p), sy, (L) => draw(L, xs, set.Y(base), sink));
   };
   tree('oak', (g) => g.LX(34 + plan.oakDX), 186, (L, x, y, sink) => { at(x, y, 4000); oak(L, x, y, 150 * ks, 'oak', rng(seed + 4), { k: 10, R: .38, sym: true, inward: plan.flip ? -1 : 1, sink }); });
   tree('small', (g) => g.RX(264 + plan.pairDX), 178, (L, x, y, sink) => { at(x, y, 5000); conifer(L, x, y, 100 * ks, plan.small, rng(seed + 5), { lean: 0, tierVar: .08, div: plan.smallDiv, sink }); }, PAR);
