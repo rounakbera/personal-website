@@ -3,7 +3,7 @@
 import { rng, hash, clamp } from '../util.js';
 import { W, H, YO, WW, WH, SV, SEASON } from './state.js';
 import { SNOWY } from './palette.js';
-import { Layer, MAT, mid } from './layer.js';
+import { Layer, MAT, mid, hid } from './layer.js';
 import { resetIds, at, clearOrigin, ids, setIds, meadow, KINDS, KIND_LIST, conifer, oak, bush, fern, rock, flowers, ground, ridge, treeline } from './draw.js';
 
 // foreground plan: which side the big oak stands on and which two conifers frame the other side
@@ -148,13 +148,13 @@ function snowify(L) {
     }
   }
 }
-// keep only the top-most material per pixel; the layer buffers are dropped
+// keep only the top-most material per pixel (with its layer's haze id); the layer buffers are dropped
 export function flatten(layers, w, h) {
-  const n = w * h, mat = new Uint8Array(n), tone = new Uint8Array(n), atm = new Float32Array(n);
+  const n = w * h, mat = new Uint8Array(n), tone = new Uint8Array(n), haze = new Uint8Array(n);
   for (const L of layers) {
     L.finalize(); if (SEASON === 'winter') snowify(L);
-    const [xa, xb] = span(L);
-    for (let y = 0; y < h; y++) for (let i = y * w + xa, e = y * w + xb; i < e; i++) if (L.mat[i]) { mat[i] = L.mat[i]; tone[i] = L.tone[i]; atm[i] = L.atm; }
+    const [xa, xb] = span(L), hz = hid(L.atm);
+    for (let y = 0; y < h; y++) for (let i = y * w + xa, e = y * w + xb; i < e; i++) if (L.mat[i]) { mat[i] = L.mat[i]; tone[i] = L.tone[i]; haze[i] = hz; }
   }
-  return { mat, tone, atm };
+  return { mat, tone, haze };
 }

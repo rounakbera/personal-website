@@ -5,6 +5,10 @@ import { W, H } from './state.js';
 // materials are stored as small ids (0 = empty) so the buffers can be typed arrays; MAT[id] gives the name back
 export const MAT = [null], MID = Object.create(null);
 export const mid = (name) => MID[name] ?? (MAT.push(name), MID[name] = MAT.length - 1);
+// the same for each layer's haze (distance to the horizon colour, 0–1): HAZE[id] gives it back, at float32
+// precision (as the per-pixel Float32Array it replaced held it, so the graded colours stay the same)
+export const HAZE = [], HID = new Map();
+export const hid = (atm) => { const k = Math.round(atm * 1000); if (!HID.has(k)) { HAZE.push(Math.fround(atm)); HID.set(k, HAZE.length - 1); } return HID.get(k); };
 
 export class Layer {
   constructor(atm, outline = true, w = W, h = H) {

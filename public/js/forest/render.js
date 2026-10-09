@@ -2,7 +2,7 @@
 import { rng, hash, lerp, mix, clamp, BAYER } from '../util.js';
 import { W, H, YO, PX, SV, SKYB, STACK, VT, WW, WH, SEASON } from './state.js';
 import { PAL, REMAP, palette } from './palette.js';
-import { MAT } from './layer.js';
+import { MAT, HAZE } from './layer.js';
 
 function grade(c, p, atm) {
   let n = mix(c, [18, 24, 58], .74);
@@ -15,16 +15,20 @@ function grade(c, p, atm) {
 const grey = (c, k) => { const l = c[0] * .3 + c[1] * .59 + c[2] * .11; return mix(c, [l, l, l], k); };
 const tint = (c) => SEASON === 'winter' ? mix(grey(c, .32), [150, 170, 200], .06) : SEASON === 'autumn' ? mix(c, [240, 160, 90], .07) : SEASON === 'spring' ? grey(c, .08) : c;
 const skyTint = (c, v) => SEASON === 'winter' ? mix(grey(c, .5), [205, 212, 225], .14) : SEASON === 'spring' ? mix(grey(c, .42), [175, 180, 190], .1 + .12 * v) : SEASON === 'autumn' ? mix(c, [240, 170, 110], .14 * v * v) : c;
+let LUT = new Uint32Array(0), gradeKey = '';
 // the static parts of a frame for one time of day: sky (with sun, moon, stars) and the land layers on top
 export function prepare(scene, t) {
   const p = palette(t), d = new Uint8ClampedArray(W * H * 4), Q = 14;
+  // one colour per row, dithered over a 4-px pattern: work out the row's four pixels, then repeat them
+  const d32 = new Uint32Array(d.buffer), row = new Uint8ClampedArray(16), row32 = new Uint32Array(row.buffer);
   for (let y = 0; y < H; y++) {
     const v = clamp(y / ((YO + 180) * .7), 0, 1), col = skyTint(v < .55 ? mix(p.top, p.mid, v / .55) : mix(p.mid, p.hor, (v - .55) / .45), v);
-    for (let x = 0; x < W; x++) {
-      const th = (BAYER[(y & 3) * 4 + (x & 3)] / 16 - .5) * Q, i = (y * W + x) * 4;
-      for (let k = 0; k < 3; k++) d[i + k] = clamp(Math.round((col[k] + th) / Q) * Q, 0, 255);
-      d[i + 3] = 255;
+    for (let x = 0; x < 4; x++) {
+      const th = (BAYER[(y & 3) * 4 + x] / 16 - .5) * Q;
+      for (let k = 0; k < 3; k++) row[x * 4 + k] = clamp(Math.round((col[k] + th) / Q) * Q, 0, 255);
+      row[x * 4 + 3] = 255;
     }
+    for (let x = 0, i = y * W; x < W; x++) d32[i + x] = row32[x & 3];
   }
   const plot = (x, y, c, a = 1) => { x |= 0; y |= 0; if (x < 0 || y < 0 || x >= W || y >= H) return; const i = (y * W + x) * 4; d[i] = lerp(d[i], c[0], a); d[i + 1] = lerp(d[i + 1], c[1], a); d[i + 2] = lerp(d[i + 2], c[2], a); };
   const dsk = (cx, cy, r, c, a) => { for (let dy = -r; dy <= r; dy++) { const h = Math.floor(Math.sqrt(Math.max(0, r * r - dy * dy + r * .8))); for (let dx = -h; dx <= h; dx++) plot(cx + dx, cy + dy, c, a); } };
@@ -66,19 +70,25 @@ export function prepare(scene, t) {
     }
   }
   // layers go into their own buffer so clouds can move between sky and land
-  const sky = d, fg = new Uint8ClampedArray(W * H * 4), cache = new Map();
+  const sky = d, fg = new Uint8ClampedArray(W * H * 4), fg32 = new Uint32Array(fg.buffer);
+  // graded colours, packed as pixels, by haze id, material id and tone; kept while the time and season stay the
+  // same, so the load-in zoom's frames don't grade every colour again (0 = not worked out yet: land is opaque)
+  if (gradeKey !== t + SEASON || LUT.length < HAZE.length * 2048) { gradeKey = t + SEASON; LUT = new Uint32Array(Math.max(16, HAZE.length) * 2048); }
+  const px = new Uint8ClampedArray(4), px32 = new Uint32Array(px.buffer);
+  const colour = (key) => {
+    const hz = key >> 11, m = (key >> 3) & 255, n = REMAP[SEASON][MAT[m]] || MAT[m], c = grade(PAL[n][key & 7], p, HAZE[hz]);
+    px[0] = c[0]; px[1] = c[1]; px[2] = c[2]; px[3] = 255;
+    return LUT[key] = px32[0];
+  };
   const { world, front } = scene, ox = (WW >> 1) - (W >> 1);
   for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
-    const i = y * W + x; let m = front.mat[i], tn, at;
-    if (m) { tn = front.tone[i]; at = front.atm[i]; }
+    const i = y * W + x; let key;
+    if (front.mat[i]) key = (front.haze[i] << 11) | (front.mat[i] << 3) | front.tone[i];
     else {
       const wy = y - YO, wx = x + ox; if (wy < 0 || wy >= WH || wx < 0 || wx >= WW) continue;
-      const j = wy * WW + wx; m = world.mat[j]; if (!m) continue; tn = world.tone[j]; at = world.atm[j];
+      const j = wy * WW + wx; if (!world.mat[j]) continue; key = (world.haze[j] << 11) | (world.mat[j] << 3) | world.tone[j];
     }
-    // graded colours are cached per material id, tone and haze (a numeric key: no string building per pixel)
-    const key = (Math.round(at * 1000) * 256 + m) * 8 + tn;
-    let c = cache.get(key); if (!c) { const n = REMAP[SEASON][MAT[m]] || MAT[m]; c = grade(PAL[n][tn], p, at); cache.set(key, c); }
-    fg[i * 4] = c[0]; fg[i * 4 + 1] = c[1]; fg[i * 4 + 2] = c[2]; fg[i * 4 + 3] = 255;
+    fg32[i] = LUT[key] || colour(key);
   }
   let base = mix([70, 74, 120], [240, 244, 250], p.L), shade = mix([46, 48, 90], mix(p.mid, [255, 255, 255], .32), p.L);
   base = mix(base, [255, 196, 150], p.Wm * .6); shade = mix(shade, [200, 100, 120], p.Wm * .5);
@@ -86,7 +96,7 @@ export function prepare(scene, t) {
   if (SEASON === 'spring') { base = mix(base, [150, 156, 170], .35 * p.L); shade = mix(shade, [96, 102, 120], .45 * p.L); }
   if (SEASON === 'winter') { base = grey(base, .4); shade = grey(shade, .4); }
   const hi = mix(base, [255, 255, 255], .15 + .5 * p.L), wisp = mix(mix(hi, p.top, .15), [255, 170, 150], p.Wm * .7);
-  return { sky, fg, p, sa, COL: [null, base, shade, hi, wisp, wisp] };
+  return { sky, fg, fg32, p, sa, COL: [null, base, shade, hi, wisp, wisp] };
 }
 const ALPHA = [0, 1, 1, 1, .6, .32];
 // each star twinkles on its own cycle: a slow 1.5–2.5 s swell and fade, then a quiet gap of 8–80 s (skewed long)
@@ -99,8 +109,11 @@ export function makeStars() {
     return { x: r() * WW | 0, d: r() * 420 | 0, b: .3 + r() * .7, on, cycle: gap + on, phase: hash(i, 3, 51) * (gap + on) };
   });
 }
+let img = null;
 export function draw(canvas, scene, prep, secs) {
-  const g = canvas.getContext('2d'), img = g.createImageData(W, H), d = img.data, { p, COL, fg, sa } = prep;
+  const g = canvas.getContext('2d'), { p, COL, sa } = prep;
+  if (!img || img.width !== W || img.height !== H) img = g.createImageData(W, H);
+  const d = img.data;
   d.set(prep.sky);
   const blend = (x, y, c, a) => { if (x < 0 || y < 0 || x >= W || y >= H) return; const i = (y * W + x) * 4; d[i] = lerp(d[i], c[0], a); d[i + 1] = lerp(d[i + 1], c[1], a); d[i + 2] = lerp(d[i + 2], c[2], a); };
   // stars: flare on their own cycles, capped so no more than 5% are lit at once
@@ -108,16 +121,16 @@ export function draw(canvas, scene, prep, secs) {
   if (sa > .02) {
     const ts = Math.floor(secs * 2) / 2, star = [255, 248, 224];
     let lit = 0;
-    STARS.forEach((s0) => {
-      const s = { ...s0, x: s0.x - ox, y: YO + 108 - s0.d }; if (s.x < 0 || s.x >= W || s.y < 0) return;
+    for (const s of STARS) {
+      const x = s.x - ox, y = YO + 108 - s.d; if (x < 0 || x >= W || y < 0) continue;
       const into = (ts + s.phase) % s.cycle;
       if (lit < MAX_LIT && into < s.on) {
         // brightness rises then falls across the twinkle (half-second frames: e.g. dim, bright, dim)
         lit++; const e = Math.sin(Math.PI * (into + .25) / s.on), a = lerp(sa * s.b, Math.min(1, sa * 1.1 + .15), e);
-        blend(s.x, s.y, star, a);
-        if (e > .7) for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) blend(s.x + dx, s.y + dy, star, a * .45 * e);
-      } else blend(s.x, s.y, star, sa * s.b);
-    });
+        blend(x, y, star, a);
+        if (e > .7) for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) blend(x + dx, y + dy, star, a * .45 * e);
+      } else blend(x, y, star, sa * s.b);
+    }
   }
   for (const c of scene.clouds || []) {
     // wrap around the world strip, then window it; y sits at a fixed height above the land
@@ -132,7 +145,9 @@ export function draw(canvas, scene, prep, secs) {
       }
     }
   }
-  for (let i = 3; i < fg.length; i += 4) if (fg[i]) { d[i - 3] = fg[i - 3]; d[i - 2] = fg[i - 2]; d[i - 1] = fg[i - 1]; }
+  // the land on top: every land pixel is opaque, every other one fully clear
+  const d32 = new Uint32Array(d.buffer), f32 = prep.fg32;
+  for (let i = 0; i < f32.length; i++) if (f32[i]) d32[i] = f32[i];
   g.putImageData(img, 0, 0);
 }
 // at most ~5% of the stars on screen may twinkle at once; recomputed when the screen size changes
