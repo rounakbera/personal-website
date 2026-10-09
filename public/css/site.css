@@ -19,8 +19,9 @@ body { background: var(--pre, var(--night)); color: var(--ink); height: 100dvh; 
 html.bleed { height: auto; overflow-y: scroll; }
 html.bleed body { height: auto; min-height: calc(100dvh + var(--off)); overflow: visible; }
 html.bleed .stage { height: 100dvh; margin-top: var(--off); }
-html.bleed #world { position: absolute; }
+html.bleed #world, html.bleed .trees { position: absolute; }
 #world { position: fixed; top: 0; left: 0; width: 100%; height: 100%; height: 100lvh; object-fit: cover; object-position: 50% 100%; image-rendering: pixelated; display: block; }
+.trees { position: fixed; top: 0; left: 0; transform-origin: 0 0; image-rendering: pixelated; pointer-events: none; display: block; }
 /* the forest is drawn edge to edge (viewport-fit=cover), but the card keeps clear of notches and rounded corners */
 /* if the card doesn't fit (e.g. zoomed to 400%) the stage scrolls, so nothing is cut off; margin: auto centres
    the card without pushing it past the top edge as place-items would */

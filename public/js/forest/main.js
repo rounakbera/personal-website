@@ -7,6 +7,10 @@ import { prepare, draw, makeStars, fitStars } from './render.js';
 import { initTimePanel } from './timepanel.js';
 
 const canvas = document.getElementById('world');
+// while the load-in zoom runs, the three framing trees are drawn on overlays of their own, each the size of its tree
+// and placed by CSS at a fractional scene pixel, so they slide smoothly against the world (see buildFront)
+const overlays = [0, 1, 2].map(() => { const c = document.createElement('canvas'); c.className = 'trees'; c.setAttribute('aria-hidden', 'true'); c.style.display = 'none'; return c; });
+canvas.after(...overlays);
 const stacked = matchMedia('(max-width: 660px)');
 
 // a new forest every visit; #seed-104 pins a forest, #winter (or #seed-104-winter) pins a season,
@@ -25,7 +29,7 @@ const t0 = performance.now(), secs = () => (performance.now() - t0) / 1000;
 let plan = planFor(seed);
 // first frame fast: build only the middle of the world strip that this screen shows (plus a margin), then the
 // whole strip when the page is idle, before a resize or a wider screen could need it (see ensureWorld)
-const scene = { world: null, front: null, clouds: buildClouds(seed), full: false, clip: null };
+const scene = { world: null, front: null, trees: [], clouds: buildClouds(seed), full: false, clip: null };
 let fullTimer = 0;
 function buildWorldFor(vw, vh) {
   const half = (Math.round(vw / baseScale(vw, vh)) >> 1) + 10;
@@ -83,28 +87,42 @@ function view(S, vw, vh, full) {
   const skyb = Math.max(top + 14, Math.min(yo + 112, top + Math.floor(document.querySelector('.card-wrap').offsetTop / S) - 6));
   return { W: w, H: top + hv + below, YO: yo, PX: S, SKYB: skyb, VT: top };
 }
-function fit() {
+function fit(force = false) {
   const vw = innerWidth;
   const vh = BLEED ? stage.clientHeight : Math.min(innerHeight, svh.offsetHeight || innerHeight);
   const full = BLEED ? vh : Math.max(vh, innerHeight, lvh.offsetHeight || 0);
   const S0 = baseScale(vw, vh), v = view(S0 * zoom, vw, vh, full), { W: w, H: h, PX: S, VT: top } = v;   // zoom > 1 only during the load-in
-  if (scene.front && w === W && h === H) return false;
+  if (!force && scene.front && w === W && h === H) return false;
   // first fit: build the visible middle of the world; later, a window wider than that (a resize before the idle
   // build) gets the whole strip at once
   if (!scene.world) buildWorldFor(vw, vh);
   else if (scene.clip && (WW >> 1) - (w >> 1) < scene.clip[0] + 2) ensureWorld(false);
   setView({ ...v, STACK: stacked.matches, SV: zoom > 1 ? view(S0, vw, vh, full) : v });
   canvas.width = w; canvas.height = h;
-  if (BLEED) { canvas.style.top = `${OFF - top * S}px`; canvas.style.height = `${h * S}px`; }
-  scene.front = flatten(buildFront(seed, plan), W, H);
+  if (BLEED) { canvas.style.top = `${OFF - top * S}px`; canvas.style.height = `${h * S}px`; for (const c of overlays) c.style.top = canvas.style.top; }
+  const f = buildFront(seed, plan);
+  scene.front = flatten(f.layers, W, H);
+  scene.trees = f.trees.map(({ L, x, y }) => ({ flat: flatten([L], L.w, L.h), w: L.w, h: L.h, x, y }));
   fitStars();
   minute = -1;
   return true;
 }
 function frame() {
   const t = hoursNow(), mk = Math.floor(t * 60), fresh = mk !== minute;
-  if (fresh) { minute = mk; prep = prepare(scene, t); }   // sky, sun and moon move once a minute
-  draw(canvas, scene, prep, secs());                      // clouds and stars on their own half-second beats
+  if (fresh) { minute = mk; prep = prepare(scene, t); paintOverlays(); }   // sky, sun and moon move once a minute
+  draw(canvas, scene, prep, secs());                                       // clouds and stars on their own half-second beats
+}
+// the framing trees' overlays (only while zooming): each tree's pixels, placed on the canvas's pixel grid at its
+// fractional position. The canvas covers its box (object-fit: cover, anchored bottom centre), so one scene pixel is
+// s screen pixels and the picture's top left sits at (bx, by) in the box
+function paintOverlays() {
+  const cw = canvas.clientWidth, ch = canvas.clientHeight, s = Math.max(cw / W, ch / H), bx = (cw - W * s) / 2, by = ch - H * s;
+  overlays.forEach((c, k) => {
+    const t = scene.trees[k]; if (!t) { c.style.display = 'none'; return; }
+    c.width = t.w; c.height = t.h;
+    c.getContext('2d').putImageData(new ImageData(new Uint8ClampedArray(prep.trees[k].buffer), t.w, t.h), 0, 0);
+    Object.assign(c.style, { width: `${t.w * s}px`, height: `${t.h * s}px`, transform: `translate(${bx + t.x * s}px, ${by + t.y * s}px)`, display: '' });
+  });
 }
 // rebuild everything for the current seed and season (the same seed gives the same layout in every season)
 function rebuild() {
@@ -122,7 +140,7 @@ frame();
 if (zoom > 1) requestAnimationFrame(function zstep(now) {
   const q = Math.min(1, (now - zStart) / ZDUR), e = 1 - Math.pow(1 - q, 3);
   zoom = 1 + (Z0 - 1) * (1 - e);
-  if (fit()) frame();
+  if (fit(q === 1)) frame();   // the last frame always rebuilds, putting the trees back in with the rest
   if (q < 1) requestAnimationFrame(zstep);
 });
 // redraw on every animation frame while the window is being resized
