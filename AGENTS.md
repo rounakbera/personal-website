@@ -9,6 +9,7 @@ Rounak Bera's one-page personal website. A procedurally generated pixel-art fore
 - **Static, no frameworks, no build step, no runtime dependencies.** Plain HTML, CSS and vanilla JS. Keep it that way. The only package is Wrangler, a dev dependency used to preview and deploy.
 - No web fonts are downloaded: every bit of text in the card is pre-rasterised into SVG pixel paths.
 - Source lives at `github.com/rounakbera/personal-website`. The site is served on the owner's own domain (DNS on Cloudflare).
+- **Branches (owner):** whenever you push a new branch, open a pull request for it too.
 
 ## Deploying (Cloudflare Workers, static assets)
 
