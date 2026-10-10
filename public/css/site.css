@@ -12,7 +12,7 @@
 /* one fixed screen: no page scroll, no scrollbars, no rubber-band overscroll */
 html, body { height: 100%; margin: 0; overflow: hidden; overscroll-behavior: none; }
 /* --pre: a sky-and-grass gradient for this hour, set by the inline script in index.html, shown until the forest is drawn */
-body { background: var(--pre, var(--night)); color: var(--ink); height: 100dvh; }
+body { background: var(--pre, var(--night)); background-color: var(--pre-c, var(--night)); color: var(--ink); height: 100dvh; }
 /* Safari 26 on iPhone (html.bleed, set by main.js): the page is OFF px taller and parked at that scroll offset so
    Safari draws it behind the status bar and toolbar; the canvas sits in the page's flow and reaches past both
    bars (main.js sets its top and height). Touch and wheel scrolling are blocked in main.js */
