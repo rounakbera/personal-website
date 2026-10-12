@@ -157,9 +157,9 @@ export function draw(canvas, scene, prep, secs) {
   // the land on top: every land pixel is opaque, every other one fully clear
   const d32 = new Uint32Array(d.buffer), f32 = prep.fg32;
   for (let i = 0; i < f32.length; i++) if (f32[i]) d32[i] = f32[i];
-  // summer nights: fireflies over the ground and bushes
-  const { front, world } = scene;
-  drawCritters(blend, (x, y) => { const i = y * W + x; if (front.mat[i]) return MAT[front.mat[i]]; const wy = y - YO, wx = x + ox; return wy >= 0 && wy < WH && wx >= 0 && wx < WW ? MAT[world.mat[wy * WW + wx]] : null; }, scene.critters, p, secs);
+  // summer nights: fireflies over the foreground's ground and bushes
+  const fm = scene.front.mat;
+  drawCritters(blend, (x, y) => MAT[fm[y * W + x]], scene.critters, p, secs);
   g.putImageData(img, 0, 0);
 }
 // at most ~5% of the stars on screen may twinkle at once; recomputed when the screen size changes
