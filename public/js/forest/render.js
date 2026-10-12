@@ -15,6 +15,7 @@ function grade(c, p, atm) {
 const grey = (c, k) => { const l = c[0] * .3 + c[1] * .59 + c[2] * .11; return mix(c, [l, l, l], k); };
 const tint = (c) => SEASON === 'winter' ? mix(grey(c, .32), [150, 170, 200], .06) : SEASON === 'autumn' ? mix(c, [240, 160, 90], .07) : SEASON === 'spring' ? grey(c, .08) : mix(grey(c, -.14), [255, 226, 150], .03);
 const skyTint = (c, v) => SEASON === 'winter' ? mix(grey(c, .5), [205, 212, 225], .14) : SEASON === 'spring' ? mix(grey(c, .42), [175, 180, 190], .1 + .12 * v) : SEASON === 'autumn' ? mix(c, [240, 170, 110], .14 * v * v) : grey(c, -.2 * (1 - v * .6));
+const SUN = { spring: [[255, 246, 214], [255, 164, 104], .85], summer: [[255, 236, 150], [255, 138, 60], 1.45], autumn: [[255, 218, 140], [255, 124, 52], 1.1], winter: [[240, 244, 250], [255, 186, 156], .6] };
 let LUT = new Uint32Array(0), gradeKey = '';
 // the static parts of a frame for one time of day: sky (with sun, moon, stars) and the land layers on top
 export function prepare(scene, t) {
@@ -49,8 +50,10 @@ export function prepare(scene, t) {
   const ye = lerp(y0, skyb - R - 2, tt), ap = vt + Math.max(R + 2, lerp((y0 - vt) * .22, Math.min((y0 - vt) * .22, (ye - vt) * .4), tt));
   const xa = lerp(sw * .12, -3 * R, tt), xb = lerp(sw * .88, sw + 3 * R, tt);
   const arc = (q) => [Math.round(xa + (xb - xa) * q) - dx, Math.round(ye - Math.sin(Math.PI * clamp(q, 0, 1)) * (ye - ap)) - dy];
-  const sp = (t - 6.5) / 12.5;
-  if (sp > -.06 && sp < 1.06) { const [x, y] = arc(sp), low = 1 - Math.sin(Math.PI * clamp(sp, 0, 1)), c = mix([255, 244, 196], [255, 150, 80], Math.pow(low, 1.5)); dsk(x, y, R * 3, c, .12); dsk(x, y, R * 2, c, .2); dsk(x, y, R, c, 1); dsk(x - Math.round(2 * f), y - Math.round(2 * f), Math.round(2 * f), [255, 255, 240], .7); }
+  // the sun by season: its colour high and low in the sky, and how strongly its halo glows (summer's hot and bright,
+  // spring's soft, autumn's golden, winter's pale and weak)
+  const [hiC, loC, glow] = SUN[SEASON], sp = (t - 6.5) / 12.5;
+  if (sp > -.06 && sp < 1.06) { const [x, y] = arc(sp), low = 1 - Math.sin(Math.PI * clamp(sp, 0, 1)), c = mix(hiC, loC, Math.pow(low, 1.5)); dsk(x, y, R * 3, c, .12 * glow); dsk(x, y, R * 2, c, .2 * glow); dsk(x, y, R, c, 1); dsk(x - Math.round(2 * f), y - Math.round(2 * f), Math.round(2 * f), [255, 255, 240], .7); }
   const mp = ((t - 19 + 24) % 24) / 11.5;
   if (mp <= 1.06) {
     // crescent tilted ~40° counterclockwise: the shadow disc sits up-right of the moon, so the lit edge faces down-left

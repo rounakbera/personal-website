@@ -188,6 +188,7 @@ The scripts are native ES modules (`<script type="module">`), so the page has to
 - They keep about a 35 px radius on screen at any scale (shrinking only on short stacked screens, so they fit above the card).
 - On wide screens they rise and set at the horizon, behind the land.
 - On tall screens and in the stacked layout the path blends into one over the card: in from beyond the left edge just above the card's top (`SKYB`), over it, and out past the right edge. Nothing pops in or out mid-sky, and the card never hides them (`STACK` in `state.js` flags the stacked layout).
+- The sun's colour (high and low in the sky) and halo strength follow the season (`SUN` in `render.js`): summer hot yellow with a strong halo (1.45×), spring soft cream (0.85×), autumn golden amber (1.1×), winter pale white with a weak halo (0.6×).
 - The moon is a crescent tilted ~40° counter-clockwise, with a crescent-shaped halo.
 
 **Time of day:** `KEYS` sets the sky colours. Dawn runs ~3.75–9 h and dusk ~16–22.25 h, deliberately long.
