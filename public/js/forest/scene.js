@@ -49,7 +49,7 @@ export function buildWorld(seed, clip = null) {
   // meadow specks across the field: wildflowers in spring, fallen leaves in autumn (own random stream, so the layout never shifts)
   if (SEASON === 'spring' || SEASON === 'autumn') {
     const md = NL(.12, false), cols = { spring: ['flower', 'fy', 'fw', 'fv', 'fb'], autumn: ['autO', 'autY', 'autR'] }[SEASON];
-    meadow(md, rng(seed + 77), SEASON === 'spring' ? 420 : 260, cols, WW, 123, 50);
+    meadow(md, rng(seed + 77), SEASON === 'spring' ? 315 : 260, cols, WW, 123, 50);
     out.push(md);
   }
   const edge = NL(.24);
@@ -148,7 +148,7 @@ export function buildFront(seed, plan) {
   // so they're as thick as on the ground strip above (17 rows); on desktop the canvas ends at SV.YO + 180
   memo(ft, `cover|${LW}|${SV.YO}|${SV.H}`, set.off - cur.off, sy, (L) => {
     if (SEASON !== 'winter') {
-      const [a, b, n] = { spring: [16, 304, 90], summer: [70, 230, 10], autumn: [30, 290, 34] }[SEASON], extra = Math.max(0, SV.H - (SV.YO + 180));
+      const [a, b, n] = { spring: [16, 304, 68], summer: [70, 230, 10], autumn: [30, 290, 34] }[SEASON], extra = Math.max(0, SV.H - (SV.YO + 180));
       at(0, 0, 200); flowers(L, rng(seed + 2), Math.min(MX(a), MX(b)), Math.max(MX(a), MX(b)), top, Math.round(n * (1 + extra / 17)), 'flower', SV.H);
     }
     const br = rng(seed + 3);
