@@ -46,10 +46,10 @@ export function buildWorld(seed, clip = null) {
   const m = NL(.55, false); ridge(m, 100, 30, 1.2); out.push(m);
   const f = NL(.4, false); treeline(f, 110, r, 8, 14, 3, 6); out.push(f);
   const mg = NL(.2, false); ground(mg, 119, 2, 'grass', 2, r, false, -WW / 2); out.push(mg);
-  // meadow specks across the field: wildflowers in spring (fewer in summer), fallen leaves in autumn (own random stream, so the layout never shifts)
-  if (SEASON !== 'winter') {
-    const md = NL(.12, false), cols = { spring: ['flower', 'fy', 'fw', 'fv', 'fb'], summer: ['fy', 'fw', 'fy', 'fr', 'fv'], autumn: ['autO', 'autY', 'autR'] }[SEASON];
-    meadow(md, rng(seed + 77), { spring: 420, summer: 170, autumn: 260 }[SEASON], cols, WW, 123, 50);
+  // meadow specks across the field: wildflowers in spring, fallen leaves in autumn (own random stream, so the layout never shifts)
+  if (SEASON === 'spring' || SEASON === 'autumn') {
+    const md = NL(.12, false), cols = { spring: ['flower', 'fy', 'fw', 'fv', 'fb'], autumn: ['autO', 'autY', 'autR'] }[SEASON];
+    meadow(md, rng(seed + 77), SEASON === 'spring' ? 420 : 260, cols, WW, 123, 50);
     out.push(md);
   }
   const edge = NL(.24);
@@ -142,10 +142,10 @@ export function buildFront(seed, plan) {
   // every object gets fixed part ids (via at()), its own random stream and its own texture origin, so nothing reshuffles as it slides
   const fg = new Layer(0, false); at(0, 0, 100); ground(fg, cur.Y(160), 3, 'grass', 4, null, true, -(W >> 1));
   const ft = new Layer(0);
-  // ground cover by season: wildflowers (many in spring, fewer but bigger in summer), fallen leaves in autumn, nothing under the snow
+  // ground cover by season: wildflowers (many in spring, a few in summer for the butterflies), fallen leaves in autumn, nothing under the snow
   const { MX, top } = set;
   memo(ft, `cover|${LW}|${SV.YO}`, set.off - cur.off, sy, (L) => {
-    if (SEASON !== 'winter') { const [a, b, n] = { spring: [16, 304, 90], summer: [24, 296, 34], autumn: [30, 290, 34] }[SEASON]; at(0, 0, 200); flowers(L, rng(seed + 2), Math.min(MX(a), MX(b)), Math.max(MX(a), MX(b)), top, n, 'flower', SV.YO + 180); }
+    if (SEASON !== 'winter') { const [a, b, n] = { spring: [16, 304, 90], summer: [70, 230, 10], autumn: [30, 290, 34] }[SEASON]; at(0, 0, 200); flowers(L, rng(seed + 2), Math.min(MX(a), MX(b)), Math.max(MX(a), MX(b)), top, n, 'flower', SV.YO + 180); }
     const br = rng(seed + 3);
     [[70, 26], [96, 20], [222, 20], [122, 16], [190, 18]].forEach(([x, w], i) => { at(MX(x), top(MX(x)), 2000 + i * 40); bush(L, MX(x), top(MX(x)) + 3, w * ks, leafOf(br), br); });
     if (SEASON !== 'winter') [[84, 10], [150, 8], [206, 9], [244, 11]].forEach(([x, s], i) => { at(MX(x), 0, 3000 + i * 10); fern(L, MX(x), top(MX(x)) + 1, s, SEASON === 'autumn' ? 'autY' : 'oak'); });

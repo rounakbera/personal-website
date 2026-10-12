@@ -198,7 +198,8 @@ The scripts are native ES modules (`<script type="module">`), so the page has to
 - **Summer:** vivid and sunny, the original look made richer.
   - Deeper, more saturated greens on the oaks, bushes and grass (`sumA`/`sumB`/`sumC`, `grassU` in `REMAP`), a slight saturation boost and golden cast on the land (`tint`), and a deeper blue sky (`skyTint`).
   - Fair-weather skies: 0.7× the clouds, and stratus is rarer in the mix (weight 1 instead of 2).
-  - Fewer flowers than spring but bigger, each on a stem (`summerFlower()`): ~34 in the foreground, daisies, black-eyed Susans, lupine spikes, poppies and the odd pink clover. A sparser scatter of specks across the field (`meadow()`, 170 vs spring's 420).
+  - Berries on the bushes (`berries()` in `draw.js`): red on most bushes, dark blue on about a third, singly or in pairs, kept off the bush's outline. Placed by `hash` relative to the bush's origin, so no random draws. Bushes stay the same evergreen shrubs otherwise.
+  - Only a few foreground flowers (10, pink, yellow and white, the small 3-px kind) for the butterflies; no specks across the field.
   - Butterflies by day (`critters.js`): about five on a wide screen, 5×4 px open, folded up on other beats (white, yellow, orange), drifting about a spot over the ground cover, graded like the land. Each leaves at its own point of the evening (`p.L` below 0.62–0.82).
   - Fireflies by night: yellow-green single pixels low over the field and ground, each wandering a few pixels and glowing for 1.5–3 s with a gap of 2–12 s (a plus-shaped glow at its peak). They fade in from dusk (`p.L` < 0.5) and are full by night.
   - Both are stepped on the half-second beat, laid out across the world strip on their own stream (`rng(seed + 131)`), and drawn over everything in `draw()`, so they add no timers.

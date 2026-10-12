@@ -349,7 +349,20 @@ export function bush(L, cx, base, w, mat, r) {
   for (let i = 0; i < 4; i++) { const rad = w * (.24 + r() * .12); blobs.push([cx + (r() - .5) * w * .9, base - rad * (.7 + r() * .5), rad]); }
   blobs.sort((a, b) => b[1] - a[1]);
   for (const b of blobs) blob(L, b[0], b[1], b[2], mat, obj, 1.3, 1);
+  if (SEASON === 'summer') berries(L, cx, base, w, obj);
   return obj;
+}
+// summer: berries in a bush's leaves, red or (on some bushes) dark blue, singly or in pairs. Placed by hashing
+// coordinates relative to the bush's origin (no random draws), and kept off its edge so the outline can't eat them
+function berries(L, cx, base, w, obj) {
+  const blue = hash(PART, obj, 81) < .35, m = blue ? 'fb' : 'fr', [t0, t1] = blue ? [1, 2] : [2, 4];
+  const inside = (x, y) => x > 0 && y > 0 && x < L.w - 1 && y < L.h - 1 && L.obj[y * L.w + x] === obj && L.mat[y * L.w + x];
+  for (let y = Math.floor(base - w * .9); y <= base; y++) for (let x = Math.floor(cx - w * .7); x <= cx + w * .7; x++) {
+    if (hash(x - ORX, y - ORY, 83) > .03) continue;
+    if (!inside(x, y) || !inside(x - 1, y) || !inside(x + 1, y) || !inside(x, y - 1) || !inside(x, y + 1)) continue;
+    L.put(x, y, m, t0, PART, obj); L.put(x, y - 1, m, t1, PART, obj);
+    if (hash(x - ORX, y - ORY, 84) < .4 && inside(x + 2, y)) L.put(x + 1, y, m, t0, PART, obj);
+  }
 }
 export function fern(L, x0, base, s, mat) {
   const obj = ++OBJ; L.thin.add(obj);
@@ -383,30 +396,10 @@ export function flowers(L, r, x0, x1, yAt, n, mat = 'flower', bottom = YO + 180)
       L.put(x, y, m, 4, part, obj); L.put(x + 1, y, m, 3, part, obj); if (hash(i, 2, 41) < .5) L.put(x + 1, y - 1, m, 5, part, obj);
       continue;
     }
-    // spring wildflowers come in several colours (and summer's pink clover among its bigger flowers)
-    const SPRING = ['flower', 'fy', 'fw', 'fv', 'fb', 'fr', 'fo', 'fy'], m = SEASON === 'spring' ? SPRING[Math.floor(hash(i, 1, 43) * SPRING.length)] : mat;
-    if (SEASON === 'summer') { const k = hash(i, 1, 45); if (k < .9) { summerFlower(L, x, y, k, part, obj); continue; } }
+    // spring wildflowers come in several colours, summer's few are pink, yellow and white
+    const SPRING = ['flower', 'fy', 'fw', 'fv', 'fb', 'fr', 'fo', 'fy'], SUMMER = ['flower', 'fy', 'fw'];
+    const m = SEASON === 'spring' ? SPRING[Math.floor(hash(i, 1, 43) * SPRING.length)] : SEASON === 'summer' ? SUMMER[Math.floor(hash(i, 1, 45) * SUMMER.length)] : mat;
     L.put(x, y + 1, 'grass', 4, part, obj); L.put(x, y, m, 4, part, obj); L.put(x + 1, y, m, 2, part, obj); L.put(x, y - 1, m, 5, part, obj);
-  }
-}
-// summer's flowers are fewer than spring's but bigger, each on a stem: daisies, black-eyed Susans, lupine spikes and poppies
-function summerFlower(L, x, y, k, part, obj) {
-  L.put(x, y + 2, 'grass', 4, part, obj);
-  if (k < .55) {
-    // daisy (white petals round a yellow eye) or black-eyed Susan (yellow petals round a dark one)
-    const [pm, c, ct] = k < .32 ? ['fw', 'fy', 4] : ['fy', 'bark', 1];
-    L.put(x, y + 1, 'grass', 3, part, obj);
-    L.put(x, y, c, ct, part, obj); L.put(x - 1, y, pm, 4, part, obj); L.put(x + 1, y, pm, 3, part, obj); L.put(x, y - 1, pm, 5, part, obj); L.put(x, y + 1, pm, 2, part, obj);
-  } else if (k < .72) {
-    // lupine: a tapering violet spike, its tip in flower
-    L.put(x, y + 1, 'grass', 3, part, obj);
-    for (let d = 0; d < 5; d++) L.put(x, y - d, 'fv', d === 4 ? 5 : d & 1 ? 4 : 3, part, obj);
-    L.put(x + 1, y, 'fv', 2, part, obj); L.put(x - 1, y - 1, 'fv', 3, part, obj); L.put(x + 1, y - 2, 'fv', 4, part, obj);
-  } else {
-    // poppy: a red cup with a dark eye
-    L.put(x, y + 1, 'grass', 3, part, obj);
-    L.put(x, y, 'fr', 3, part, obj); L.put(x + 1, y, 'fr', 2, part, obj); L.put(x, y - 1, 'fr', 5, part, obj); L.put(x + 1, y - 1, 'fr', 4, part, obj); L.put(x - 1, y - 1, 'fr', 4, part, obj);
-    L.put(x, y - 1, 'bark', 1, part, obj);
   }
 }
 // ox converts this layer's x to world x, so the ground's waves and tufts stay put when the screen width changes
