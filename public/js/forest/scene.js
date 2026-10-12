@@ -142,14 +142,16 @@ export function buildFront(seed, plan) {
   // every object gets fixed part ids (via at()), its own random stream and its own texture origin, so nothing reshuffles as it slides
   const fg = new Layer(0, false); at(0, 0, 100); ground(fg, cur.Y(160), 3, 'grass', 4, null, true, -(W >> 1));
   const ft = new Layer(0);
-  // ground cover by season: wildflowers (many in spring, a few in summer), fallen leaves in autumn, nothing under the snow
+  // ground cover by season: wildflowers (many in spring, under a third as many in summer), fallen leaves in autumn,
+  // nothing under the snow. They're spread edge to edge (behind the framing trees' trunks too), and the counts are per
+  // 320 px of width, so they're equally thick on every screen shape. They reach down to the canvas's bottom edge,
+  // behind a phone's toolbar too, and the extra rows there get more of them so they're as thick as on the ground strip
+  // above (17 rows); on desktop the canvas ends at SV.YO + 180
   const { MX, top } = set;
-  // they reach down to the canvas's bottom edge, behind a phone's toolbar too, and the extra rows there get more of them
-  // so they're as thick as on the ground strip above (17 rows); on desktop the canvas ends at SV.YO + 180
   memo(ft, `cover|${LW}|${SV.YO}|${SV.H}`, set.off - cur.off, sy, (L) => {
     if (SEASON !== 'winter') {
-      const [a, b, n] = { spring: [16, 304, 68], summer: [70, 230, 10], autumn: [30, 290, 34] }[SEASON], extra = Math.max(0, SV.H - (SV.YO + 180));
-      at(0, 0, 200); flowers(L, rng(seed + 2), Math.min(MX(a), MX(b)), Math.max(MX(a), MX(b)), top, Math.round(n * (1 + extra / 17)), 'flower', SV.H);
+      const n = { spring: 76, summer: 22, autumn: 42 }[SEASON], extra = Math.max(0, SV.H - (SV.YO + 180));
+      at(0, 0, 200); flowers(L, rng(seed + 2), Math.min(MX(0), MX(320)), Math.max(MX(0), MX(320)), top, Math.round(n * LW / 320 * (1 + extra / 17)), 'flower', SV.H);
     }
     const br = rng(seed + 3);
     [[70, 26], [96, 20], [222, 20], [122, 16], [190, 18]].forEach(([x, w], i) => { at(MX(x), top(MX(x)), 2000 + i * 40); bush(L, MX(x), top(MX(x)) + 3, w * ks, leafOf(br), br); });
