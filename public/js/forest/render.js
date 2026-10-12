@@ -3,7 +3,6 @@ import { rng, hash, lerp, mix, clamp, BAYER } from '../util.js';
 import { W, H, YO, PX, SV, SKYB, STACK, VT, WW, WH, SEASON } from './state.js';
 import { PAL, REMAP, palette } from './palette.js';
 import { MAT, HAZE } from './layer.js';
-import { drawCritters } from './critters.js';
 
 function grade(c, p, atm) {
   let n = mix(c, [18, 24, 58], .74);
@@ -116,6 +115,18 @@ export function makeStars() {
     return { x: r() * WW | 0, d: r() * 420 | 0, b: .3 + r() * .7, on, cycle: gap + on, phase: hash(i, 3, 51) * (gap + on) };
   });
 }
+// summer nights: fireflies across the world strip (own stream, so nothing else shifts), each wandering a few pixels about
+// its spot (v: how far down, from row 150 of the land to the canvas's bottom edge) and glowing on its own slow cycle.
+// They only show against the foreground's ground and what's on it, never a tree, the field behind or the sky
+let FLIES = [];
+const GLOW = [222, 255, 120], LOW = new Set(['grass', 'shrub', 'shrub2', 'shrub3', 'moss', 'rock', 'flower', 'fy', 'fw', 'fr', 'fb']);
+export function makeFlies(seed) {
+  const r = rng(seed + 131);
+  FLIES = Array.from({ length: 36 }, () => {
+    const on = .5 * (3 + Math.floor(r() * 4)), gap = 4 + r() * 12;
+    return { x: r() * WW, v: r(), ax: 2 + r() * 4, ay: 1 + r() * 2, wx: .1 + r() * .2, wy: .12 + r() * .25, px: r() * 7, py: r() * 7, on, cycle: on + gap, phase: r() * (on + gap) };
+  });
+}
 let img = null;
 export function draw(canvas, scene, prep, secs) {
   const g = canvas.getContext('2d'), { p, COL, sa } = prep;
@@ -157,9 +168,17 @@ export function draw(canvas, scene, prep, secs) {
   // the land on top: every land pixel is opaque, every other one fully clear
   const d32 = new Uint32Array(d.buffer), f32 = prep.fg32;
   for (let i = 0; i < f32.length; i++) if (f32[i]) d32[i] = f32[i];
-  // summer nights: fireflies over the foreground's ground and bushes
-  const fm = scene.front.mat;
-  drawCritters(blend, (x, y) => MAT[fm[y * W + x]], scene.critters, p, secs);
+  // fireflies: out from dusk to dawn, on the half-second beat; one that drifts in front of a tree stays dark that beat
+  const night = SEASON === 'summer' ? clamp((.5 - p.L) / .35, 0, 1) : 0, fm = scene.front.mat, ts = Math.floor(secs * 2) / 2;
+  const low = (x, y) => x >= 0 && y >= 0 && x < W && y < H && LOW.has(MAT[fm[y * W + x]]);
+  if (night) for (const f of FLIES) {
+    const into = (ts + f.phase) % f.cycle; if (into >= f.on) continue;
+    const x = Math.round(f.x + f.ax * Math.sin(ts * f.wx + f.px)) - ox, y = Math.round(YO + 150 + f.v * (H - YO - 152) + f.ay * Math.sin(ts * f.wy + f.py));
+    if (!low(x, y)) continue;
+    const e = Math.sin(Math.PI * (into + .25) / f.on), a = night * (.35 + .65 * e);
+    blend(x, y, GLOW, a);
+    if (e > .6) for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) if (low(x + dx, y + dy)) blend(x + dx, y + dy, GLOW, a * .45 * e);
+  }
   g.putImageData(img, 0, 0);
 }
 // at most ~5% of the stars on screen may twinkle at once; recomputed when the screen size changes
