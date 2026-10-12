@@ -2,6 +2,7 @@
 // and runs the redraw loop. Loaded from index.html as a module.
 import { W, H, WW, setView, setSeasonState, seasonOf } from './state.js';
 import { buildClouds } from './clouds.js';
+import { buildCritters } from './critters.js';
 import { planFor, buildWorld, buildFront, flatten } from './scene.js';
 import { prepare, draw, makeStars, fitStars } from './render.js';
 import { initTimePanel } from './timepanel.js';
@@ -29,7 +30,7 @@ const t0 = performance.now(), secs = () => (performance.now() - t0) / 1000;
 let plan = planFor(seed);
 // first frame fast: build only the middle of the world strip that this screen shows (plus a margin), then the
 // whole strip when the page is idle, before a resize or a wider screen could need it (see ensureWorld)
-const scene = { world: null, front: null, trees: [], clouds: buildClouds(seed), full: false, clip: null };
+const scene = { world: null, front: null, trees: [], clouds: buildClouds(seed), critters: buildCritters(seed), full: false, clip: null };
 let fullTimer = 0;
 function buildWorldFor(vw, vh) {
   const half = (Math.round(vw / baseScale(vw, vh)) >> 1) + 10;
@@ -126,7 +127,7 @@ function paintOverlays() {
 }
 // rebuild everything for the current seed and season (the same seed gives the same layout in every season)
 function rebuild() {
-  scene.world = null; scene.clouds = buildClouds(seed); scene.front = null;
+  scene.world = null; scene.clouds = buildClouds(seed); scene.critters = buildCritters(seed); scene.front = null;
   fit(); minute = -1; frame();
 }
 

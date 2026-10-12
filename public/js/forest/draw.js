@@ -383,9 +383,30 @@ export function flowers(L, r, x0, x1, yAt, n, mat = 'flower', bottom = YO + 180)
       L.put(x, y, m, 4, part, obj); L.put(x + 1, y, m, 3, part, obj); if (hash(i, 2, 41) < .5) L.put(x + 1, y - 1, m, 5, part, obj);
       continue;
     }
-    // spring wildflowers come in several colours, summer's are all pink
+    // spring wildflowers come in several colours (and summer's pink clover among its bigger flowers)
     const SPRING = ['flower', 'fy', 'fw', 'fv', 'fb', 'fr', 'fo', 'fy'], m = SEASON === 'spring' ? SPRING[Math.floor(hash(i, 1, 43) * SPRING.length)] : mat;
+    if (SEASON === 'summer') { const k = hash(i, 1, 45); if (k < .9) { summerFlower(L, x, y, k, part, obj); continue; } }
     L.put(x, y + 1, 'grass', 4, part, obj); L.put(x, y, m, 4, part, obj); L.put(x + 1, y, m, 2, part, obj); L.put(x, y - 1, m, 5, part, obj);
+  }
+}
+// summer's flowers are fewer than spring's but bigger, each on a stem: daisies, black-eyed Susans, lupine spikes and poppies
+function summerFlower(L, x, y, k, part, obj) {
+  L.put(x, y + 2, 'grass', 4, part, obj);
+  if (k < .55) {
+    // daisy (white petals round a yellow eye) or black-eyed Susan (yellow petals round a dark one)
+    const [pm, c, ct] = k < .32 ? ['fw', 'fy', 4] : ['fy', 'bark', 1];
+    L.put(x, y + 1, 'grass', 3, part, obj);
+    L.put(x, y, c, ct, part, obj); L.put(x - 1, y, pm, 4, part, obj); L.put(x + 1, y, pm, 3, part, obj); L.put(x, y - 1, pm, 5, part, obj); L.put(x, y + 1, pm, 2, part, obj);
+  } else if (k < .72) {
+    // lupine: a tapering violet spike, its tip in flower
+    L.put(x, y + 1, 'grass', 3, part, obj);
+    for (let d = 0; d < 5; d++) L.put(x, y - d, 'fv', d === 4 ? 5 : d & 1 ? 4 : 3, part, obj);
+    L.put(x + 1, y, 'fv', 2, part, obj); L.put(x - 1, y - 1, 'fv', 3, part, obj); L.put(x + 1, y - 2, 'fv', 4, part, obj);
+  } else {
+    // poppy: a red cup with a dark eye
+    L.put(x, y + 1, 'grass', 3, part, obj);
+    L.put(x, y, 'fr', 3, part, obj); L.put(x + 1, y, 'fr', 2, part, obj); L.put(x, y - 1, 'fr', 5, part, obj); L.put(x + 1, y - 1, 'fr', 4, part, obj); L.put(x - 1, y - 1, 'fr', 4, part, obj);
+    L.put(x, y - 1, 'bark', 1, part, obj);
   }
 }
 // ox converts this layer's x to world x, so the ground's waves and tufts stay put when the screen width changes

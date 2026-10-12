@@ -3,6 +3,7 @@ import { rng, hash, lerp, mix, clamp, BAYER } from '../util.js';
 import { W, H, YO, PX, SV, SKYB, STACK, VT, WW, WH, SEASON } from './state.js';
 import { PAL, REMAP, palette } from './palette.js';
 import { MAT, HAZE } from './layer.js';
+import { WINGS, BODY, drawCritters } from './critters.js';
 
 function grade(c, p, atm) {
   let n = mix(c, [18, 24, 58], .74);
@@ -11,10 +12,10 @@ function grade(c, p, atm) {
   o = mix(o, [255, 150, 100], p.Wm * .2);
   return tint(mix(o, p.hor, atm * (.45 + .55 * p.L)));
 }
-// season-wide colour cast: winter muted and cool, autumn warm, spring a touch overcast
+// season-wide colour cast: winter muted and cool, autumn warm, spring a touch overcast, summer vivid and sunny
 const grey = (c, k) => { const l = c[0] * .3 + c[1] * .59 + c[2] * .11; return mix(c, [l, l, l], k); };
-const tint = (c) => SEASON === 'winter' ? mix(grey(c, .32), [150, 170, 200], .06) : SEASON === 'autumn' ? mix(c, [240, 160, 90], .07) : SEASON === 'spring' ? grey(c, .08) : c;
-const skyTint = (c, v) => SEASON === 'winter' ? mix(grey(c, .5), [205, 212, 225], .14) : SEASON === 'spring' ? mix(grey(c, .42), [175, 180, 190], .1 + .12 * v) : SEASON === 'autumn' ? mix(c, [240, 170, 110], .14 * v * v) : c;
+const tint = (c) => SEASON === 'winter' ? mix(grey(c, .32), [150, 170, 200], .06) : SEASON === 'autumn' ? mix(c, [240, 160, 90], .07) : SEASON === 'spring' ? grey(c, .08) : mix(grey(c, -.14), [255, 226, 150], .03);
+const skyTint = (c, v) => SEASON === 'winter' ? mix(grey(c, .5), [205, 212, 225], .14) : SEASON === 'spring' ? mix(grey(c, .42), [175, 180, 190], .1 + .12 * v) : SEASON === 'autumn' ? mix(c, [240, 170, 110], .14 * v * v) : grey(c, -.2 * (1 - v * .6));
 let LUT = new Uint32Array(0), gradeKey = '';
 // the static parts of a frame for one time of day: sky (with sun, moon, stars) and the land layers on top
 export function prepare(scene, t) {
@@ -102,7 +103,9 @@ export function prepare(scene, t) {
   if (SEASON === 'spring') { base = mix(base, [150, 156, 170], .35 * p.L); shade = mix(shade, [96, 102, 120], .45 * p.L); }
   if (SEASON === 'winter') { base = grey(base, .4); shade = grey(shade, .4); }
   const hi = mix(base, [255, 255, 255], .15 + .5 * p.L), wisp = mix(mix(hi, p.top, .15), [255, 170, 150], p.Wm * .7);
-  return { sky, fg, fg32, trees, p, sa, COL: [null, base, shade, hi, wisp, wisp] };
+  // summer's butterflies, lit like the land
+  const wings = [WINGS.map(w => w.map(c => grade(c, p, 0))), grade(BODY, p, 0)];
+  return { sky, fg, fg32, trees, p, sa, wings, COL: [null, base, shade, hi, wisp, wisp] };
 }
 const ALPHA = [0, 1, 1, 1, .6, .32];
 // each star twinkles on its own cycle: a slow 1.5–2.5 s swell and fade, then a quiet gap of 8–80 s (skewed long)
@@ -156,6 +159,8 @@ export function draw(canvas, scene, prep, secs) {
   // the land on top: every land pixel is opaque, every other one fully clear
   const d32 = new Uint32Array(d.buffer), f32 = prep.fg32;
   for (let i = 0; i < f32.length; i++) if (f32[i]) d32[i] = f32[i];
+  // summer: butterflies by day and fireflies by night, over everything
+  drawCritters(blend, scene.critters, p, secs, prep.wings);
   g.putImageData(img, 0, 0);
 }
 // at most ~5% of the stars on screen may twinkle at once; recomputed when the screen size changes

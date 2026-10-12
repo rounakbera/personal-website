@@ -26,6 +26,11 @@ export const PAL = Object.fromEntries(Object.entries({
   autY:   ['#3a2a0c', '#6a4a12', '#9a6e1a', '#c89a26', '#e6c044', '#f8e07a'],
   autR:   ['#34100e', '#5e1a14', '#8c2618', '#b63a1e', '#d85a30', '#f08a52'],
   grassA: ['#1f2412', '#33391a', '#4a5122', '#636a2c', '#848a3c', '#aaa852'],
+  // summer: deep, saturated leaves and lush grass (the original greens, made more vivid)
+  sumA:   ['#0e2a12', '#16431a', '#1f5f22', '#2d7d2b', '#4ca035', '#84cc4a'],
+  sumB:   ['#162d0c', '#244912', '#36681a', '#4c8824', '#6fab30', '#a8d448'],
+  sumC:   ['#0b2716', '#113f20', '#185b2b', '#257a37', '#3f9c45', '#74c45c'],
+  grassU: ['#0d2714', '#153e1a', '#1e5822', '#2b7629', '#469834', '#7cc24a'],
   // spring: fresh, pale leaves, blossom and wildflowers
   sprA:   ['#17321a', '#25502a', '#367036', '#4c9040', '#74b450', '#a8d878'],
   sprB:   ['#1e3418', '#305222', '#46722c', '#629438', '#8cb84a', '#c0de78'],
@@ -47,7 +52,7 @@ export const PAL = Object.fromEntries(Object.entries({
 
 // materials swapped at paint time
 export const REMAP = {
-  summer: {},
+  summer: { oak: 'sumA', oak2: 'sumB', oak3: 'sumC', shrub: 'sumA', shrub2: 'sumB', shrub3: 'sumC', grass: 'grassU' },
   autumn: { oak: 'autO', oak2: 'autY', oak3: 'autR', grass: 'grassA' },
   spring: { oak: 'sprA', oak2: 'sprB', oak3: 'sprC', grass: 'grassS' },
   winter: { moss: 'snow', grass: 'snowG' }
