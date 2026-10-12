@@ -56,7 +56,7 @@ let prep = null, minute = -1;
 // and never draws fixed elements there. So in that browser (html.bleed) the page is made a little taller and
 // parked at a small scroll offset (OFF) that the visitor can't change, and the canvas sits in the page's flow,
 // reaching TB px above the visible top and BB px below the visible bottom: sky behind the status bar, ground
-// behind the toolbar. The land still ends at the visible bottom, so the flowers and bushes stay above the bar.
+// behind the toolbar. The land still ends at the visible bottom, so the bushes stay above the bar (the flowers run on behind it).
 const BLEED = CSS.supports('-webkit-touch-callout: none') && CSS.supports('font: -apple-system-body') && !navigator.standalone;
 const TB = 80, BB = 160, OFF = TB;
 const stage = document.querySelector('.stage');

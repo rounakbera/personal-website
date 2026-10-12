@@ -144,8 +144,13 @@ export function buildFront(seed, plan) {
   const ft = new Layer(0);
   // ground cover by season: wildflowers (many in spring, a few in summer), fallen leaves in autumn, nothing under the snow
   const { MX, top } = set;
-  memo(ft, `cover|${LW}|${SV.YO}`, set.off - cur.off, sy, (L) => {
-    if (SEASON !== 'winter') { const [a, b, n] = { spring: [16, 304, 90], summer: [70, 230, 10], autumn: [30, 290, 34] }[SEASON]; at(0, 0, 200); flowers(L, rng(seed + 2), Math.min(MX(a), MX(b)), Math.max(MX(a), MX(b)), top, n, 'flower', SV.YO + 180); }
+  // they reach down to the canvas's bottom edge, behind a phone's toolbar too, and the extra rows there get more of them
+  // so they're as thick as on the ground strip above (17 rows); on desktop the canvas ends at SV.YO + 180
+  memo(ft, `cover|${LW}|${SV.YO}|${SV.H}`, set.off - cur.off, sy, (L) => {
+    if (SEASON !== 'winter') {
+      const [a, b, n] = { spring: [16, 304, 90], summer: [70, 230, 10], autumn: [30, 290, 34] }[SEASON], extra = Math.max(0, SV.H - (SV.YO + 180));
+      at(0, 0, 200); flowers(L, rng(seed + 2), Math.min(MX(a), MX(b)), Math.max(MX(a), MX(b)), top, Math.round(n * (1 + extra / 17)), 'flower', SV.H);
+    }
     const br = rng(seed + 3);
     [[70, 26], [96, 20], [222, 20], [122, 16], [190, 18]].forEach(([x, w], i) => { at(MX(x), top(MX(x)), 2000 + i * 40); bush(L, MX(x), top(MX(x)) + 3, w * ks, leafOf(br), br); });
     if (SEASON !== 'winter') [[84, 10], [150, 8], [206, 9], [244, 11]].forEach(([x, s], i) => { at(MX(x), 0, 3000 + i * 10); fern(L, MX(x), top(MX(x)) + 1, s, SEASON === 'autumn' ? 'autY' : 'oak'); });

@@ -9,10 +9,11 @@ const LOW = new Set(['grass', 'shrub', 'shrub2', 'shrub3', 'moss', 'rock', 'flow
 
 export function buildCritters(seed) {
   const r = rng(seed + 131);
-  // each wanders a few pixels about its spot in the foreground, and glows on its own slow cycle
+  // each wanders a few pixels about its spot in the foreground (v: how far down, from row 150 of the land to the canvas's
+// bottom edge, behind a phone's toolbar too), and glows on its own slow cycle
   return Array.from({ length: Math.round(12 * WW / 320) }, () => {
     const on = .5 * (3 + Math.floor(r() * 4)), gap = 4 + r() * 12;
-    return { x: r() * WW, y: 150 + r() * 28, ax: 2 + r() * 4, ay: 1 + r() * 2, wx: .1 + r() * .2, wy: .12 + r() * .25, px: r() * 7, py: r() * 7,
+    return { x: r() * WW, v: r(), ax: 2 + r() * 4, ay: 1 + r() * 2, wx: .1 + r() * .2, wy: .12 + r() * .25, px: r() * 7, py: r() * 7,
       on, cycle: on + gap, phase: r() * (on + gap) };
   });
 }
@@ -24,7 +25,7 @@ export function drawCritters(blend, matAt, flies, p, secs) {
   const ts = Math.floor(secs * 2) / 2, ox = (WW >> 1) - (W >> 1), low = (x, y) => x >= 0 && y >= 0 && x < W && y < H && LOW.has(matAt(x, y));
   for (const f of flies) {
     const into = (ts + f.phase) % f.cycle; if (into >= f.on) continue;
-    const x = Math.round(f.x + f.ax * Math.sin(ts * f.wx + f.px)) - ox, y = Math.round(YO + f.y + f.ay * Math.sin(ts * f.wy + f.py));
+    const x = Math.round(f.x + f.ax * Math.sin(ts * f.wx + f.px)) - ox, y = Math.round(YO + 150 + f.v * (H - YO - 152) + f.ay * Math.sin(ts * f.wy + f.py));
     if (!low(x, y)) continue;   // drifted in front of a tree: dark this beat
     const e = Math.sin(Math.PI * (into + .25) / f.on), a = night * (.35 + .65 * e);
     blend(x, y, GLOW, a);

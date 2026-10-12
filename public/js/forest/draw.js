@@ -397,8 +397,8 @@ export function rock(L, cx, base, r, moss) {
 }
 export function flowers(L, r, x0, x1, yAt, n, mat = 'flower', bottom = YO + 180) {
   for (let i = 0; i < n; i++) {
-    // anywhere on the ground strip, from just below the grass line down to the bottom of the visible screen
-    // (YO + 180 unless given; the canvas may run on under a browser toolbar)
+    // anywhere on the ground strip, from just below the grass line down to the bottom row given
+    // (YO + 180 unless given; the front passes the canvas's bottom, which may run on under a browser toolbar)
     const obj = ++OBJ; L.thin.add(obj); const part = ++PART, x = Math.round(x0 + r() * (x1 - x0)), y = yAt(x) + 3 + Math.floor(r() * Math.max(7, bottom - yAt(x) - 5));
     if (SEASON === 'autumn') {
       // fallen leaves lying flat in the grass
