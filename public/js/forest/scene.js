@@ -142,7 +142,7 @@ export function buildFront(seed, plan) {
   // every object gets fixed part ids (via at()), its own random stream and its own texture origin, so nothing reshuffles as it slides
   const fg = new Layer(0, false); at(0, 0, 100); ground(fg, cur.Y(160), 3, 'grass', 4, null, true, -(W >> 1));
   const ft = new Layer(0);
-  // ground cover by season: wildflowers (many in spring, a few in summer for the butterflies), fallen leaves in autumn, nothing under the snow
+  // ground cover by season: wildflowers (many in spring, a few in summer), fallen leaves in autumn, nothing under the snow
   const { MX, top } = set;
   memo(ft, `cover|${LW}|${SV.YO}`, set.off - cur.off, sy, (L) => {
     if (SEASON !== 'winter') { const [a, b, n] = { spring: [16, 304, 90], summer: [70, 230, 10], autumn: [30, 290, 34] }[SEASON]; at(0, 0, 200); flowers(L, rng(seed + 2), Math.min(MX(a), MX(b)), Math.max(MX(a), MX(b)), top, n, 'flower', SV.YO + 180); }

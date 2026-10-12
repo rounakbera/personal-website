@@ -352,16 +352,23 @@ export function bush(L, cx, base, w, mat, r) {
   if (SEASON === 'summer') berries(L, cx, base, w, obj);
   return obj;
 }
-// summer: berries in a bush's leaves, red or (on some bushes) dark blue, singly or in pairs. Placed by hashing
-// coordinates relative to the bush's origin (no random draws), and kept off its edge so the outline can't eat them
+// summer: berries in a bush's leaves, red or (on some bushes) dark blue. They sit on a staggered grid, so they're
+// evenly spread: round 2×2 berries, lit from the top left, on the foreground bushes (haze 0), and only the odd
+// single-pixel one on the bushes in the field. Placed by hashing grid cells relative to the bush's origin (no random
+// draws), and kept off the bush's edge so the outline can't eat them
 function berries(L, cx, base, w, obj) {
-  const blue = hash(PART, obj, 81) < .35, m = blue ? 'fb' : 'fr', [t0, t1] = blue ? [1, 2] : [2, 4];
+  const blue = hash(PART, obj, 81) < .35, m = blue ? 'fb' : 'fr', near = L.atm === 0;
+  const g = near ? 5 : 6, keep = near ? .8 : .22, sz = near ? 2 : 1, tones = blue ? [3, 2, 2, 1] : [4, 3, 3, 2];
   const inside = (x, y) => x > 0 && y > 0 && x < L.w - 1 && y < L.h - 1 && L.obj[y * L.w + x] === obj && L.mat[y * L.w + x];
-  for (let y = Math.floor(base - w * .9); y <= base; y++) for (let x = Math.floor(cx - w * .7); x <= cx + w * .7; x++) {
-    if (hash(x - ORX, y - ORY, 83) > .03) continue;
-    if (!inside(x, y) || !inside(x - 1, y) || !inside(x + 1, y) || !inside(x, y - 1) || !inside(x, y + 1)) continue;
-    L.put(x, y, m, t0, PART, obj); L.put(x, y - 1, m, t1, PART, obj);
-    if (hash(x - ORX, y - ORY, 84) < .4 && inside(x + 2, y)) L.put(x + 1, y, m, t0, PART, obj);
+  const y0 = Math.floor((base - w * .9 - ORY) / g), y1 = Math.ceil((base - ORY) / g), x0 = Math.floor((cx - w * .7 - ORX) / g) - 1, x1 = Math.ceil((cx + w * .7 - ORX) / g);
+  for (let gy = y0; gy <= y1; gy++) for (let gx = x0; gx <= x1; gx++) {
+    if (hash(gx, gy, 83) > keep) continue;
+    const x = ORX + gx * g + (gy & 1 ? g >> 1 : 0) + Math.round(hash(gx, gy, 84) * 2 - 1) * (near ? 0 : 1), y = ORY + gy * g;
+    let ok = true;
+    for (let dy = -1; dy <= sz && ok; dy++) for (let dx = -1; dx <= sz; dx++) if (!inside(x + dx, y + dy)) { ok = false; break; }
+    if (!ok) continue;
+    if (sz === 1) { L.put(x, y, m, tones[1], PART, obj); continue; }
+    L.put(x, y, m, tones[0], PART, obj); L.put(x + 1, y, m, tones[1], PART, obj); L.put(x, y + 1, m, tones[2], PART, obj); L.put(x + 1, y + 1, m, tones[3], PART, obj);
   }
 }
 export function fern(L, x0, base, s, mat) {

@@ -40,7 +40,7 @@ public/                 everything served to the browser (the Worker's static as
     draw.js             drawing primitives: blob, trunk, limb, tier, pine/conifer, oak + bare winter oak,
                         bush, fern, rock, flowers, meadow, ground, ridge, treeline; owns object/part ids
     clouds.js           cloud shapes and buildClouds(seed)
-    critters.js         summer's butterflies (day) and fireflies (night): buildCritters(seed), drawCritters()
+    critters.js         summer's fireflies (night): buildCritters(seed), drawCritters()
     scene.js            planFor, buildWorld, buildFront, snowify, flatten
     render.js           prepare() (sky, sun, moon, grading) and draw() (stars, clouds, land) per frame
     timepanel.js        the easter-egg panel; talks to main.js through a small api object
@@ -147,7 +147,7 @@ The scripts are native ES modules (`<script type="module">`), so the page has to
 2. `finalize()` adds outlines and the shade line under overlapping parts.
 3. `flatten()` keeps the top-most pixel.
 4. `prepare(t)` paints the dithered sky, sun, crescent moon and halo, then grades every land pixel for time of day and distance haze (`grade`) plus a season cast (`tint`). It runs once a minute.
-5. `draw()` runs every 500 ms. It composites stars (each twinkles on its own slow cycle, at most ~5% lit at once), clouds and the land, then (summer only) the butterflies and fireflies on top.
+5. `draw()` runs every 500 ms. It composites stars (each twinkles on its own slow cycle, at most ~5% lit at once), clouds and the land, then (summer only) the fireflies on top.
 
 **Materials.** `PAL` gives each material six tones: outline, deep shadow, shadow, mid, light, highlight. In the `Layer` buffers, materials are stored as small ids (`Uint8Array`, 0 = empty). `mid(name)` registers a name and `MAT[id]` gives it back (`layer.js`), so the buffers are all typed arrays.
 
@@ -198,11 +198,10 @@ The scripts are native ES modules (`<script type="module">`), so the page has to
 - **Summer:** vivid and sunny, the original look made richer.
   - Deeper, more saturated greens on the oaks, bushes and grass (`sumA`/`sumB`/`sumC`, `grassU` in `REMAP`), a slight saturation boost and golden cast on the land (`tint`), and a deeper blue sky (`skyTint`).
   - Fair-weather skies: 0.7× the clouds, and stratus is rarer in the mix (weight 1 instead of 2).
-  - Berries on the bushes (`berries()` in `draw.js`): red on most bushes, dark blue on about a third, singly or in pairs, kept off the bush's outline. Placed by `hash` relative to the bush's origin, so no random draws. Bushes stay the same evergreen shrubs otherwise.
-  - Only a few foreground flowers (10, pink, yellow and white, the small 3-px kind) for the butterflies; no specks across the field.
-  - Butterflies by day (`critters.js`): about five on a wide screen, 5×4 px open, folded up on other beats (white, yellow, orange), drifting about a spot over the ground cover, graded like the land. Each leaves at its own point of the evening (`p.L` below 0.62–0.82).
-  - Fireflies by night: yellow-green single pixels low over the field and ground, each wandering a few pixels and glowing for 1.5–3 s with a gap of 2–12 s (a plus-shaped glow at its peak). They fade in from dusk (`p.L` < 0.5) and are full by night.
-  - Both are stepped on the half-second beat, laid out across the world strip on their own stream (`rng(seed + 131)`), and drawn over everything in `draw()`, so they add no timers.
+  - Berries on the bushes (`berries()` in `draw.js`): red on most bushes, dark blue on about a third. They sit on a staggered grid (5 px), so they're evenly spread: round 2×2 berries lit from the top left on the foreground bushes (layer haze 0), and only the odd single-pixel one (about 1 in 5 cells of 6 px) on the bushes in the field. Kept off the bush's outline, and placed by `hash` of grid cells relative to the bush's origin, so no random draws.
+  - Only a few foreground flowers (10, pink, yellow and white, the small 3-px kind); no specks across the field.
+  - Fireflies by night (`critters.js`): a few yellow-green pixels (12 per 320 px of strip) low over the ground and bushes, each wandering a few pixels and glowing for 1.5–3 s with a gap of 4–16 s (a plus-shaped glow at its peak). They only ever show against the ground and what's on it (grass, bushes, rocks, flowers), never a tree or the sky: a firefly that drifts in front of one stays dark that beat. They fade in from dusk (`p.L` < 0.5) and are full by night.
+  - Stepped on the half-second beat, laid out across the world strip on their own stream (`rng(seed + 131)`), and drawn last in `draw()`, so they add no timers.
 - **Autumn:**
   - Oaks turn orange, gold or red (`REMAP`).
   - Grass is warmer and the ferns turn yellow.
@@ -255,7 +254,7 @@ Keep these unless asked otherwise.
   - Deciduous canopies should be clumpy and textured, not visible spheres.
   - The tops of leaf clumps and conifer tiers are smoother; the undersides more ragged.
 - **Clouds:** no towering cumulus, no mackerel sky.
-- **Motion:** slow and stepped. Clouds move in half-second multiples. Stars twinkle 1.5–2.5 s with long gaps. The sun and moon move once a minute. Summer's butterflies and fireflies move and flap/glow on the same half-second beat.
+- **Motion:** slow and stepped. Clouds move in half-second multiples. Stars twinkle 1.5–2.5 s with long gaps. The sun and moon move once a minute. Summer's fireflies move and glow on the same half-second beat.
 - **Portrait:**
   - The current art (msG48) is approved, including the measured mouth position and the original eyes.
   - A symmetric-eyes edit was rejected.
