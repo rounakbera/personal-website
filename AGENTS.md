@@ -41,7 +41,7 @@ public/                 everything served to the browser (the Worker's static as
                         bush, fern, rock, flowers, meadow, ground, ridge, treeline; owns object/part ids
     clouds.js           cloud shapes and buildClouds(seed)
     scene.js            planFor, buildWorld, buildFront, snowify, flatten
-    render.js           prepare() (sky, sun, moon, grading) and draw() (stars, clouds, land) per frame
+    render.js           prepare() (sky, sun, moon, grading) and draw() (stars, clouds, land, summer's fireflies) per frame
     timepanel.js        the easter-egg panel; talks to main.js through a small api object
   rounakbera_resume.pdf the résumé, linked from the scroll button; X-Robots-Tag noindex
   robots.txt            allow all; points at the sitemap
@@ -124,11 +124,11 @@ The scripts are native ES modules (`<script type="module">`), so the page has to
 
 - One scene pixel is `PX` screen pixels, where `S = max(1, min(vh/180, vw/200))`. S is continuous, so resizing zooms smoothly.
 - The land is a 180 px-tall band. `YO = H − 180` pushes it down on tall screens, showing more sky.
-- **Under browser toolbars:** the canvas is `100lvh` tall, so Safari's toolbars show forest rather than a blank strip. `fit()` sizes the scene to the visible area (`100svh`, toolbars shown) and adds the extra rows below `YO + 180` as plain foreground ground. Flowers stop at `YO + 180`, so they and the bushes stay above the bar. Sky gradient and sun path use `YO + 180`, not `H`. On desktop there are no extra rows.
+- **Under browser toolbars:** the canvas is `100lvh` tall, so Safari's toolbars show forest rather than a blank strip. `fit()` sizes the scene to the visible area (`100svh`, toolbars shown) and adds the extra rows below `YO + 180` as plain foreground ground. The bushes stay above the bar, but the foreground flowers (autumn's leaves, summer's fireflies) run on down to the canvas's bottom edge (owner, for phones), with more of them in the extra rows so they're as thick there as above. Sky gradient and sun path use `YO + 180`, not `H`. On desktop there are no extra rows.
 - **Safari 26 on iPhone** draws page pixels behind its status bar and toolbar only when the page is scrolled, and never draws fixed elements there (it just tints the bars). So in that browser (`BLEED` in `main.js`, `html.bleed` in CSS):
   - The page is `OFF` (80 px) taller and parked at `scrollY = OFF`. Touch and wheel scrolling are blocked (`touchmove`/`wheel` `preventDefault`, except on the time slider), and any scroll snaps back.
   - The canvas is `position: absolute` in the page's flow. It reaches `TB` (80 px) above the visible top and `BB` (160 px) below the visible bottom: sky behind the status bar, ground behind the toolbar.
-  - The land still ends at the visible bottom, so the flowers and bushes stay above the bar. `VT` in `state.js` is the first visible row, and the sun and moon path is measured from it.
+  - The land still ends at the visible bottom, so the bushes stay above the bar; the flowers and fireflies carry on behind it to the canvas's bottom edge. `VT` in `state.js` is the first visible row, and the sun and moon path is measured from it.
   - Elsewhere none of this applies (the fixed 100lvh canvas above).
 - In the stacked layout (≤ 660 px) the scene zooms in further, with `S ≥ min(vh/250, vw/110)`, so the land fills about the lower half and the framing trees reach the middle of the screen (owner's request). The view gets narrower to allow this.
 
@@ -146,7 +146,7 @@ The scripts are native ES modules (`<script type="module">`), so the page has to
 2. `finalize()` adds outlines and the shade line under overlapping parts.
 3. `flatten()` keeps the top-most pixel.
 4. `prepare(t)` paints the dithered sky, sun, crescent moon and halo, then grades every land pixel for time of day and distance haze (`grade`) plus a season cast (`tint`). It runs once a minute.
-5. `draw()` runs every 500 ms. It composites stars (each twinkles on its own slow cycle, at most ~5% lit at once), clouds and the land.
+5. `draw()` runs every 500 ms. It composites stars (each twinkles on its own slow cycle, at most ~5% lit at once), clouds and the land, then (summer only) the fireflies on top.
 
 **Materials.** `PAL` gives each material six tones: outline, deep shadow, shadow, mid, light, highlight. In the `Layer` buffers, materials are stored as small ids (`Uint8Array`, 0 = empty). `mid(name)` registers a name and `MAT[id]` gives it back (`layer.js`), so the buffers are all typed arrays.
 
@@ -158,7 +158,7 @@ The scripts are native ES modules (`<script type="module">`), so the page has to
 - **Clouds:** `puffs()` works out each pixel's owning circle once into a grid, and skips the trig for pixels beyond a circle's widest lobe. A cloud's pixels (`c.t`, a lazy getter) are only worked out when it's first drawn on screen; its shape and place are fixed when the sky is built, so when doesn't matter.
 - **Front cache** (`memo()` in `scene.js`): the load-in zoom rebuilds the front every frame, but its groups (the ground cover, each framing tree) keep their settled shape and only slide. Each group is drawn once as it stands in the settled view (`SV`), into a scratch layer, and replayed shifted by whole pixels; the settled frame replays it unshifted, which is exactly drawing it there. Groups are keyed on their exact inputs (position floats, scale, `SV.YO`, sink, ids), because the drawing does float maths on screen coordinates: a shifted copy can differ from a fresh drawing at .5 rounding ties, so only zoom frames ever show shifted copies, and a resize replays a tree only when its inputs are bit-identical (e.g. the edge-anchored tree whose position doesn't depend on the width). A group's pixels are found afterwards as those holding its object ids. Draw functions must not read view state behind memo's back (that's why `flowers()` takes its bottom row).
 - **Grading:** `flatten` stores a small haze id per pixel (`hid()`/`HAZE` in `layer.js`, kept at float32 precision as the old per-pixel `Float32Array` was). `prepare()` looks graded colours up in a table of packed pixels by haze, material and tone, kept while the time and season stay the same, so zoom frames don't grade again. The sky works out each row's four dithered pixels and repeats them. `draw()` reuses its `ImageData` and copies land pixels as 32-bit words.
-- **Backdrop:** an inline script in `<head>` sets `--pre`, a gradient of this hour's sky (a copy of `KEYS`, keep in sync) over the season's forest and grass. It's laid out where the first, zoomed-in frame puts them, and is the body background until the canvas covers it. So the moment before the forest is drawn shows matching colours, not navy.
+- **Backdrop:** an inline script in `<head>` sets `--pre`, a gradient of this hour's sky (a copy of `KEYS`, keep in sync) over the season's forest and grass (grass mids copied from the season's grass palette). It's laid out where the first, zoomed-in frame puts them, and is the body background until the canvas covers it. So the moment before the forest is drawn shows matching colours, not navy.
 - **Safari (iPhone):** WebKit holds the first paint until the page counts as visually non-empty (enough real text, or a loaded image of some size). Backgrounds and SVG paths don't count, so here the gate is `portrait.jpg`; until then a first visit showed a black screen (`color-scheme: dark`). The photo is preloaded with `fetchpriority="high"` so it arrives ahead of the scripts. The script also sets `--pre-c`, the sky's top colour, as the body's `background-color`, because Safari 26 tints its status bar and toolbar from the page's background colour, not from a gradient (without it the bars were black until `main.js` parked the scroll).
 - These changes were verified pixel-identical to the previous renderer (all seasons, three screen sizes, several seeds; and through season changes, new forests, time scrubbing and resizes). Keep that bar for any future speed work. When comparing with Playwright, pause the clock (`page.clock.install` then `pauseAt`), or it keeps running in real time between steps and the clouds drift.
 
@@ -188,18 +188,24 @@ The scripts are native ES modules (`<script type="module">`), so the page has to
 - They keep about a 35 px radius on screen at any scale (shrinking only on short stacked screens, so they fit above the card).
 - On wide screens they rise and set at the horizon, behind the land.
 - On tall screens and in the stacked layout the path blends into one over the card: in from beyond the left edge just above the card's top (`SKYB`), over it, and out past the right edge. Nothing pops in or out mid-sky, and the card never hides them (`STACK` in `state.js` flags the stacked layout).
+- The sun's colour (high and low in the sky) and halo strength follow the season (`SUN` in `render.js`): summer hot yellow with a strong halo (1.45×), spring soft cream (0.85×), autumn golden amber (1.1×), winter pale white with a weak halo (0.6×).
 - The moon is a crescent tilted ~40° counter-clockwise, with a crescent-shaped halo.
 
 **Time of day:** `KEYS` sets the sky colours. Dawn runs ~3.75–9 h and dusk ~16–22.25 h, deliberately long.
 
 **Seasons** (`SEASON`, picked from the date: Mar–May spring, Jun–Aug summer, Sep–Nov autumn, Dec–Feb winter):
 
-- **Summer:** the original look.
+- **Summer:** vivid and sunny.
+  - Deeper, more saturated greens on the oaks, bushes and grass (`sumA`/`sumB`/`sumC`, `grassU` in `REMAP`), a slight saturation boost and golden cast on the land (`tint`), and a deeper blue sky (`skyTint`).
+  - Fair weather: 0.7× the clouds, and stratus is rarer in the mix (weight 1 instead of 2).
+  - Berries on the bushes (`berries()` in `draw.js`), red, or dark blue on about a third of bushes. Scattered at random, not on a grid (owner: a grid looked too uniform), each with its own elbow room (~2.5–4.5 px), and kept 2 px inside the bush, never at its edge. Foreground bushes (layer haze 0) get plenty, mostly 1 px with some 2–3 px clusters; bushes in the field only the odd pixel. Hashed from the bush's origin, so no random draws.
+  - Few foreground flowers (pink, yellow and white; under a third of spring's), none across the field.
+  - Fireflies at night (`makeFlies()`/`draw()` in `render.js`, beside the stars): 12 per 320 px of strip, from row 150 of the land to the canvas's bottom edge, each wandering a few pixels and glowing 1.5–3 s with gaps of 4–16 s (plus-shaped glow at its peak), on the half-second beat. They only show against the foreground's ground and what's on it (grass, bushes, rocks, flowers), never a tree, the field or the sky; one that drifts in front of a tree stays dark that beat. They fade in from dusk (`p.L` < 0.5). Own stream (`rng(seed + 131)`).
 - **Autumn:**
   - Oaks turn orange, gold or red (`REMAP`).
   - Grass is warmer and the ferns turn yellow.
   - Fallen leaves replace the flowers, in the foreground and across the field.
-  - Warm colour cast.
+  - Warm colour cast, and 1.4× the clouds.
 - **Winter:**
   - Oaks are bare branches (`bare()`).
   - Snow is added by `snowify()` on the top surfaces of conifers, rocks, ridges, branches and bushes, plus flecks of snow in the needles.
@@ -208,9 +214,9 @@ The scripts are native ES modules (`<script type="module">`), so the page has to
   - Muted, cool grading.
 - **Spring:**
   - Fresh pale greens, with blossom on the oaks only (`blossom()`), pink or white per tree. Size follows the tree's height: the foreground oak (h ≥ 90) gets full flowers (mostly a 5-px yellow-eyed flower, sometimes a 3-px bud, a diagonal one or a large one). Nearer background oaks (h 35–90) get 2–3 px sprigs; distant ones single-pixel buds. Placement is patchy (a coarse noise decides where the crown is in bloom) and each flower keeps its own random elbow room, so it neither clumps nor looks like a grid. The foreground oak is kept fairly sparse (owner). Tone (±1) and occasionally the other shade vary per flower.
-  - Many multicoloured wildflowers in the foreground (~90, across nearly the full width; pink, yellow, white, violet, blue, red `fr` and orange `fo`).
-  - In every season, foreground flowers (and autumn's fallen leaves) are scattered over the whole ground strip, from just below the grass line to the bottom edge. The specks scattered across the field (`meadow()`, also autumn's fallen leaves) only appear in the nearer part of the field, thinning toward the middle, since far back they'd be too small to see.
-  - 1.7× the clouds, with a greyer sky and greyer clouds.
+  - Many multicoloured wildflowers in the foreground (76 per 320 px of width, a quarter fewer than before (owner); pink, yellow, white, violet, blue, red `fr` and orange `fo`).
+  - In every season, foreground flowers (and autumn's fallen leaves, 42 per 320 px) are scattered over the whole ground strip: edge to edge (behind the framing trees' trunks too), and from just below the grass line to the canvas's bottom edge (behind a phone's toolbar too). Counts are per 320 px of the settled width (plus the extra rows under a toolbar), so the density is the same on every screen shape. The specks scattered across the field (`meadow()`: 315 in spring, also cut by a quarter, and 260 of autumn's fallen leaves) only appear in the nearer part of the field, thinning toward the middle, since far back they'd be too small to see.
+  - 2.2× the clouds, with a greyer sky and greyer clouds.
 
 **Motion:**
 
@@ -247,7 +253,7 @@ Keep these unless asked otherwise.
   - Deciduous canopies should be clumpy and textured, not visible spheres.
   - The tops of leaf clumps and conifer tiers are smoother; the undersides more ragged.
 - **Clouds:** no towering cumulus, no mackerel sky.
-- **Motion:** slow and stepped. Clouds move in half-second multiples. Stars twinkle 1.5–2.5 s with long gaps. The sun and moon move once a minute.
+- **Motion:** slow and stepped. Clouds move in half-second multiples. Stars twinkle 1.5–2.5 s with long gaps. The sun and moon move once a minute. Summer's fireflies move and glow on the same half-second beat.
 - **Portrait:**
   - The current art (msG48) is approved, including the measured mouth position and the original eyes.
   - A symmetric-eyes edit was rejected.

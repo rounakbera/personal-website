@@ -3,7 +3,7 @@
 import { W, H, WW, setView, setSeasonState, seasonOf } from './state.js';
 import { buildClouds } from './clouds.js';
 import { planFor, buildWorld, buildFront, flatten } from './scene.js';
-import { prepare, draw, makeStars, fitStars } from './render.js';
+import { prepare, draw, makeStars, makeFlies, fitStars } from './render.js';
 import { initTimePanel } from './timepanel.js';
 
 const canvas = document.getElementById('world');
@@ -44,7 +44,7 @@ function ensureWorld(redraw = true) {
   scene.world = buildWorld(seed); scene.full = true; scene.clip = null;
   if (redraw) { minute = -1; frame(); }
 }
-makeStars();
+makeStars(); makeFlies(seed);
 let prep = null, minute = -1;
 
 // size the scene to the screen; only the front is rebuilt when the size changes, so this can run on every resize frame.
@@ -55,7 +55,7 @@ let prep = null, minute = -1;
 // and never draws fixed elements there. So in that browser (html.bleed) the page is made a little taller and
 // parked at a small scroll offset (OFF) that the visitor can't change, and the canvas sits in the page's flow,
 // reaching TB px above the visible top and BB px below the visible bottom: sky behind the status bar, ground
-// behind the toolbar. The land still ends at the visible bottom, so the flowers and bushes stay above the bar.
+// behind the toolbar. The land still ends at the visible bottom, so the bushes stay above the bar (the flowers run on behind it).
 const BLEED = CSS.supports('-webkit-touch-callout: none') && CSS.supports('font: -apple-system-body') && !navigator.standalone;
 const TB = 80, BB = 160, OFF = TB;
 const stage = document.querySelector('.stage');
@@ -126,7 +126,7 @@ function paintOverlays() {
 }
 // rebuild everything for the current seed and season (the same seed gives the same layout in every season)
 function rebuild() {
-  scene.world = null; scene.clouds = buildClouds(seed); scene.front = null;
+  scene.world = null; scene.clouds = buildClouds(seed); makeFlies(seed); scene.front = null;
   fit(); minute = -1; frame();
 }
 

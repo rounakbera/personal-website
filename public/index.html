@@ -37,7 +37,7 @@
   document.querySelectorAll('[data-season-icon]').forEach((l) => { l.href = `assets/icons/${season}-${l.dataset.seasonIcon}.png`; });
   // the land reads mostly as trees (dark conifer green, warmer in autumn, snow-dusted in winter) over grass
   const tree = { spring: [43, 97, 65], summer: [31, 74, 51], autumn: [92, 74, 40], winter: [62, 74, 82] }[season];
-  const grass = { spring: [60, 112, 52], summer: [53, 102, 47], autumn: [99, 106, 44], winter: [154, 166, 188] }[season];
+  const grass = { spring: [60, 112, 52], summer: [43, 118, 41], autumn: [99, 106, 44], winter: [154, 166, 188] }[season];
   const grade = (c, atm) => mix(mix(mix(mix(c, [18, 24, 58], .74), c, .12), c, L), hor, atm * (.45 + .55 * L));
   // the first frame's pixel size (the forest starts zoomed in 1.8×, see main.js)
   const vw = innerWidth, vh = innerHeight; let S = Math.max(1, Math.min(vh / 180, vw / 200));

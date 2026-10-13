@@ -83,10 +83,11 @@ const SKY = {
 };
 export function buildClouds(seed) {
   const cr = rng(Math.floor(hash(seed, 7, 3) * 4294967296)), pool = Object.keys(SKY), kinds = [];
-  const want = 2 + (cr() < .4 ? 1 : 0);
+  // summer skies are fair (stratus rarer); spring and autumn are cloudier
+  const want = 2 + (cr() < .4 ? 1 : 0), wt = (k) => SKY[k][0] - (SEASON === 'summer' && k === 'stratus'), more = { spring: 2.2, summer: .7, autumn: 1.4 }[SEASON] || 1;
   while (kinds.length < want) {
-    const left = pool.filter(k => !kinds.includes(k)), tot = left.reduce((a, k) => a + SKY[k][0], 0);
-    let roll = cr() * tot; for (const k of left) { roll -= SKY[k][0]; if (roll <= 0) { kinds.push(k); break; } }
+    const left = pool.filter(k => !kinds.includes(k)), tot = left.reduce((a, k) => a + wt(k), 0);
+    let roll = cr() * tot; for (const k of left) { roll -= wt(k); if (roll <= 0) { kinds.push(k); break; } }
   }
   const out = [], boxes = [];
   // the usual bands just above the horizon, then extra cumulus and cirrus filling the sky above them;
@@ -94,7 +95,7 @@ export function buildClouds(seed) {
   const groups = kinds.map(kind => [kind, ...SKY[kind].slice(1)]);
   for (const kind of kinds.filter(k => k !== 'stratus')) groups.push([kind, kind === 'cumulus' ? [4, 6] : [2, 4], [-300, -45]]); // starts clear of a 180 px-tall screen, so wide screens never see half of one
   for (const [kind, [lo, hi], [y0, y1]] of groups) {
-    const n = Math.round((lo + Math.floor(cr() * (hi - lo + 1))) * WW / 320 * (SEASON === 'spring' ? 1.7 : 1));
+    const n = Math.round((lo + Math.floor(cr() * (hi - lo + 1))) * WW / 320 * more);
     for (let i = 0; i < n; i++) {
       // sizes skew small with the occasional big one
       const c = CLOUDS[kind](cr, (kind === 'cumulus' ? .7 : .6) + Math.pow(cr(), 1.6) * (kind === 'cumulus' ? 1.2 : 1));

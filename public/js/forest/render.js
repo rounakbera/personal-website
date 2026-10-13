@@ -11,10 +11,11 @@ function grade(c, p, atm) {
   o = mix(o, [255, 150, 100], p.Wm * .2);
   return tint(mix(o, p.hor, atm * (.45 + .55 * p.L)));
 }
-// season-wide colour cast: winter muted and cool, autumn warm, spring a touch overcast
+// season-wide colour cast: winter muted and cool, autumn warm, spring a touch overcast, summer vivid and sunny
 const grey = (c, k) => { const l = c[0] * .3 + c[1] * .59 + c[2] * .11; return mix(c, [l, l, l], k); };
-const tint = (c) => SEASON === 'winter' ? mix(grey(c, .32), [150, 170, 200], .06) : SEASON === 'autumn' ? mix(c, [240, 160, 90], .07) : SEASON === 'spring' ? grey(c, .08) : c;
-const skyTint = (c, v) => SEASON === 'winter' ? mix(grey(c, .5), [205, 212, 225], .14) : SEASON === 'spring' ? mix(grey(c, .42), [175, 180, 190], .1 + .12 * v) : SEASON === 'autumn' ? mix(c, [240, 170, 110], .14 * v * v) : c;
+const tint = (c) => SEASON === 'winter' ? mix(grey(c, .32), [150, 170, 200], .06) : SEASON === 'autumn' ? mix(c, [240, 160, 90], .07) : SEASON === 'spring' ? grey(c, .08) : mix(grey(c, -.14), [255, 226, 150], .03);
+const skyTint = (c, v) => SEASON === 'winter' ? mix(grey(c, .5), [205, 212, 225], .14) : SEASON === 'spring' ? mix(grey(c, .42), [175, 180, 190], .1 + .12 * v) : SEASON === 'autumn' ? mix(c, [240, 170, 110], .14 * v * v) : grey(c, -.2 * (1 - v * .6));
+const SUN = { spring: [[255, 246, 214], [255, 164, 104], .85], summer: [[255, 236, 150], [255, 138, 60], 1.45], autumn: [[255, 218, 140], [255, 124, 52], 1.1], winter: [[240, 244, 250], [255, 186, 156], .6] };
 let LUT = new Uint32Array(0), gradeKey = '';
 // the static parts of a frame for one time of day: sky (with sun, moon, stars) and the land layers on top
 export function prepare(scene, t) {
@@ -49,8 +50,10 @@ export function prepare(scene, t) {
   const ye = lerp(y0, skyb - R - 2, tt), ap = vt + Math.max(R + 2, lerp((y0 - vt) * .22, Math.min((y0 - vt) * .22, (ye - vt) * .4), tt));
   const xa = lerp(sw * .12, -3 * R, tt), xb = lerp(sw * .88, sw + 3 * R, tt);
   const arc = (q) => [Math.round(xa + (xb - xa) * q) - dx, Math.round(ye - Math.sin(Math.PI * clamp(q, 0, 1)) * (ye - ap)) - dy];
-  const sp = (t - 6.5) / 12.5;
-  if (sp > -.06 && sp < 1.06) { const [x, y] = arc(sp), low = 1 - Math.sin(Math.PI * clamp(sp, 0, 1)), c = mix([255, 244, 196], [255, 150, 80], Math.pow(low, 1.5)); dsk(x, y, R * 3, c, .12); dsk(x, y, R * 2, c, .2); dsk(x, y, R, c, 1); dsk(x - Math.round(2 * f), y - Math.round(2 * f), Math.round(2 * f), [255, 255, 240], .7); }
+  // the sun by season: its colour high and low in the sky, and how strongly its halo glows (summer's hot and bright,
+  // spring's soft, autumn's golden, winter's pale and weak)
+  const [hiC, loC, glow] = SUN[SEASON], sp = (t - 6.5) / 12.5;
+  if (sp > -.06 && sp < 1.06) { const [x, y] = arc(sp), low = 1 - Math.sin(Math.PI * clamp(sp, 0, 1)), c = mix(hiC, loC, Math.pow(low, 1.5)); dsk(x, y, R * 3, c, .12 * glow); dsk(x, y, R * 2, c, .2 * glow); dsk(x, y, R, c, 1); dsk(x - Math.round(2 * f), y - Math.round(2 * f), Math.round(2 * f), [255, 255, 240], .7); }
   const mp = ((t - 19 + 24) % 24) / 11.5;
   if (mp <= 1.06) {
     // crescent tilted ~40° counterclockwise: the shadow disc sits up-right of the moon, so the lit edge faces down-left
@@ -115,6 +118,18 @@ export function makeStars() {
     return { x: r() * WW | 0, d: r() * 420 | 0, b: .3 + r() * .7, on, cycle: gap + on, phase: hash(i, 3, 51) * (gap + on) };
   });
 }
+// summer nights: fireflies across the world strip (own stream, so nothing else shifts), each wandering a few pixels about
+// its spot (v: how far down, from row 150 of the land to the canvas's bottom edge) and glowing on its own slow cycle.
+// They only show against the foreground's ground and what's on it, never a tree, the field behind or the sky
+let FLIES = [];
+const GLOW = [222, 255, 120], LOW = new Set(['grass', 'shrub', 'shrub2', 'shrub3', 'moss', 'rock', 'flower', 'fy', 'fw', 'fr', 'fb']);
+export function makeFlies(seed) {
+  const r = rng(seed + 131);
+  FLIES = Array.from({ length: 36 }, () => {
+    const on = .5 * (3 + Math.floor(r() * 4)), gap = 4 + r() * 12;
+    return { x: r() * WW, v: r(), ax: 2 + r() * 4, ay: 1 + r() * 2, wx: .1 + r() * .2, wy: .12 + r() * .25, px: r() * 7, py: r() * 7, on, cycle: on + gap, phase: r() * (on + gap) };
+  });
+}
 let img = null;
 export function draw(canvas, scene, prep, secs) {
   const g = canvas.getContext('2d'), { p, COL, sa } = prep;
@@ -156,6 +171,17 @@ export function draw(canvas, scene, prep, secs) {
   // the land on top: every land pixel is opaque, every other one fully clear
   const d32 = new Uint32Array(d.buffer), f32 = prep.fg32;
   for (let i = 0; i < f32.length; i++) if (f32[i]) d32[i] = f32[i];
+  // fireflies: out from dusk to dawn, on the half-second beat; one that drifts in front of a tree stays dark that beat
+  const night = SEASON === 'summer' ? clamp((.5 - p.L) / .35, 0, 1) : 0, fm = scene.front.mat, ts = Math.floor(secs * 2) / 2;
+  const low = (x, y) => x >= 0 && y >= 0 && x < W && y < H && LOW.has(MAT[fm[y * W + x]]);
+  if (night) for (const f of FLIES) {
+    const into = (ts + f.phase) % f.cycle; if (into >= f.on) continue;
+    const x = Math.round(f.x + f.ax * Math.sin(ts * f.wx + f.px)) - ox, y = Math.round(YO + 150 + f.v * (H - YO - 152) + f.ay * Math.sin(ts * f.wy + f.py));
+    if (!low(x, y)) continue;
+    const e = Math.sin(Math.PI * (into + .25) / f.on), a = night * (.35 + .65 * e);
+    blend(x, y, GLOW, a);
+    if (e > .6) for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) if (low(x + dx, y + dy)) blend(x + dx, y + dy, GLOW, a * .45 * e);
+  }
   g.putImageData(img, 0, 0);
 }
 // at most ~5% of the stars on screen may twinkle at once; recomputed when the screen size changes

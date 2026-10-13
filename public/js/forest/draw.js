@@ -1,6 +1,6 @@
 // Drawing primitives: trees, bushes, rocks, ground cover, ground and hills, all written into Layer buffers.
 import { rng, hash, lerp, clamp, dith, vnoise } from '../util.js';
-import { SEASON, YO } from './state.js';
+import { SEASON } from './state.js';
 import { toneOf, mid } from './layer.js';
 
 // texture origin of the object being drawn: textures are hashed from coordinates relative to it,
@@ -349,7 +349,26 @@ export function bush(L, cx, base, w, mat, r) {
   for (let i = 0; i < 4; i++) { const rad = w * (.24 + r() * .12); blobs.push([cx + (r() - .5) * w * .9, base - rad * (.7 + r() * .5), rad]); }
   blobs.sort((a, b) => b[1] - a[1]);
   for (const b of blobs) blob(L, b[0], b[1], b[2], mat, obj, 1.3, 1);
+  if (SEASON === 'summer') berries(L, cx, base, w, obj);
   return obj;
+}
+// summer: berries in a bush's leaves, red or (on a third of bushes) dark blue: scattered at random, each keeping its own
+// elbow room, and kept a margin inside the bush so none sit at its edge. The foreground bushes (haze 0) get plenty,
+// mostly 1 px with some 2–3 px clusters; the bushes in the field only the odd pixel. Hashed from the bush's origin
+function berries(L, cx, base, w, obj) {
+  const blue = hash(PART, obj, 81) < .35, m = blue ? 'fb' : 'fr', near = L.atm === 0, mg = near ? 2 : 1, placed = [];
+  // margin px of this bush's leaves all round the 2×2 cell a berry may fill
+  const deep = (x, y) => { for (let j = y - mg; j <= y + 1 + mg; j++) for (let i = x - mg; i <= x + 1 + mg; i++) if (i < 0 || j < 0 || i >= L.w || j >= L.h || L.obj[j * L.w + i] !== obj || !L.mat[j * L.w + i]) return false; return true; };
+  for (let y = Math.floor(base - w * .9); y <= base; y++) for (let x = Math.floor(cx - w * .7); x <= cx + w * .7; x++) {
+    const u = x - ORX, v = y - ORY, room = near ? 2.5 + hash(u, v, 86) * 2 : 4;
+    if (hash(u, v, 83) > (near ? .09 : .012) || placed.some(([px, py]) => (px - x) ** 2 + (py - y) ** 2 < room * room) || !deep(x, y)) continue;
+    placed.push([x, y]);
+    const k = near ? hash(u, v, 85) : 0, pts = [[0, 0]];
+    if (k > .55) pts.push(k > .85 || hash(u, v, 87) < .5 ? [1, 0] : [0, 1]);
+    if (k > .85) pts.push([0, 1]);
+    // a lit top-left pixel on clusters, otherwise the berry's colour with a little variation
+    pts.forEach(([dx, dy], j) => L.put(x + dx, y + dy, m, (blue ? 1 : 2) + (j === 0 && pts.length > 1 ? 1 + !blue : hash(u + dx, v + dy, 88) < .3), PART, obj));
+  }
 }
 export function fern(L, x0, base, s, mat) {
   const obj = ++OBJ; L.thin.add(obj);
@@ -372,10 +391,10 @@ export function rock(L, cx, base, r, moss) {
   blob(L, cx, base, r, 'rock', obj, 1.4, .8, .15);
   if (moss) blob(L, cx - r * .4, base - r * .55, r * .45, 'moss', obj, 1.6, .5);
 }
-export function flowers(L, r, x0, x1, yAt, n, mat = 'flower', bottom = YO + 180) {
+export function flowers(L, r, x0, x1, yAt, n, bottom) {
   for (let i = 0; i < n; i++) {
-    // anywhere on the ground strip, from just below the grass line down to the bottom of the visible screen
-    // (YO + 180 unless given; the canvas may run on under a browser toolbar)
+    // anywhere on the ground strip, from just below the grass line down to the bottom row (the canvas's bottom edge,
+    // which may run on under a browser toolbar)
     const obj = ++OBJ; L.thin.add(obj); const part = ++PART, x = Math.round(x0 + r() * (x1 - x0)), y = yAt(x) + 3 + Math.floor(r() * Math.max(7, bottom - yAt(x) - 5));
     if (SEASON === 'autumn') {
       // fallen leaves lying flat in the grass
@@ -383,8 +402,8 @@ export function flowers(L, r, x0, x1, yAt, n, mat = 'flower', bottom = YO + 180)
       L.put(x, y, m, 4, part, obj); L.put(x + 1, y, m, 3, part, obj); if (hash(i, 2, 41) < .5) L.put(x + 1, y - 1, m, 5, part, obj);
       continue;
     }
-    // spring wildflowers come in several colours, summer's are all pink
-    const SPRING = ['flower', 'fy', 'fw', 'fv', 'fb', 'fr', 'fo', 'fy'], m = SEASON === 'spring' ? SPRING[Math.floor(hash(i, 1, 43) * SPRING.length)] : mat;
+    // wildflowers in several colours in spring, pink, yellow and white in summer
+    const cols = SEASON === 'spring' ? ['flower', 'fy', 'fw', 'fv', 'fb', 'fr', 'fo', 'fy'] : ['flower', 'fy', 'fw'], m = cols[Math.floor(hash(i, 1, 43) * cols.length)];
     L.put(x, y + 1, 'grass', 4, part, obj); L.put(x, y, m, 4, part, obj); L.put(x + 1, y, m, 2, part, obj); L.put(x, y - 1, m, 5, part, obj);
   }
 }
