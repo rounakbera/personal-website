@@ -56,6 +56,8 @@ let prep = null, minute = -1;
 // parked at a small scroll offset (OFF) that the visitor can't change, and the canvas sits in the page's flow,
 // reaching TB px above the visible top and BB px below the visible bottom: sky behind the status bar, ground
 // behind the toolbar. The land still ends at the visible bottom, so the bushes stay above the bar (the flowers run on behind it).
+// The visible area is measured with the toolbar shown (100svh) and the canvas reaches BB px below the toolbar
+// hidden (100lvh), so hiding the toolbar from Safari's page menu changes no size: it just uncovers more ground.
 const BLEED = CSS.supports('-webkit-touch-callout: none') && CSS.supports('font: -apple-system-body') && !navigator.standalone;
 const TB = 80, BB = 160, OFF = TB;
 const stage = document.querySelector('.stage');
@@ -81,7 +83,7 @@ function baseScale(vw, vh) {
 }
 // the scene's size and rows for pixel scale S: width, height, first visible row (top), land offset (yo), card top (skyb)
 function view(S, vw, vh, full) {
-  const top = BLEED ? Math.ceil(TB / S) : 0, below = BLEED ? Math.ceil(BB / S) : Math.max(0, Math.round((full - vh) / S));
+  const top = BLEED ? Math.ceil(TB / S) : 0, below = BLEED ? Math.ceil((BB + full - vh) / S) : Math.max(0, Math.round((full - vh) / S));
   const w = Math.round(vw / S), hv = Math.max(180, Math.round(vh / S)), yo = top + hv - 180;
   // skyb: the card's top edge (layout position, ignoring the drop-in animation), so the sun and moon arc above it
   const skyb = Math.max(top + 14, Math.min(yo + 112, top + Math.floor(document.querySelector('.card-wrap').offsetTop / S) - 6));
@@ -90,7 +92,7 @@ function view(S, vw, vh, full) {
 function fit(force = false) {
   const vw = innerWidth;
   const vh = BLEED ? stage.clientHeight : Math.min(innerHeight, svh.offsetHeight || innerHeight);
-  const full = BLEED ? vh : Math.max(vh, innerHeight, lvh.offsetHeight || 0);
+  const full = BLEED ? Math.max(vh, lvh.offsetHeight || 0) : Math.max(vh, innerHeight, lvh.offsetHeight || 0);
   const S0 = baseScale(vw, vh), v = view(S0 * zoom, vw, vh, full), { W: w, H: h, PX: S, VT: top } = v;   // zoom > 1 only during the load-in
   if (!force && scene.front && w === W && h === H) return false;
   // first fit: build the visible middle of the world; later, a window wider than that (a resize before the idle

@@ -129,6 +129,7 @@ The scripts are native ES modules (`<script type="module">`), so the page has to
   - The page is `OFF` (80 px) taller and parked at `scrollY = OFF`. Touch and wheel scrolling are blocked (`touchmove`/`wheel` `preventDefault`, except on the time slider), and any scroll snaps back.
   - The canvas is `position: absolute` in the page's flow. It reaches `TB` (80 px) above the visible top and `BB` (160 px) below the visible bottom: sky behind the status bar, ground behind the toolbar.
   - The land still ends at the visible bottom, so the bushes stay above the bar; the flowers and fireflies carry on behind it to the canvas's bottom edge. `VT` in `state.js` is the first visible row, and the sun and moon path is measured from it.
+  - **Hiding the toolbar** (Safari's page menu → Hide Toolbar) must not resize anything. So every size here is fixed rather than dynamic: `.stage` is `100svh` (the visible area with toolbars shown, which `fit()` reads), the page is `100lvh + OFF`, and the canvas reaches `BB` px below `100lvh`. Hiding the toolbar just uncovers more ground, and the scene, card and sun path stay put. (It used to be `100dvh`, which rescaled the whole scene.)
   - Elsewhere none of this applies (the fixed 100lvh canvas above).
 - In the stacked layout (≤ 660 px) the scene zooms in further, with `S ≥ min(vh/250, vw/110)`, so the land fills about the lower half and the framing trees reach the middle of the screen (owner's request). The view gets narrower to allow this.
 
