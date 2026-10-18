@@ -15,10 +15,12 @@ html, body { height: 100%; margin: 0; overflow: hidden; overscroll-behavior: non
 body { background: var(--pre, var(--night)); background-color: var(--pre-c, var(--night)); color: var(--ink); height: 100dvh; }
 /* Safari 26 on iPhone (html.bleed, set by main.js): the page is OFF px taller and parked at that scroll offset so
    Safari draws it behind the status bar and toolbar; the canvas sits in the page's flow and reaches past both
-   bars (main.js sets its top and height). Touch and wheel scrolling are blocked in main.js */
+   bars (main.js sets its top and height). Touch and wheel scrolling are blocked in main.js. The stage is 100svh
+   (toolbars shown) and the page 100lvh + OFF, both fixed sizes, so hiding the toolbar (Safari's page menu) doesn't
+   resize anything: the forest just shows more ground below */
 html.bleed { height: auto; overflow-y: scroll; }
-html.bleed body { height: auto; min-height: calc(100dvh + var(--off)); overflow: visible; }
-html.bleed .stage { height: 100dvh; margin-top: var(--off); }
+html.bleed body { height: auto; min-height: calc(100lvh + var(--off)); overflow: visible; }
+html.bleed .stage { height: 100svh; margin-top: var(--off); }
 html.bleed #world, html.bleed .trees { position: absolute; }
 #world { position: fixed; top: 0; left: 0; width: 100%; height: 100%; height: 100lvh; object-fit: cover; object-position: 50% 100%; image-rendering: pixelated; display: block; }
 .trees { position: fixed; top: 0; left: 0; transform-origin: 0 0; image-rendering: pixelated; pointer-events: none; display: block; }
